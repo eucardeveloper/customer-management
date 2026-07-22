@@ -19,5 +19,11 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Build with Maven
-        run: mvn clean install -DskipTests
+      - name: Build Kunden Service
+        run: mvn clean install -DskipTests -f kundenservice/pom.xml
+
+      - name: Build Bestellung Service
+        run: mvn clean install -DskipTests -f bestellungservice/pom.xml
+
+      - name: Build API Gateway
+        run: mvn clean install -DskipTests -f apigateway/pom.xml
