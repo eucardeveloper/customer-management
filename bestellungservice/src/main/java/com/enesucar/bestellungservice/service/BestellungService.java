@@ -3,6 +3,7 @@ package com.enesucar.bestellungservice.service;
 import com.enesucar.bestellungservice.dto.BestellungRequestDTO;
 import com.enesucar.bestellungservice.dto.BestellungResponseDTO;
 import com.enesucar.bestellungservice.entity.Bestellung;
+import com.enesucar.bestellungservice.exception.ResourceNotFoundException;
 import com.enesucar.bestellungservice.kafka.BestellungProducer;
 import com.enesucar.bestellungservice.repository.BestellungRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,7 @@ public class BestellungService {
 
     public BestellungResponseDTO bestellungById(Long id) {
         Bestellung bestellung = bestellungRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Sipariş bulunamadı: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + id));
         return toResponse(bestellung);
     }
 
@@ -61,7 +62,7 @@ public class BestellungService {
     @Transactional
     public void bestellungDelete(Long id) {
         if (!bestellungRepository.existsById(id)) {
-            throw new RuntimeException("Sipariş bulunamadı: " + id);
+            throw new ResourceNotFoundException("Sipariş bulunamadı: " + id);
         }
         bestellungRepository.deleteById(id);
     }

@@ -3,6 +3,7 @@ package com.enesucar.kundenservice.service;
 import com.enesucar.kundenservice.dto.KundeRequestDTO;
 import com.enesucar.kundenservice.dto.KundeResponseDTO;
 import com.enesucar.kundenservice.entity.Kunde;
+import com.enesucar.kundenservice.exception.ResourceNotFoundException;
 import com.enesucar.kundenservice.repository.KundeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -40,14 +41,14 @@ public class KundeService {
 
     public KundeResponseDTO kundeById(Long id) {
         Kunde kunde = kundeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Müşteri bulunamadı: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Müşteri bulunamadı: " + id));
         return toResponse(kunde);
     }
 
     @Transactional
     public KundeResponseDTO kundeUpdate(Long id, KundeRequestDTO request) {
         Kunde kunde = kundeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Müşteri bulunamadı: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Müşteri bulunamadı: " + id));
         kunde.setAd(request.getAd());
         kunde.setSoyad(request.getSoyad());
         kunde.setEmail(request.getEmail());
@@ -58,7 +59,7 @@ public class KundeService {
     @Transactional
     public void kundeDelete(Long id) {
         if (!kundeRepository.existsById(id)) {
-            throw new RuntimeException("Müşteri bulunamadı: " + id);
+            throw new ResourceNotFoundException("Müşteri bulunamadı: " + id);
         }
         kundeRepository.deleteById(id);
     }
