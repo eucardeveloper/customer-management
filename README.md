@@ -1,78 +1,115 @@
-# Kundenverwaltung - Microservices Project
+# Kundenverwaltung Microservices
 
-A microservices-based customer and order management system built with Spring Boot, Apache Kafka, and Docker.
+Spring Boot 4.0 ile geliştirilmiş çok servisli müşteri ve sipariş yönetim sistemi. İki bağımsız mikroservis, API Gateway ve Apache Kafka ile gerçek zamanlı mesajlaşma içerir. Railway cloud üzerinde canlı olarak yayındadır.
 
-## Architecture
+---
 
-Client → API Gateway (8080) → Kunden-Service (8081)
-→ Bestellung-Service (8082)
+## Canlı Demo
 
-Bestellung-Service → Kafka → Kunden-Service
-## Services
+| Servis | URL |
+|--------|-----|
+| Kunden API (Swagger) | https://kundenverwaltung-production.up.railway.app/swagger-ui.html |
+| Kunden API (JSON) | https://kundenverwaltung-production.up.railway.app/api/kunden |
+| Bestellung API (JSON) | https://bestellungservice-production.up.railway.app/api/bestellungen |
 
-### Kunden-Service (Port: 8081)
-- Customer management (CRUD)
-- Listens to Kafka events from Bestellung-Service
+---
 
-### Bestellung-Service (Port: 8082)
-- Order management (CRUD)
-- Publishes events to Kafka when an order is created
+## Mimari
 
-### API Gateway (Port: 8080)
-- Single entry point for all requests
-- Routes requests to the appropriate service
-
-## Technologies
-- Java 21
-- Spring Boot 4.0.7
-- Spring Cloud Gateway
-- Apache Kafka
-- PostgreSQL
-- Docker & Docker Compose
-- Lombok
-- Swagger / OpenAPI
-
-## Running the Project
-
-### Prerequisites
-- Docker Desktop
-- Java 21
-- Maven
-
-### Start Kafka and Databases
-```bash
-docker-compose up -d
+```
+Client
+  │
+  └── API Gateway (Spring Cloud Gateway :8080)
+        ├── kundenservice (:8081)   → PostgreSQL (kunden_db)
+        └── bestellungservice (:8082) → PostgreSQL (bestellung_db)
+                │
+                └── Apache Kafka (Producer/Consumer)
 ```
 
-### Start Services
-Run each service separately in IntelliJ:
-1. KundenServiceApplication (port 8081)
-2. BestellungServiceApplication (port 8082)
-3. ApigatewayApplication (port 8080)
+---
 
-## API Endpoints
+## Teknolojiler
 
-### Kunden-Service
-| Method | URL | Description |
-|--------|-----|-------------|
-| POST | /api/kunden | Add customer |
-| GET | /api/kunden | List all customers |
-| GET | /api/kunden/{id} | Get customer by ID |
-| PUT | /api/kunden/{id} | Update customer |
-| DELETE | /api/kunden/{id} | Delete customer |
+- **Java 21** / **Spring Boot 4.0**
+- **Spring Cloud Gateway** — API Gateway
+- **Apache Kafka** — servisler arası mesajlaşma
+- **PostgreSQL** — veri saklama
+- **Spring Data JPA / Hibernate** — ORM
+- **Springdoc OpenAPI (Swagger UI)** — API dokümantasyonu
+- **Docker & Docker Compose** — konteynerizasyon
+- **GitHub Actions** — CI/CD pipeline
+- **Railway** — cloud deployment
 
-### Bestellung-Service
-| Method | URL | Description |
-|--------|-----|-------------|
-| POST | /api/bestellungen | Create order |
-| GET | /api/bestellungen | List all orders |
-| GET | /api/bestellungen/{id} | Get order by ID |
-| GET | /api/bestellungen/kunde/{kundeId} | Get orders by customer |
-| DELETE | /api/bestellungen/{id} | Delete order |
+---
 
-## Swagger UI
-- Kunden-Service: http://localhost:8081/swagger-ui/index.html
-- Bestellung-Service: http://localhost:8082/swagger-ui/index.html
+## Servisler
 
-## Author
-Enes Uçar - eucardeveloper@gmail.com
+### kundenservice (Port: 8081)
+
+Müşteri CRUD işlemlerini yönetir.
+
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| GET | /api/kunden | Tüm müşterileri listele |
+| GET | /api/kunden/{id} | ID ile müşteri getir |
+| POST | /api/kunden | Yeni müşteri ekle |
+| PUT | /api/kunden/{id} | Müşteri güncelle |
+| DELETE | /api/kunden/{id} | Müşteri sil |
+
+### bestellungservice (Port: 8082)
+
+Sipariş sorgulama işlemlerini yönetir. Kafka üzerinden kundenservice ile iletişim kurar.
+
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| GET | /api/bestellungen | Tüm siparişleri listele |
+| GET | /api/bestellungen/kunde/{kundeId} | Müşteriye göre siparişleri listele |
+
+---
+
+## Yerel Kurulum
+
+### Gereksinimler
+
+- Java 21
+- Docker Desktop
+- Maven
+
+### Çalıştırma
+
+```bash
+# Repoyu klonla
+git clone https://github.com/eucardeveloper/kundenverwaltung.git
+cd kundenverwaltung
+
+# Docker ile tüm bağımlılıkları başlat (PostgreSQL, Kafka, Zookeeper)
+docker-compose up -d
+
+# Servisleri ayrı terminallerde başlat
+cd kundenservice && mvn spring-boot:run
+cd bestellungservice && mvn spring-boot:run
+```
+
+Swagger UI: http://localhost:8081/swagger-ui.html
+
+---
+
+## CI/CD
+
+Her `main` branch push'unda GitHub Actions otomatik olarak:
+1. Maven ile build alır
+2. Unit testleri çalıştırır
+3. Railway üzerinde deploy eder
+
+---
+
+## Özellikler
+
+- ✅ RESTful API tasarımı
+- ✅ @ControllerAdvice ile merkezi hata yönetimi
+- ✅ Bean Validation ile input doğrulama
+- ✅ Kafka Producer/Consumer entegrasyonu
+- ✅ Docker multi-stage build
+- ✅ Swagger UI dokümantasyonu
+- ✅ Railway cloud deployment
+- ✅ GitHub Actions CI/CD
