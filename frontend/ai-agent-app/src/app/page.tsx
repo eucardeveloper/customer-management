@@ -182,7 +182,7 @@ export default function Home() {
               <AutoAwesomeIcon sx={{ fontSize: 20 }} />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
                 AI Ajan Orkestrasyon Sistemi
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
