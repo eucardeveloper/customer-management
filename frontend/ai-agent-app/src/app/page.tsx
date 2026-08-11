@@ -368,7 +368,7 @@ export default function Home() {
               onKeyDown={handleKeyDown}
               placeholder="Bir şey sorun... (Müşteri ekle, sil, listele, sipariş getir)"
               variant="standard"
-              InputProps={{ disableUnderline: true }}
+              slotProps={{ input: { disableUnderline: true } }}
               sx={{
                 '& .MuiInputBase-input': {
                   color: 'white',
