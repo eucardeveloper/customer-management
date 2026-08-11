@@ -243,7 +243,7 @@ export default function Home() {
                 <StorefrontIcon sx={{ fontSize: 20, color: 'white' }} />
               </Box>
               <Box>
-                <Typography variant="subtitle2" fontWeight={700} color="white">
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }} color="white">
                   Müşteri Yönetimi
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>
@@ -274,7 +274,7 @@ export default function Home() {
                   }}
                 >
                   <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.label} slotProps={{ primary: { fontSize: '0.875rem', fontWeight: 500 } }} />
+                  <ListItemText primary={item.label} slotProps={{ primary: { style: { fontSize: "0.875rem", fontWeight: 500 } } }} />
                   {item.key === 'kunden' && (
                     <Chip label={kunden.length} size="small" sx={{ bgcolor: 'rgba(59,130,246,0.3)', color: '#93c5fd', fontSize: '0.7rem', height: 20 }} />
                   )}
@@ -294,7 +294,7 @@ export default function Home() {
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <AppBar position="sticky" elevation={0}>
             <Toolbar>
-              <Typography variant="h6" fontWeight={700} sx={{ flex: 1, fontSize: '1rem' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, flex: 1, fontSize: '1rem' }}>
                 {tab === 'kunden' ? 'Müşteriler' : 'Siparişler'}
               </Typography>
               <Chip
@@ -382,7 +382,7 @@ export default function Home() {
                                 <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light', fontSize: '0.8rem' }}>
                                   {k.ad[0]}{k.soyad[0]}
                                 </Avatar>
-                                <Typography variant="body2" fontWeight={600}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                   {k.ad} {k.soyad}
                                 </Typography>
                               </Box>
@@ -415,7 +415,7 @@ export default function Home() {
                           .map((b) => (
                             <TableRow key={b.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                               <TableCell>
-                                <Typography variant="body2" fontWeight={600}>{b.urunAdi}</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{b.urunAdi}</Typography>
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" color="text.secondary">{getKundeName(b.kundeId)}</Typography>
@@ -494,7 +494,7 @@ export default function Home() {
 
         {/* Delete Dialog */}
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
-          <DialogTitle fontWeight={700}>Müşteri Sil</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 700 }}>Müşteri Sil</DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary">
               Bu müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
