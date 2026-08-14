@@ -22,7 +22,7 @@ services:
   customer-db:
     image: postgres:16
     environment:
-      POSTGRES_DB: kunden_db
+      POSTGRES_DB: customer_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
     ports:
@@ -31,8 +31,9 @@ services:
   order-db:
     image: postgres:16
     environment:
-      POSTGRES_DB: bestellung_db
+      POSTGRES_DB: order_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
     ports:
       - "5435:5432"
+
