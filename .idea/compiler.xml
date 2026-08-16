@@ -8,19 +8,20 @@
         <outputRelativeToContentRoot value="true" />
         <module name="apigateway" />
       </profile>
-      <profile name="Annotation profile for customer-service" enabled="true">
+      <profile name="Annotation profile for order-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
         </processorPath>
         <module name="kundenservice" />
+        <module name="order-service" />
         <module name="bestellungservice" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="customer-service" target="21" />
       <module name="kunden-service" target="21" />
     </bytecodeTargetLevel>
   </component>
@@ -28,8 +29,10 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="apigateway" options="-parameters" />
       <module name="bestellungservice" options="-parameters" />
+      <module name="customer-service" options="-parameters" />
       <module name="kunden-service" options="-parameters" />
       <module name="kundenservice" options="-parameters" />
+      <module name="order-service" options="-parameters" />
     </option>
   </component>
 </project>

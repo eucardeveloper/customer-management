@@ -22,44 +22,51 @@ public class CustomerService {
     public List<CustomerResponseDTO> getAllCustomers() {
         return customerRepository.findAll()
                 .stream()
-                .map(this::toResponseDTO)
+                .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    public CustomerResponseDTO createCustomer(CustomerRequestDTO request) {
+        Customer customer = new Customer();
+        customer.setFirstName(request.getFirstName());
+        customer.setLastName(request.getLastName());
+        customer.setEmail(request.getEmail());
+        customer.setPhone(request.getPhone());
+        Customer saved = customerRepository.save(customer);
+        return toResponse(saved);
     }
 
     public CustomerResponseDTO getCustomerById(Long id) {
         Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
-        return toResponseDTO(customer);
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with ID: " + id));
+        return toResponse(customer);
     }
 
-    public CustomerResponseDTO createCustomer(CustomerRequestDTO dto) {
-        Customer customer = new Customer();
-        customer.setName(dto.getName());
-        customer.setEmail(dto.getEmail());
-        Customer saved = customerRepository.save(customer);
-        return toResponseDTO(saved);
-    }
-
-    public CustomerResponseDTO updateCustomer(Long id, CustomerRequestDTO dto) {
+    public CustomerResponseDTO updateCustomer(Long id, CustomerRequestDTO request) {
         Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
-        customer.setName(dto.getName());
-        customer.setEmail(dto.getEmail());
-        Customer updated = customerRepository.save(customer);
-        return toResponseDTO(updated);
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with ID: " + id));
+        customer.setFirstName(request.getFirstName());
+        customer.setLastName(request.getLastName());
+        customer.setEmail(request.getEmail());
+        customer.setPhone(request.getPhone());
+        Customer saved = customerRepository.save(customer);
+        return toResponse(saved);
     }
 
     public void deleteCustomer(Long id) {
-        Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
-        customerRepository.delete(customer);
+        if (!customerRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Customer not found with ID: " + id);
+        }
+        customerRepository.deleteById(id);
     }
 
-    private CustomerResponseDTO toResponseDTO(Customer customer) {
-        CustomerResponseDTO dto = new CustomerResponseDTO();
-        dto.setId(customer.getId());
-        dto.setName(customer.getName());
-        dto.setEmail(customer.getEmail());
-        return dto;
+    private CustomerResponseDTO toResponse(Customer customer) {
+        CustomerResponseDTO response = new CustomerResponseDTO();
+        response.setId(customer.getId());
+        response.setFirstName(customer.getFirstName());
+        response.setLastName(customer.getLastName());
+        response.setEmail(customer.getEmail());
+        response.setPhone(customer.getPhone());
+        return response;
     }
 }
