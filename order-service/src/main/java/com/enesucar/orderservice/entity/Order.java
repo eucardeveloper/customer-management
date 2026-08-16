@@ -1,15 +1,15 @@
 package com.enesucar.orderservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "orders")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter
+@Setter
 public class Order {
 
     @Id
@@ -18,9 +18,11 @@ public class Order {
 
     private Long customerId;
 
-    private String product;
+    private String productName;
+
+    private BigDecimal price;
 
     private Integer quantity;
 
-    private Double price;
+    private LocalDateTime date;
 }

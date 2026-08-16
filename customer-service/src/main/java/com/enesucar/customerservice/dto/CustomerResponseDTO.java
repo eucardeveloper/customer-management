@@ -1,11 +1,19 @@
 package com.enesucar.customerservice.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class CustomerResponseDTO {
 
     private Long id;
-    private String name;
+
+    private String firstName;
+
+    private String lastName;
+
     private String email;
+
+    private String phone;
 }

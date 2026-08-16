@@ -49,8 +49,8 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 const DRAWER_WIDTH = 240;
-const KUNDEN_URL = 'https://kundenverwaltung-production.up.railway.app/api/kunden';
-const BESTELLUNG_URL = 'https://bestellungservice-production.up.railway.app/api/bestellungen';
+const CUSTOMERS_URL = 'https://kundenverwaltung-production.up.railway.app/api/customers';
+const ORDERS_URL = 'https://bestellungservice-production.up.railway.app/api/orders';
 
 const theme = createTheme({
   palette: {
@@ -98,68 +98,68 @@ const theme = createTheme({
   },
 });
 
-interface Kunde {
+interface Customer {
   id: number;
-  ad: string;
-  soyad: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  telefon: string;
+  phone: string;
 }
 
-interface Bestellung {
+interface Order {
   id: number;
-  kundeId: number;
-  urunAdi: string;
-  fiyat: number;
-  miktar: number;
-  tarih: string;
+  customerId: number;
+  productName: string;
+  price: number;
+  quantity: number;
+  date: string;
 }
 
-const emptyKunde: Omit<Kunde, 'id'> = { ad: '', soyad: '', email: '', telefon: '' };
+const emptyCustomer: Omit<Customer, 'id'> = { firstName: '', lastName: '', email: '', phone: '' };
 
 export default function Home() {
-  const [tab, setTab] = useState<'kunden' | 'bestellungen'>('kunden');
-  const [kunden, setKunden] = useState<Kunde[]>([]);
-  const [bestellungen, setBestellungen] = useState<Bestellung[]>([]);
+  const [tab, setTab] = useState<'customers' | 'orders'>('customers');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editKunde, setEditKunde] = useState<Partial<Kunde>>(emptyKunde);
+  const [editCustomer, setEditCustomer] = useState<Partial<Customer>>(emptyCustomer);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
-  const fetchKunden = useCallback(async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(KUNDEN_URL);
+      const res = await fetch(CUSTOMERS_URL);
       const data = await res.json();
-      setKunden(data);
+      setCustomers(data);
     } catch {
-      showSnackbar('Müşteriler yüklenemedi.', 'error');
+      showSnackbar('Failed to load customers.', 'error');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchBestellungen = useCallback(async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(BESTELLUNG_URL);
+      const res = await fetch(ORDERS_URL);
       const data = await res.json();
-      setBestellungen(data);
+      setOrders(data);
     } catch {
-      showSnackbar('Siparişler yüklenemedi.', 'error');
+      showSnackbar('Failed to load orders.', 'error');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (tab === 'kunden') fetchKunden();
-    else fetchBestellungen();
-  }, [tab, fetchKunden, fetchBestellungen]);
+    if (tab === 'customers') fetchCustomers();
+    else fetchOrders();
+  }, [tab, fetchCustomers, fetchOrders]);
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
@@ -167,48 +167,48 @@ export default function Home() {
 
   const handleSave = async () => {
     try {
-      if (isEditing && editKunde.id) {
-        await fetch(`${KUNDEN_URL}/${editKunde.id}`, {
+      if (isEditing && editCustomer.id) {
+        await fetch(`${CUSTOMERS_URL}/${editCustomer.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editKunde),
+          body: JSON.stringify(editCustomer),
         });
-        showSnackbar('Müşteri güncellendi.', 'success');
+        showSnackbar('Customer updated.', 'success');
       } else {
-        await fetch(KUNDEN_URL, {
+        await fetch(CUSTOMERS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editKunde),
+          body: JSON.stringify(editCustomer),
         });
-        showSnackbar('Müşteri eklendi.', 'success');
+        showSnackbar('Customer added.', 'success');
       }
       setDialogOpen(false);
-      fetchKunden();
+      fetchCustomers();
     } catch {
-      showSnackbar('İşlem başarısız.', 'error');
+      showSnackbar('Operation failed.', 'error');
     }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      await fetch(`${KUNDEN_URL}/${deleteId}`, { method: 'DELETE' });
-      showSnackbar('Müşteri silindi.', 'success');
+      await fetch(`${CUSTOMERS_URL}/${deleteId}`, { method: 'DELETE' });
+      showSnackbar('Customer deleted.', 'success');
       setDeleteDialogOpen(false);
-      fetchKunden();
+      fetchCustomers();
     } catch {
-      showSnackbar('Silme başarısız.', 'error');
+      showSnackbar('Delete failed.', 'error');
     }
   };
 
   const openAdd = () => {
-    setEditKunde(emptyKunde);
+    setEditCustomer(emptyCustomer);
     setIsEditing(false);
     setDialogOpen(true);
   };
 
-  const openEdit = (k: Kunde) => {
-    setEditKunde(k);
+  const openEdit = (c: Customer) => {
+    setEditCustomer(c);
     setIsEditing(true);
     setDialogOpen(true);
   };
@@ -218,16 +218,16 @@ export default function Home() {
     setDeleteDialogOpen(true);
   };
 
-  const filteredKunden = kunden.filter(
-    (k) =>
-      k.ad.toLowerCase().includes(search.toLowerCase()) ||
-      k.soyad.toLowerCase().includes(search.toLowerCase()) ||
-      k.email.toLowerCase().includes(search.toLowerCase())
+  const filteredCustomers = customers.filter(
+    (c) =>
+      c.firstName.toLowerCase().includes(search.toLowerCase()) ||
+      c.lastName.toLowerCase().includes(search.toLowerCase()) ||
+      c.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getKundeName = (id: number) => {
-    const k = kunden.find((k) => k.id === id);
-    return k ? `${k.ad} ${k.soyad}` : `ID: ${id}`;
+  const getCustomerName = (id: number) => {
+    const c = customers.find((c) => c.id === id);
+    return c ? `${c.firstName} ${c.lastName}` : `ID: ${id}`;
   };
 
   return (
@@ -244,7 +244,7 @@ export default function Home() {
               </Box>
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }} color="white">
-                  Müşteri Yönetimi
+                  Customer Management
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>
                   Microservices · Railway
@@ -255,13 +255,13 @@ export default function Home() {
 
           <List sx={{ px: 1, pt: 2 }}>
             {[
-              { key: 'kunden', label: 'Müşteriler', icon: <PeopleIcon /> },
-              { key: 'bestellungen', label: 'Siparişler', icon: <ShoppingCartIcon /> },
+              { key: 'customers', label: 'Customers', icon: <PeopleIcon /> },
+              { key: 'orders', label: 'Orders', icon: <ShoppingCartIcon /> },
             ].map((item) => (
               <ListItem key={item.key} disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton
                   selected={tab === item.key}
-                  onClick={() => setTab(item.key as 'kunden' | 'bestellungen')}
+                  onClick={() => setTab(item.key as 'customers' | 'orders')}
                   sx={{
                     borderRadius: 2,
                     color: 'rgba(255,255,255,0.6)',
@@ -275,8 +275,8 @@ export default function Home() {
                 >
                   <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>{item.icon}</ListItemIcon>
                   <ListItemText primary={item.label} slotProps={{ primary: { style: { fontSize: "0.875rem", fontWeight: 500 } } }} />
-                  {item.key === 'kunden' && (
-                    <Chip label={kunden.length} size="small" sx={{ bgcolor: 'rgba(59,130,246,0.3)', color: '#93c5fd', fontSize: '0.7rem', height: 20 }} />
+                  {item.key === 'customers' && (
+                    <Chip label={customers.length} size="small" sx={{ bgcolor: 'rgba(59,130,246,0.3)', color: '#93c5fd', fontSize: '0.7rem', height: 20 }} />
                   )}
                 </ListItemButton>
               </ListItem>
@@ -295,10 +295,10 @@ export default function Home() {
           <AppBar position="sticky" elevation={0}>
             <Toolbar>
               <Typography variant="h6" sx={{ fontWeight: 700, flex: 1, fontSize: '1rem' }}>
-                {tab === 'kunden' ? 'Müşteriler' : 'Siparişler'}
+                {tab === 'customers' ? 'Customers' : 'Orders'}
               </Typography>
               <Chip
-                label="● Canlı"
+                label="● Live"
                 size="small"
                 sx={{ bgcolor: 'rgba(34,197,94,0.2)', color: '#86efac', fontSize: '0.7rem', mr: 1 }}
               />
@@ -311,7 +311,7 @@ export default function Home() {
             <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
               <TextField
                 size="small"
-                placeholder={tab === 'kunden' ? 'Ad, soyad veya e-posta ara...' : 'Ürün ara...'}
+                placeholder={tab === 'customers' ? 'Search by name or email...' : 'Search product...'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 slotProps={{
@@ -326,12 +326,12 @@ export default function Home() {
                 sx={{ width: 320, bgcolor: 'white', borderRadius: 2 }}
               />
               <Box sx={{ flex: 1 }} />
-              <Tooltip title="Yenile">
-                <IconButton onClick={() => tab === 'kunden' ? fetchKunden() : fetchBestellungen()} size="small">
+              <Tooltip title="Refresh">
+                <IconButton onClick={() => tab === 'customers' ? fetchCustomers() : fetchOrders()} size="small">
                   <RefreshIcon />
                 </IconButton>
               </Tooltip>
-              {tab === 'kunden' && (
+              {tab === 'customers' && (
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
@@ -339,7 +339,7 @@ export default function Home() {
                   disableElevation
                   sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
                 >
-                  Yeni Müşteri
+                  New Customer
                 </Button>
               )}
             </Box>
@@ -354,85 +354,85 @@ export default function Home() {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      {tab === 'kunden' ? (
+                      {tab === 'customers' ? (
                         <>
-                          <TableCell>Müşteri</TableCell>
-                          <TableCell>E-posta</TableCell>
-                          <TableCell>Telefon</TableCell>
+                          <TableCell>Customer</TableCell>
+                          <TableCell>Email</TableCell>
+                          <TableCell>Phone</TableCell>
                           <TableCell>ID</TableCell>
-                          <TableCell align="right">İşlemler</TableCell>
+                          <TableCell align="right">Actions</TableCell>
                         </>
                       ) : (
                         <>
-                          <TableCell>Ürün</TableCell>
-                          <TableCell>Müşteri</TableCell>
-                          <TableCell>Fiyat</TableCell>
-                          <TableCell>Miktar</TableCell>
-                          <TableCell>Tarih</TableCell>
+                          <TableCell>Product</TableCell>
+                          <TableCell>Customer</TableCell>
+                          <TableCell>Price</TableCell>
+                          <TableCell>Quantity</TableCell>
+                          <TableCell>Date</TableCell>
                         </>
                       )}
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {tab === 'kunden'
-                      ? filteredKunden.map((k) => (
-                          <TableRow key={k.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                    {tab === 'customers'
+                      ? filteredCustomers.map((c) => (
+                          <TableRow key={c.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                             <TableCell>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                 <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light', fontSize: '0.8rem' }}>
-                                  {k.ad[0]}{k.soyad[0]}
+                                  {c.firstName[0]}{c.lastName[0]}
                                 </Avatar>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  {k.ad} {k.soyad}
+                                  {c.firstName} {c.lastName}
                                 </Typography>
                               </Box>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2" color="text.secondary">{k.email}</Typography>
+                              <Typography variant="body2" color="text.secondary">{c.email}</Typography>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2" color="text.secondary">{k.telefon}</Typography>
+                              <Typography variant="body2" color="text.secondary">{c.phone}</Typography>
                             </TableCell>
                             <TableCell>
-                              <Chip label={`#${k.id}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontSize: '0.7rem' }} />
+                              <Chip label={`#${c.id}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontSize: '0.7rem' }} />
                             </TableCell>
                             <TableCell align="right">
-                              <Tooltip title="Düzenle">
-                                <IconButton size="small" onClick={() => openEdit(k)} sx={{ color: 'primary.main', mr: 0.5 }}>
+                              <Tooltip title="Edit">
+                                <IconButton size="small" onClick={() => openEdit(c)} sx={{ color: 'primary.main', mr: 0.5 }}>
                                   <EditIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
-                              <Tooltip title="Sil">
-                                <IconButton size="small" onClick={() => openDelete(k.id)} sx={{ color: 'error.main' }}>
+                              <Tooltip title="Delete">
+                                <IconButton size="small" onClick={() => openDelete(c.id)} sx={{ color: 'error.main' }}>
                                   <DeleteIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
                             </TableCell>
                           </TableRow>
                         ))
-                      : bestellungen
-                          .filter((b) => b.urunAdi.toLowerCase().includes(search.toLowerCase()))
-                          .map((b) => (
-                            <TableRow key={b.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                      : orders
+                          .filter((o) => o.productName.toLowerCase().includes(search.toLowerCase()))
+                          .map((o) => (
+                            <TableRow key={o.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                               <TableCell>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{b.urunAdi}</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{o.productName}</Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2" color="text.secondary">{getKundeName(b.kundeId)}</Typography>
+                                <Typography variant="body2" color="text.secondary">{getCustomerName(o.customerId)}</Typography>
                               </TableCell>
                               <TableCell>
                                 <Chip
-                                  label={`${b.fiyat.toLocaleString('tr-TR')} ₺`}
+                                  label={`${o.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`}
                                   size="small"
                                   sx={{ bgcolor: '#f0fdf4', color: '#16a34a', fontWeight: 600, fontSize: '0.75rem' }}
                                 />
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{b.miktar} adet</Typography>
+                                <Typography variant="body2">{o.quantity} pcs</Typography>
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" color="text.secondary">
-                                  {new Date(b.tarih).toLocaleDateString('tr-TR')}
+                                  {new Date(o.date).toLocaleDateString('en-US')}
                                 </Typography>
                               </TableCell>
                             </TableRow>
@@ -447,63 +447,63 @@ export default function Home() {
         {/* Add/Edit Dialog */}
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle sx={{ fontWeight: 700 }}>
-            {isEditing ? 'Müşteri Düzenle' : 'Yeni Müşteri Ekle'}
+            {isEditing ? 'Edit Customer' : 'Add New Customer'}
           </DialogTitle>
           <Divider />
           <DialogContent sx={{ pt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
-                  label="Ad"
+                  label="First Name"
                   fullWidth
                   size="small"
-                  value={editKunde.ad || ''}
-                  onChange={(e) => setEditKunde({ ...editKunde, ad: e.target.value })}
+                  value={editCustomer.firstName || ''}
+                  onChange={(e) => setEditCustomer({ ...editCustomer, firstName: e.target.value })}
                 />
                 <TextField
-                  label="Soyad"
+                  label="Last Name"
                   fullWidth
                   size="small"
-                  value={editKunde.soyad || ''}
-                  onChange={(e) => setEditKunde({ ...editKunde, soyad: e.target.value })}
+                  value={editCustomer.lastName || ''}
+                  onChange={(e) => setEditCustomer({ ...editCustomer, lastName: e.target.value })}
                 />
               </Box>
               <TextField
-                label="E-posta"
+                label="Email"
                 fullWidth
                 size="small"
-                value={editKunde.email || ''}
-                onChange={(e) => setEditKunde({ ...editKunde, email: e.target.value })}
+                value={editCustomer.email || ''}
+                onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })}
               />
               <TextField
-                label="Telefon"
+                label="Phone"
                 fullWidth
                 size="small"
-                value={editKunde.telefon || ''}
-                onChange={(e) => setEditKunde({ ...editKunde, telefon: e.target.value })}
+                value={editCustomer.phone || ''}
+                onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })}
               />
             </Box>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button onClick={() => setDialogOpen(false)} sx={{ textTransform: 'none' }}>İptal</Button>
+            <Button onClick={() => setDialogOpen(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
             <Button variant="contained" onClick={handleSave} disableElevation sx={{ textTransform: 'none', fontWeight: 600 }}>
-              {isEditing ? 'Güncelle' : 'Ekle'}
+              {isEditing ? 'Update' : 'Add'}
             </Button>
           </DialogActions>
         </Dialog>
 
         {/* Delete Dialog */}
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
-          <DialogTitle sx={{ fontWeight: 700 }}>Müşteri Sil</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 700 }}>Delete Customer</DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary">
-              Bu müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+              Are you sure you want to delete this customer? This action cannot be undone.
             </Typography>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button onClick={() => setDeleteDialogOpen(false)} sx={{ textTransform: 'none' }}>İptal</Button>
+            <Button onClick={() => setDeleteDialogOpen(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
             <Button variant="contained" color="error" onClick={handleDelete} disableElevation sx={{ textTransform: 'none', fontWeight: 600 }}>
-              Sil
+              Delete
             </Button>
           </DialogActions>
         </Dialog>

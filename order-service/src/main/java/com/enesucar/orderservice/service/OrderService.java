@@ -8,6 +8,7 @@ import com.enesucar.orderservice.kafka.OrderProducer;
 import com.enesucar.orderservice.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,58 +26,54 @@ public class OrderService {
     public List<OrderResponseDTO> getAllOrders() {
         return orderRepository.findAll()
                 .stream()
-                .map(this::toResponseDTO)
+                .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    public OrderResponseDTO createOrder(OrderRequestDTO request) {
+        Order order = new Order();
+        order.setCustomerId(request.getCustomerId());
+        order.setProductName(request.getProductName());
+        order.setPrice(request.getPrice());
+        order.setQuantity(request.getQuantity());
+        order.setDate(LocalDateTime.now());
+        Order saved = orderRepository.save(order);
+        orderProducer.sendOrderEvent("Order created: " + saved.getId());
+        return toResponse(saved);
     }
 
     public OrderResponseDTO getOrderById(Long id) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
-        return toResponseDTO(order);
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + id));
+        return toResponse(order);
     }
 
-    public List<OrderResponseDTO> getOrdersByCustomerId(Long customerId) {
-        return orderRepository.findByCustomerId(customerId)
-                .stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-    }
-
-    public OrderResponseDTO createOrder(OrderRequestDTO dto) {
-        Order order = new Order();
-        order.setCustomerId(dto.getCustomerId());
-        order.setProduct(dto.getProduct());
-        order.setQuantity(dto.getQuantity());
-        order.setPrice(dto.getPrice());
-        Order saved = orderRepository.save(order);
-        orderProducer.sendOrderMessage("New order created: " + saved.getId());
-        return toResponseDTO(saved);
-    }
-
-    public OrderResponseDTO updateOrder(Long id, OrderRequestDTO dto) {
+    public OrderResponseDTO updateOrder(Long id, OrderRequestDTO request) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
-        order.setCustomerId(dto.getCustomerId());
-        order.setProduct(dto.getProduct());
-        order.setQuantity(dto.getQuantity());
-        order.setPrice(dto.getPrice());
-        Order updated = orderRepository.save(order);
-        return toResponseDTO(updated);
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + id));
+        order.setCustomerId(request.getCustomerId());
+        order.setProductName(request.getProductName());
+        order.setPrice(request.getPrice());
+        order.setQuantity(request.getQuantity());
+        Order saved = orderRepository.save(order);
+        return toResponse(saved);
     }
 
     public void deleteOrder(Long id) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
-        orderRepository.delete(order);
+        if (!orderRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Order not found with ID: " + id);
+        }
+        orderRepository.deleteById(id);
     }
 
-    private OrderResponseDTO toResponseDTO(Order order) {
-        OrderResponseDTO dto = new OrderResponseDTO();
-        dto.setId(order.getId());
-        dto.setCustomerId(order.getCustomerId());
-        dto.setProduct(order.getProduct());
-        dto.setQuantity(order.getQuantity());
-        dto.setPrice(order.getPrice());
-        return dto;
+    private OrderResponseDTO toResponse(Order order) {
+        OrderResponseDTO response = new OrderResponseDTO();
+        response.setId(order.getId());
+        response.setCustomerId(order.getCustomerId());
+        response.setProductName(order.getProductName());
+        response.setPrice(order.getPrice());
+        response.setQuantity(order.getQuantity());
+        response.setDate(order.getDate());
+        return response;
     }
 }

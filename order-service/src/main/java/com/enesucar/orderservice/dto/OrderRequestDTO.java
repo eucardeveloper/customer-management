@@ -1,23 +1,21 @@
 package com.enesucar.orderservice.dto;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 public class OrderRequestDTO {
 
-    @NotNull
     private Long customerId;
 
-    @NotBlank
-    private String product;
+    private String productName;
 
-    @NotNull
-    @Min(1)
+    private BigDecimal price;
+
     private Integer quantity;
 
-    @NotNull
-    private Double price;
+    private LocalDateTime date;
 }

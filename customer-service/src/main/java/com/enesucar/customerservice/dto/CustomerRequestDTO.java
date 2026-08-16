@@ -1,16 +1,17 @@
 package com.enesucar.customerservice.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class CustomerRequestDTO {
 
-    @NotBlank
-    private String name;
+    private String firstName;
 
-    @NotBlank
-    @Email
+    private String lastName;
+
     private String email;
+
+    private String phone;
 }

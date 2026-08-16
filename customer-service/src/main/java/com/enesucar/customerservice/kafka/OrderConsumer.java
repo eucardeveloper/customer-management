@@ -1,13 +1,13 @@
 package com.enesucar.customerservice.kafka;
 
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
 public class OrderConsumer {
 
-    @KafkaListener(topics = "bestellung-topic", groupId = "customer-group")
-    public void consume(String message) {
-        System.out.println("Received order message: " + message);
+    @KafkaListener(topics = "order-events", groupId = "customer-group")
+    public void consumeOrderEvent(String message) {
+        System.out.println("Order event received: " + message);
     }
 }
