@@ -74,10 +74,10 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  'Tüm müşterileri listele',
-  "Enes Uçar'ın siparişleri",
-  'Yeni müşteri ekle',
-  "Hans Müller'i güncelle",
+  'List all customers',
+  "Show orders for Enes Ucar",
+  'Add new customer',
+  "Update Hans Mueller",
 ];
 
 export default function Home() {
@@ -85,7 +85,7 @@ export default function Home() {
     {
       role: 'assistant',
       content:
-        "Merhaba! Ben AI Ajan Orkestrasyon Sistemi'yim. Müşteri ve sipariş işlemlerinizde size yardımcı olabilirim. Ne yapmamı istersiniz?",
+        "Hello! I am the AI Agent Orchestration System. I can help you with customer and order operations. What would you like me to do?",
       timestamp: new Date(),
     },
   ]);
@@ -122,7 +122,7 @@ export default function Home() {
 
       const data = await response.json();
       const replyText =
-        data?.output || data?.text || data?.message || 'Yanıt alınamadı.';
+        data?.output || data?.text || data?.message || 'No response received.';
 
       setMessages((prev) => [
         ...prev,
@@ -133,7 +133,7 @@ export default function Home() {
         ...prev,
         {
           role: 'assistant',
-          content: 'Bağlantı hatası. Lütfen tekrar deneyin.',
+          content: 'Connection error. Please try again.',
           timestamp: new Date(),
         },
       ]);
@@ -150,7 +150,7 @@ export default function Home() {
   };
 
   const formatTime = (date: Date) =>
-    date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -183,20 +183,20 @@ export default function Home() {
             </Box>
             <Box sx={{ flex: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                AI Ajan Orkestrasyon Sistemi
+                AI Agent Orchestration System
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <FiberManualRecordIcon
                   sx={{ fontSize: 8, color: '#22c55e' }}
                 />
                 <Typography variant="caption" color="text.secondary">
-                  Çevrimiçi · Railway Production
+                  Online · Railway Production
                 </Typography>
               </Box>
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Chip
-                label="Kunden-Agent"
+                label="Customer-Agent"
                 size="small"
                 variant="outlined"
                 sx={{
@@ -206,7 +206,7 @@ export default function Home() {
                 }}
               />
               <Chip
-                label="Bestellungs-Agent"
+                label="Order-Agent"
                 size="small"
                 variant="outlined"
                 sx={{
@@ -322,7 +322,7 @@ export default function Home() {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <CircularProgress size={14} color="primary" />
                       <Typography variant="body2" color="text.secondary">
-                        Ajan yanıt üretiyor...
+                        Agent is generating a response...
                       </Typography>
                     </Box>
                   </Paper>
@@ -385,7 +385,7 @@ export default function Home() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Bir şey sorun... (Müşteri ekle, sil, listele, sipariş getir)"
+                placeholder="Ask something... (Add customer, delete, list, get orders)"
                 variant="standard"
                 slotProps={{ input: { disableUnderline: true } }}
                 sx={{
