@@ -3,6 +3,7 @@ package com.enesucar.orderservice.controller;
 import com.enesucar.orderservice.dto.OrderRequestDTO;
 import com.enesucar.orderservice.dto.OrderResponseDTO;
 import com.enesucar.orderservice.service.OrderService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,7 +32,7 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<OrderResponseDTO> createOrder(@RequestBody OrderRequestDTO request) {
-        return ResponseEntity.ok(orderService.createOrder(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createOrder(request));
     }
 
     @PutMapping("/{id}")
