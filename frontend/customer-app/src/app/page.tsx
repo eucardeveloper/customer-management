@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
@@ -47,11 +46,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import RefreshIcon from '@mui/icons-material/Refresh';
-
 const DRAWER_WIDTH = 240;
 const CUSTOMERS_URL = 'https://customer-service-app.up.railway.app/api/customers';
 const ORDERS_URL = 'https://orderservice-api.up.railway.app/api/orders';
-
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -97,7 +94,6 @@ const theme = createTheme({
     },
   },
 });
-
 interface Customer {
   id: number;
   firstName: string;
@@ -105,7 +101,6 @@ interface Customer {
   email: string;
   phone: string;
 }
-
 interface Order {
   id: number;
   customerId: number;
@@ -114,9 +109,7 @@ interface Order {
   quantity: number;
   date: string;
 }
-
 const emptyCustomer: Omit<Customer, 'id'> = { firstName: '', lastName: '', email: '', phone: '' };
-
 export default function Home() {
   const [tab, setTab] = useState<'customers' | 'orders'>('customers');
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -129,42 +122,37 @@ export default function Home() {
   const [isEditing, setIsEditing] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
-
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(CUSTOMERS_URL);
       const data = await res.json();
-      setCustomers(data);
+      setCustomers(Array.isArray(data) ? data : []);
     } catch {
       showSnackbar('Failed to load customers.', 'error');
     } finally {
       setLoading(false);
     }
   }, []);
-
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(ORDERS_URL);
       const data = await res.json();
-      setOrders(data);
+      setOrders(Array.isArray(data) ? data : []);
     } catch {
       showSnackbar('Failed to load orders.', 'error');
     } finally {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     if (tab === 'customers') fetchCustomers();
     else fetchOrders();
   }, [tab, fetchCustomers, fetchOrders]);
-
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   };
-
   const handleSave = async () => {
     try {
       if (isEditing && editCustomer.id) {
@@ -188,7 +176,6 @@ export default function Home() {
       showSnackbar('Operation failed.', 'error');
     }
   };
-
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
@@ -200,41 +187,36 @@ export default function Home() {
       showSnackbar('Delete failed.', 'error');
     }
   };
-
   const openAdd = () => {
     setEditCustomer(emptyCustomer);
     setIsEditing(false);
     setDialogOpen(true);
   };
-
   const openEdit = (c: Customer) => {
     setEditCustomer(c);
     setIsEditing(true);
     setDialogOpen(true);
   };
-
   const openDelete = (id: number) => {
     setDeleteId(id);
     setDeleteDialogOpen(true);
   };
-
-  const filteredCustomers = customers.filter(
-    (c) =>
-      c.firstName.toLowerCase().includes(search.toLowerCase()) ||
-      c.lastName.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
-  );
-
+  const filteredCustomers = customers.filter((c) => {
+    const q = search.toLowerCase();
+    return (
+      (c.firstName ?? '').toLowerCase().includes(q) ||
+      (c.lastName ?? '').toLowerCase().includes(q) ||
+      (c.email ?? '').toLowerCase().includes(q)
+    );
+  });
   const getCustomerName = (id: number) => {
     const c = customers.find((c) => c.id === id);
     return c ? `${c.firstName} ${c.lastName}` : `ID: ${id}`;
   };
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-
         {/* Sidebar */}
         <Drawer variant="permanent" sx={{ width: DRAWER_WIDTH, flexShrink: 0, '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' } }}>
           <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -252,7 +234,6 @@ export default function Home() {
               </Box>
             </Box>
           </Box>
-
           <List sx={{ px: 1, pt: 2 }}>
             {[
               { key: 'customers', label: 'Customers', icon: <PeopleIcon /> },
@@ -282,14 +263,12 @@ export default function Home() {
               </ListItem>
             ))}
           </List>
-
           <Box sx={{ mt: 'auto', p: 2, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.65rem' }}>
               Apache Kafka · Spring Cloud Gateway · PostgreSQL
             </Typography>
           </Box>
         </Drawer>
-
         {/* Main */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <AppBar position="sticky" elevation={0}>
@@ -304,9 +283,7 @@ export default function Home() {
               />
             </Toolbar>
           </AppBar>
-
           <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
-
             {/* Toolbar */}
             <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
               <TextField
@@ -343,7 +320,6 @@ export default function Home() {
                 </Button>
               )}
             </Box>
-
             {/* Table */}
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -380,7 +356,7 @@ export default function Home() {
                             <TableCell>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                 <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light', fontSize: '0.8rem' }}>
-                                  {c.firstName[0]}{c.lastName[0]}
+                                  {(c.firstName ?? '?')[0]}{(c.lastName ?? '?')[0]}
                                 </Avatar>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                   {c.firstName} {c.lastName}
@@ -411,7 +387,7 @@ export default function Home() {
                           </TableRow>
                         ))
                       : orders
-                          .filter((o) => o.productName.toLowerCase().includes(search.toLowerCase()))
+                          .filter((o) => (o.productName ?? '').toLowerCase().includes(search.toLowerCase()))
                           .map((o) => (
                             <TableRow key={o.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                               <TableCell>
@@ -443,7 +419,6 @@ export default function Home() {
             )}
           </Container>
         </Box>
-
         {/* Add/Edit Dialog */}
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle sx={{ fontWeight: 700 }}>
@@ -491,7 +466,6 @@ export default function Home() {
             </Button>
           </DialogActions>
         </Dialog>
-
         {/* Delete Dialog */}
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
           <DialogTitle sx={{ fontWeight: 700 }}>Delete Customer</DialogTitle>
@@ -507,7 +481,6 @@ export default function Home() {
             </Button>
           </DialogActions>
         </Dialog>
-
         {/* Snackbar */}
         <Snackbar
           open={snackbar.open}
