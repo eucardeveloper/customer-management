@@ -49,8 +49,8 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 const DRAWER_WIDTH = 240;
-const CUSTOMERS_URL = 'https://kundenverwaltung-production.up.railway.app/api/customers';
-const ORDERS_URL = 'https://bestellungservice-production.up.railway.app/api/orders';
+const CUSTOMERS_URL = 'https://customer-service-app.up.railway.app/api/customers';
+const ORDERS_URL = 'https://orderservice-api.up.railway.app/api/orders';
 
 const theme = createTheme({
   palette: {
