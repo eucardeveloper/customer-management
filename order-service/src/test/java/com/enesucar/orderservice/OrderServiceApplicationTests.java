@@ -1,13 +1,13 @@
-package com.enesucar.kundenservice;
+package com.enesucar.orderservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class KundenserviceApplicationTests {
+class OrderServiceApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
+    @Test
+    void contextLoads() {
+    }
 
 }
