@@ -37,6 +37,10 @@ import {
   InputAdornment,
   Tooltip,
   Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -46,9 +50,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import RefreshIcon from '@mui/icons-material/Refresh';
+
 const DRAWER_WIDTH = 240;
 const CUSTOMERS_URL = 'https://customer-service-app.up.railway.app/api/customers';
 const ORDERS_URL = 'https://orderservice-api.up.railway.app/api/orders';
+
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -94,6 +100,7 @@ const theme = createTheme({
     },
   },
 });
+
 interface Customer {
   id: number;
   firstName: string;
@@ -101,6 +108,7 @@ interface Customer {
   email: string;
   phone: string;
 }
+
 interface Order {
   id: number;
   customerId: number;
@@ -109,19 +117,34 @@ interface Order {
   quantity: number;
   date: string;
 }
+
 const emptyCustomer: Omit<Customer, 'id'> = { firstName: '', lastName: '', email: '', phone: '' };
+const emptyOrder = { customerId: '', productName: '', price: '', quantity: '' };
+
 export default function Home() {
   const [tab, setTab] = useState<'customers' | 'orders'>('customers');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Customer dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Partial<Customer>>(emptyCustomer);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  // Order dialog state
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [orderDeleteDialogOpen, setOrderDeleteDialogOpen] = useState(false);
+  const [editOrder, setEditOrder] = useState<typeof emptyOrder>(emptyOrder);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [editOrderId, setEditOrderId] = useState<number | null>(null);
+  const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);
+
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
@@ -134,6 +157,7 @@ export default function Home() {
       setLoading(false);
     }
   }, []);
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
@@ -146,13 +170,17 @@ export default function Home() {
       setLoading(false);
     }
   }, []);
+
   useEffect(() => {
     if (tab === 'customers') fetchCustomers();
-    else fetchOrders();
+    else { fetchOrders(); fetchCustomers(); }
   }, [tab, fetchCustomers, fetchOrders]);
+
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   };
+
+  // Customer CRUD
   const handleSave = async () => {
     try {
       if (isEditing && editCustomer.id) {
@@ -176,6 +204,7 @@ export default function Home() {
       showSnackbar('Operation failed.', 'error');
     }
   };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
@@ -187,20 +216,91 @@ export default function Home() {
       showSnackbar('Delete failed.', 'error');
     }
   };
+
+  // Order CRUD
+  const handleSaveOrder = async () => {
+    try {
+      const body = {
+        customerId: parseInt(editOrder.customerId),
+        productName: editOrder.productName,
+        price: parseFloat(editOrder.price),
+        quantity: parseInt(editOrder.quantity),
+      };
+      if (isEditingOrder && editOrderId) {
+        await fetch(`${ORDERS_URL}/${editOrderId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        showSnackbar('Order updated.', 'success');
+      } else {
+        await fetch(ORDERS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        showSnackbar('Order added.', 'success');
+      }
+      setOrderDialogOpen(false);
+      fetchOrders();
+    } catch {
+      showSnackbar('Operation failed.', 'error');
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!deleteOrderId) return;
+    try {
+      await fetch(`${ORDERS_URL}/${deleteOrderId}`, { method: 'DELETE' });
+      showSnackbar('Order deleted.', 'success');
+      setOrderDeleteDialogOpen(false);
+      fetchOrders();
+    } catch {
+      showSnackbar('Delete failed.', 'error');
+    }
+  };
+
   const openAdd = () => {
     setEditCustomer(emptyCustomer);
     setIsEditing(false);
     setDialogOpen(true);
   };
+
   const openEdit = (c: Customer) => {
     setEditCustomer(c);
     setIsEditing(true);
     setDialogOpen(true);
   };
+
   const openDelete = (id: number) => {
     setDeleteId(id);
     setDeleteDialogOpen(true);
   };
+
+  const openAddOrder = () => {
+    setEditOrder(emptyOrder);
+    setIsEditingOrder(false);
+    setEditOrderId(null);
+    setOrderDialogOpen(true);
+  };
+
+  const openEditOrder = (o: Order) => {
+    setEditOrder({
+      customerId: o.customerId.toString(),
+      productName: o.productName,
+      price: o.price.toString(),
+      quantity: o.quantity.toString(),
+    });
+    setIsEditingOrder(true);
+    setEditOrderId(o.id);
+    setOrderDialogOpen(true);
+  };
+
+  const openDeleteOrder = (id: number) => {
+    setDeleteOrderId(id);
+    setOrderDeleteDialogOpen(true);
+  };
+
   const filteredCustomers = customers.filter((c) => {
     const q = search.toLowerCase();
     return (
@@ -209,10 +309,12 @@ export default function Home() {
       (c.email ?? '').toLowerCase().includes(q)
     );
   });
+
   const getCustomerName = (id: number) => {
     const c = customers.find((c) => c.id === id);
     return c ? `${c.firstName} ${c.lastName}` : `ID: ${id}`;
   };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -269,6 +371,7 @@ export default function Home() {
             </Typography>
           </Box>
         </Drawer>
+
         {/* Main */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <AppBar position="sticky" elevation={0}>
@@ -319,7 +422,19 @@ export default function Home() {
                   New Customer
                 </Button>
               )}
+              {tab === 'orders' && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={openAddOrder}
+                  disableElevation
+                  sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                >
+                  New Order
+                </Button>
+              )}
             </Box>
+
             {/* Table */}
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -345,6 +460,7 @@ export default function Home() {
                           <TableCell>Price</TableCell>
                           <TableCell>Quantity</TableCell>
                           <TableCell>Date</TableCell>
+                          <TableCell align="right">Actions</TableCell>
                         </>
                       )}
                     </TableRow>
@@ -411,6 +527,18 @@ export default function Home() {
                                   {new Date(o.date).toLocaleDateString('en-US')}
                                 </Typography>
                               </TableCell>
+                              <TableCell align="right">
+                                <Tooltip title="Edit">
+                                  <IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: 'primary.main', mr: 0.5 }}>
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete">
+                                  <IconButton size="small" onClick={() => openDeleteOrder(o.id)} sx={{ color: 'error.main' }}>
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </TableCell>
                             </TableRow>
                           ))}
                   </TableBody>
@@ -419,7 +547,8 @@ export default function Home() {
             )}
           </Container>
         </Box>
-        {/* Add/Edit Dialog */}
+
+        {/* Customer Add/Edit Dialog */}
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle sx={{ fontWeight: 700 }}>
             {isEditing ? 'Edit Customer' : 'Add New Customer'}
@@ -466,7 +595,8 @@ export default function Home() {
             </Button>
           </DialogActions>
         </Dialog>
-        {/* Delete Dialog */}
+
+        {/* Customer Delete Dialog */}
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
           <DialogTitle sx={{ fontWeight: 700 }}>Delete Customer</DialogTitle>
           <DialogContent>
@@ -481,6 +611,80 @@ export default function Home() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Order Add/Edit Dialog */}
+        <Dialog open={orderDialogOpen} onClose={() => setOrderDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ fontWeight: 700 }}>
+            {isEditingOrder ? 'Edit Order' : 'Add New Order'}
+          </DialogTitle>
+          <Divider />
+          <DialogContent sx={{ pt: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <FormControl size="small" fullWidth>
+                <InputLabel>Customer</InputLabel>
+                <Select
+                  value={editOrder.customerId}
+                  label="Customer"
+                  onChange={(e) => setEditOrder({ ...editOrder, customerId: e.target.value })}
+                >
+                  {customers.map((c) => (
+                    <MenuItem key={c.id} value={c.id.toString()}>
+                      {c.firstName} {c.lastName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                label="Product Name"
+                fullWidth
+                size="small"
+                value={editOrder.productName}
+                onChange={(e) => setEditOrder({ ...editOrder, productName: e.target.value })}
+              />
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Price"
+                  type="number"
+                  fullWidth
+                  size="small"
+                  value={editOrder.price}
+                  onChange={(e) => setEditOrder({ ...editOrder, price: e.target.value })}
+                />
+                <TextField
+                  label="Quantity"
+                  type="number"
+                  fullWidth
+                  size="small"
+                  value={editOrder.quantity}
+                  onChange={(e) => setEditOrder({ ...editOrder, quantity: e.target.value })}
+                />
+              </Box>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setOrderDialogOpen(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveOrder} disableElevation sx={{ textTransform: 'none', fontWeight: 600 }}>
+              {isEditingOrder ? 'Update' : 'Add'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Order Delete Dialog */}
+        <Dialog open={orderDeleteDialogOpen} onClose={() => setOrderDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle sx={{ fontWeight: 700 }}>Delete Order</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary">
+              Are you sure you want to delete this order? This action cannot be undone.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setOrderDeleteDialogOpen(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
+            <Button variant="contained" color="error" onClick={handleDeleteOrder} disableElevation sx={{ textTransform: 'none', fontWeight: 600 }}>
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* Snackbar */}
         <Snackbar
           open={snackbar.open}
