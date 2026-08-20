@@ -61,7 +61,7 @@ import SendIcon from '@mui/icons-material/Send';
 const DRAWER_WIDTH = 240;
 const CUSTOMERS_URL = 'https://customer-service-app.up.railway.app/api/customers';
 const ORDERS_URL = 'https://orderservice-api.up.railway.app/api/orders';
-const AI_AGENT_URL = 'https://enesucar.app.n8n.cloud/webhook/ai-agent';
+const AI_AGENT_URL = 'https://n8n-production-53424.up.railway.app/webhook/e3f86e7c-0c58-4ac0-a8a2-a5d7c95a3fd0/chat';
 
 const theme = createTheme({
   palette: {
@@ -388,7 +388,7 @@ export default function Home() {
       const res = await fetch(AI_AGENT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, sessionId }),
+        body: JSON.stringify({ chatInput: text, sessionId }),
       });
       const data = await res.json();
       const reply = data.output || data.message || data.response || JSON.stringify(data);
