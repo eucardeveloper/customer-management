@@ -119,6 +119,7 @@ interface Order {
 }
 
 const emptyCustomer: Omit<Customer, 'id'> = { firstName: '', lastName: '', email: '', phone: '' };
+type CustomerType = 'individual' | 'company';
 const emptyOrder = { customerId: '', productName: '', price: '', quantity: '' };
 
 export default function Home() {
@@ -134,6 +135,8 @@ export default function Home() {
   const [editCustomer, setEditCustomer] = useState<Partial<Customer>>(emptyCustomer);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [customerType, setCustomerType] = useState<CustomerType>('individual');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Order dialog state
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
@@ -181,20 +184,40 @@ export default function Home() {
   };
 
   // Customer CRUD
+  const validateCustomer = () => {
+    const errors: Record<string, string> = {};
+    if (customerType === 'individual') {
+      if (!editCustomer.firstName?.trim()) errors.firstName = 'First name is required';
+      if (!editCustomer.lastName?.trim()) errors.lastName = 'Last name is required';
+    } else {
+      if (!editCustomer.firstName?.trim()) errors.firstName = 'Company name is required';
+    }
+    if (!editCustomer.email?.trim() && !editCustomer.phone?.trim()) {
+      errors.email = 'Email or phone is required';
+      errors.phone = 'Email or phone is required';
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSave = async () => {
+    if (!validateCustomer()) return;
     try {
+      const payload = customerType === 'company'
+        ? { ...editCustomer, lastName: editCustomer.lastName || '' }
+        : editCustomer;
       if (isEditing && editCustomer.id) {
         await fetch(`${CUSTOMERS_URL}/${editCustomer.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editCustomer),
+          body: JSON.stringify(payload),
         });
         showSnackbar('Customer updated.', 'success');
       } else {
         await fetch(CUSTOMERS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editCustomer),
+          body: JSON.stringify(payload),
         });
         showSnackbar('Customer added.', 'success');
       }
@@ -263,12 +286,17 @@ export default function Home() {
   const openAdd = () => {
     setEditCustomer(emptyCustomer);
     setIsEditing(false);
+    setCustomerType('individual');
+    setFormErrors({});
     setDialogOpen(true);
   };
 
   const openEdit = (c: Customer) => {
     setEditCustomer(c);
     setIsEditing(true);
+    setFormErrors({});
+    // if lastName is empty, treat as company
+    setCustomerType(c.lastName?.trim() ? 'individual' : 'company');
     setDialogOpen(true);
   };
 
@@ -556,35 +584,76 @@ export default function Home() {
           <Divider />
           <DialogContent sx={{ pt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              {/* Customer Type Toggle */}
+              <FormControl size="small" fullWidth>
+                <InputLabel>Customer Type</InputLabel>
+                <Select
+                  value={customerType}
+                  label="Customer Type"
+                  onChange={(e) => {
+                    setCustomerType(e.target.value as CustomerType);
+                    setFormErrors({});
+                    if (e.target.value === 'company') {
+                      setEditCustomer((prev) => ({ ...prev, lastName: '' }));
+                    }
+                  }}
+                >
+                  <MenuItem value="individual">Individual (Person)</MenuItem>
+                  <MenuItem value="company">Company / Organization</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Name Fields */}
+              {customerType === 'individual' ? (
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    label="First Name *"
+                    fullWidth
+                    size="small"
+                    value={editCustomer.firstName || ''}
+                    onChange={(e) => { setEditCustomer({ ...editCustomer, firstName: e.target.value }); setFormErrors((p) => ({ ...p, firstName: '' })); }}
+                    error={!!formErrors.firstName}
+                    helperText={formErrors.firstName}
+                  />
+                  <TextField
+                    label="Last Name *"
+                    fullWidth
+                    size="small"
+                    value={editCustomer.lastName || ''}
+                    onChange={(e) => { setEditCustomer({ ...editCustomer, lastName: e.target.value }); setFormErrors((p) => ({ ...p, lastName: '' })); }}
+                    error={!!formErrors.lastName}
+                    helperText={formErrors.lastName}
+                  />
+                </Box>
+              ) : (
                 <TextField
-                  label="First Name"
+                  label="Company Name *"
                   fullWidth
                   size="small"
                   value={editCustomer.firstName || ''}
-                  onChange={(e) => setEditCustomer({ ...editCustomer, firstName: e.target.value })}
+                  onChange={(e) => { setEditCustomer({ ...editCustomer, firstName: e.target.value }); setFormErrors((p) => ({ ...p, firstName: '' })); }}
+                  error={!!formErrors.firstName}
+                  helperText={formErrors.firstName}
                 />
-                <TextField
-                  label="Last Name"
-                  fullWidth
-                  size="small"
-                  value={editCustomer.lastName || ''}
-                  onChange={(e) => setEditCustomer({ ...editCustomer, lastName: e.target.value })}
-                />
-              </Box>
+              )}
+
               <TextField
-                label="Email"
+                label={`Email${!editCustomer.phone?.trim() ? ' *' : ''}`}
                 fullWidth
                 size="small"
                 value={editCustomer.email || ''}
-                onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })}
+                onChange={(e) => { setEditCustomer({ ...editCustomer, email: e.target.value }); setFormErrors((p) => ({ ...p, email: '', phone: '' })); }}
+                error={!!formErrors.email}
+                helperText={formErrors.email || 'Email or phone — at least one required'}
               />
               <TextField
-                label="Phone"
+                label={`Phone${!editCustomer.email?.trim() ? ' *' : ''}`}
                 fullWidth
                 size="small"
                 value={editCustomer.phone || ''}
-                onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })}
+                onChange={(e) => { setEditCustomer({ ...editCustomer, phone: e.target.value }); setFormErrors((p) => ({ ...p, email: '', phone: '' })); }}
+                error={!!formErrors.phone}
+                helperText={formErrors.phone}
               />
             </Box>
           </DialogContent>
