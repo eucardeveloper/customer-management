@@ -43,7 +43,6 @@ import {
   InputLabel,
   Card,
   CardContent,
-  Grid,
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -517,27 +516,25 @@ export default function Home() {
           <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
 
             {/* Stats Cards — always visible */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 3 }}>
               {statCards.map((s) => (
-                <Grid item xs={12} sm={6} md={3} key={s.label}>
-                  <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
-                    <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: '16px !important' }}>
-                      <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}>
-                        {s.icon}
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          {s.label}
-                        </Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, color: '#0f172a' }}>
-                          {s.value}
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                <Card key={s.label} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
+                  <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: '16px !important' }}>
+                    <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}>
+                      {s.icon}
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {s.label}
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, color: '#0f172a' }}>
+                        {s.value}
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
               ))}
-            </Grid>
+            </Box>
 
             {/* AI AGENT TAB */}
             {tab === 'ai' && (
