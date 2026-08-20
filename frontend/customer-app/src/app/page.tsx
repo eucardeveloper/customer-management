@@ -41,6 +41,9 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Card,
+  CardContent,
+  Grid,
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -50,10 +53,16 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import SendIcon from '@mui/icons-material/Send';
 
 const DRAWER_WIDTH = 240;
 const CUSTOMERS_URL = 'https://customer-service-app.up.railway.app/api/customers';
 const ORDERS_URL = 'https://orderservice-api.up.railway.app/api/orders';
+const AI_AGENT_URL = 'https://enesucar.app.n8n.cloud/webhook/ai-agent';
 
 const theme = createTheme({
   palette: {
@@ -118,12 +127,24 @@ interface Order {
   date: string;
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 const emptyCustomer: Omit<Customer, 'id'> = { firstName: '', lastName: '', email: '', phone: '' };
 type CustomerType = 'individual' | 'company';
 const emptyOrder = { customerId: '', productName: '', price: '', quantity: '' };
 
+const QUICK_QUESTIONS = [
+  'En pahalı siparişi kim verdi?',
+  'Toplam kaç sipariş var?',
+  'En son eklenen müşteri kim?',
+  'En ucuz siparişi sil',
+];
+
 export default function Home() {
-  const [tab, setTab] = useState<'customers' | 'orders'>('customers');
+  const [tab, setTab] = useState<'customers' | 'orders' | 'ai'>('customers');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
@@ -145,6 +166,12 @@ export default function Home() {
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editOrderId, setEditOrderId] = useState<number | null>(null);
   const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);
+
+  // AI Agent state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [sessionId] = useState(() => `session-${Date.now()}`);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
@@ -175,13 +202,22 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    fetchCustomers();
+    fetchOrders();
+  }, [fetchCustomers, fetchOrders]);
+
+  useEffect(() => {
     if (tab === 'customers') fetchCustomers();
-    else { fetchOrders(); fetchCustomers(); }
+    else if (tab === 'orders') { fetchOrders(); fetchCustomers(); }
   }, [tab, fetchCustomers, fetchOrders]);
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   };
+
+  // Stats
+  const totalRevenue = orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
+  const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
 
   // Customer CRUD
   const validateCustomer = () => {
@@ -295,7 +331,6 @@ export default function Home() {
     setEditCustomer(c);
     setIsEditing(true);
     setFormErrors({});
-    // if lastName is empty, treat as company
     setCustomerType(c.lastName?.trim() ? 'individual' : 'company');
     setDialogOpen(true);
   };
@@ -343,6 +378,60 @@ export default function Home() {
     return c ? `${c.firstName} ${c.lastName}` : `ID: ${id}`;
   };
 
+  // AI Agent chat
+  const sendMessage = async (text: string) => {
+    if (!text.trim()) return;
+    const userMsg: ChatMessage = { role: 'user', content: text };
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatInput('');
+    setChatLoading(true);
+    try {
+      const res = await fetch(AI_AGENT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, sessionId }),
+      });
+      const data = await res.json();
+      const reply = data.output || data.message || data.response || JSON.stringify(data);
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+    } catch {
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: '⚠️ AI Agent bağlantısı kurulamadı.' }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const statCards = [
+    {
+      label: 'Total Customers',
+      value: customers.length,
+      icon: <PeopleIcon />,
+      color: '#1d4ed8',
+      bg: '#eff6ff',
+    },
+    {
+      label: 'Total Orders',
+      value: orders.length,
+      icon: <ReceiptIcon />,
+      color: '#7c3aed',
+      bg: '#f5f3ff',
+    },
+    {
+      label: 'Total Revenue',
+      value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+      icon: <AttachMoneyIcon />,
+      color: '#059669',
+      bg: '#f0fdf4',
+    },
+    {
+      label: 'Avg Order Value',
+      value: avgOrderValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+      icon: <TrendingUpIcon />,
+      color: '#d97706',
+      bg: '#fffbeb',
+    },
+  ];
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -356,7 +445,7 @@ export default function Home() {
               </Box>
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }} color="white">
-                  Customer Management
+                  Customer Mgmt
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>
                   Microservices · Railway
@@ -366,28 +455,38 @@ export default function Home() {
           </Box>
           <List sx={{ px: 1, pt: 2 }}>
             {[
-              { key: 'customers', label: 'Customers', icon: <PeopleIcon /> },
-              { key: 'orders', label: 'Orders', icon: <ShoppingCartIcon /> },
+              { key: 'customers', label: 'Customers', icon: <PeopleIcon />, count: customers.length },
+              { key: 'orders', label: 'Orders', icon: <ShoppingCartIcon />, count: orders.length },
+              { key: 'ai', label: 'AI Agent', icon: <SmartToyIcon />, count: null },
             ].map((item) => (
               <ListItem key={item.key} disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton
                   selected={tab === item.key}
-                  onClick={() => setTab(item.key as 'customers' | 'orders')}
+                  onClick={() => setTab(item.key as 'customers' | 'orders' | 'ai')}
                   sx={{
                     borderRadius: 2,
                     color: 'rgba(255,255,255,0.6)',
                     '&.Mui-selected': {
-                      bgcolor: 'rgba(59,130,246,0.2)',
-                      color: '#93c5fd',
-                      '& .MuiListItemIcon-root': { color: '#93c5fd' },
+                      bgcolor: item.key === 'ai' ? 'rgba(124,58,237,0.2)' : 'rgba(59,130,246,0.2)',
+                      color: item.key === 'ai' ? '#c4b5fd' : '#93c5fd',
+                      '& .MuiListItemIcon-root': { color: item.key === 'ai' ? '#c4b5fd' : '#93c5fd' },
                     },
                     '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', color: 'white' },
                   }}
                 >
                   <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.label} slotProps={{ primary: { style: { fontSize: "0.875rem", fontWeight: 500 } } }} />
-                  {item.key === 'customers' && (
-                    <Chip label={customers.length} size="small" sx={{ bgcolor: 'rgba(59,130,246,0.3)', color: '#93c5fd', fontSize: '0.7rem', height: 20 }} />
+                  <ListItemText primary={item.label} slotProps={{ primary: { style: { fontSize: '0.875rem', fontWeight: 500 } } }} />
+                  {item.count !== null && (
+                    <Chip
+                      label={item.count}
+                      size="small"
+                      sx={{
+                        bgcolor: 'rgba(59,130,246,0.3)',
+                        color: '#93c5fd',
+                        fontSize: '0.7rem',
+                        height: 20,
+                      }}
+                    />
                   )}
                 </ListItemButton>
               </ListItem>
@@ -395,7 +494,7 @@ export default function Home() {
           </List>
           <Box sx={{ mt: 'auto', p: 2, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.65rem' }}>
-              Apache Kafka · Spring Cloud Gateway · PostgreSQL
+              Kafka · Spring Cloud Gateway · PostgreSQL
             </Typography>
           </Box>
         </Drawer>
@@ -405,7 +504,7 @@ export default function Home() {
           <AppBar position="sticky" elevation={0}>
             <Toolbar>
               <Typography variant="h6" sx={{ fontWeight: 700, flex: 1, fontSize: '1rem' }}>
-                {tab === 'customers' ? 'Customers' : 'Orders'}
+                {tab === 'customers' ? 'Customers' : tab === 'orders' ? 'Orders' : 'AI Agent'}
               </Typography>
               <Chip
                 label="● Live"
@@ -414,164 +513,314 @@ export default function Home() {
               />
             </Toolbar>
           </AppBar>
-          <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
-            {/* Toolbar */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
-              <TextField
-                size="small"
-                placeholder={tab === 'customers' ? 'Search by name or email...' : 'Search product...'}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon sx={{ fontSize: 18, color: 'grey.400' }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ width: 320, bgcolor: 'white', borderRadius: 2 }}
-              />
-              <Box sx={{ flex: 1 }} />
-              <Tooltip title="Refresh">
-                <IconButton onClick={() => tab === 'customers' ? fetchCustomers() : fetchOrders()} size="small">
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-              {tab === 'customers' && (
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={openAdd}
-                  disableElevation
-                  sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                >
-                  New Customer
-                </Button>
-              )}
-              {tab === 'orders' && (
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={openAddOrder}
-                  disableElevation
-                  sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                >
-                  New Order
-                </Button>
-              )}
-            </Box>
 
-            {/* Table */}
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                <CircularProgress color="primary" />
+          <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
+
+            {/* Stats Cards — always visible */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              {statCards.map((s) => (
+                <Grid item xs={12} sm={6} md={3} key={s.label}>
+                  <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
+                    <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: '16px !important' }}>
+                      <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}>
+                        {s.icon}
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {s.label}
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, color: '#0f172a' }}>
+                          {s.value}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
+            {/* AI AGENT TAB */}
+            {tab === 'ai' && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 280px)', gap: 2 }}>
+                {/* Quick questions */}
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {QUICK_QUESTIONS.map((q) => (
+                    <Chip
+                      key={q}
+                      label={q}
+                      clickable
+                      onClick={() => sendMessage(q)}
+                      icon={<SmartToyIcon sx={{ fontSize: '14px !important' }} />}
+                      sx={{
+                        bgcolor: '#f5f3ff',
+                        color: '#7c3aed',
+                        border: '1px solid #e9d5ff',
+                        fontWeight: 500,
+                        fontSize: '0.8rem',
+                        '&:hover': { bgcolor: '#ede9fe' },
+                      }}
+                    />
+                  ))}
+                </Box>
+
+                {/* Chat area */}
+                <Paper
+                  elevation={0}
+                  sx={{
+                    flex: 1,
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 2,
+                    p: 2,
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    bgcolor: '#fafafa',
+                  }}
+                >
+                  {chatMessages.length === 0 && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 1 }}>
+                      <Box sx={{ width: 56, height: 56, borderRadius: 3, bgcolor: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <SmartToyIcon sx={{ fontSize: 28, color: '#7c3aed' }} />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                        AI Agent hazır
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Müşteri ve sipariş verileriniz hakkında sorular sorabilirsiniz
+                      </Typography>
+                    </Box>
+                  )}
+                  {chatMessages.map((msg, i) => (
+                    <Box
+                      key={i}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          maxWidth: '75%',
+                          px: 2,
+                          py: 1.2,
+                          borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                          bgcolor: msg.role === 'user' ? '#1d4ed8' : '#ffffff',
+                          color: msg.role === 'user' ? 'white' : '#1e293b',
+                          border: msg.role === 'assistant' ? '1px solid #e2e8f0' : 'none',
+                          boxShadow: msg.role === 'assistant' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                          {msg.content}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                  {chatLoading && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} sx={{ color: '#7c3aed' }} />
+                      <Typography variant="caption" color="text.secondary">AI düşünüyor...</Typography>
+                    </Box>
+                  )}
+                </Paper>
+
+                {/* Input */}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Bir soru sor... (örn: En pahalı siparişi kim verdi?)"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(chatInput); } }}
+                    disabled={chatLoading}
+                    sx={{ bgcolor: 'white', borderRadius: 2 }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={() => sendMessage(chatInput)}
+                    disabled={chatLoading || !chatInput.trim()}
+                    disableElevation
+                    sx={{ borderRadius: 2, minWidth: 48, px: 2, bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }}
+                  >
+                    <SendIcon fontSize="small" />
+                  </Button>
+                </Box>
               </Box>
-            ) : (
-              <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      {tab === 'customers' ? (
-                        <>
-                          <TableCell>Customer</TableCell>
-                          <TableCell>Email</TableCell>
-                          <TableCell>Phone</TableCell>
-                          <TableCell>ID</TableCell>
-                          <TableCell align="right">Actions</TableCell>
-                        </>
-                      ) : (
-                        <>
-                          <TableCell>Product</TableCell>
-                          <TableCell>Customer</TableCell>
-                          <TableCell>Price</TableCell>
-                          <TableCell>Quantity</TableCell>
-                          <TableCell>Date</TableCell>
-                          <TableCell align="right">Actions</TableCell>
-                        </>
-                      )}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {tab === 'customers'
-                      ? filteredCustomers.map((c) => (
-                          <TableRow key={c.id} hover sx={{ '&:last-child td': { border: 0 } }}>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light', fontSize: '0.8rem' }}>
-                                  {(c.firstName ?? '?')[0]}{(c.lastName ?? '?')[0]}
-                                </Avatar>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  {c.firstName} {c.lastName}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="text.secondary">{c.email}</Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="text.secondary">{c.phone}</Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Chip label={`#${c.id}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontSize: '0.7rem' }} />
-                            </TableCell>
-                            <TableCell align="right">
-                              <Tooltip title="Edit">
-                                <IconButton size="small" onClick={() => openEdit(c)} sx={{ color: 'primary.main', mr: 0.5 }}>
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete">
-                                <IconButton size="small" onClick={() => openDelete(c.id)} sx={{ color: 'error.main' }}>
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      : orders
-                          .filter((o) => (o.productName ?? '').toLowerCase().includes(search.toLowerCase()))
-                          .map((o) => (
-                            <TableRow key={o.id} hover sx={{ '&:last-child td': { border: 0 } }}>
-                              <TableCell>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{o.productName}</Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" color="text.secondary">{getCustomerName(o.customerId)}</Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Chip
-                                  label={`${o.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`}
-                                  size="small"
-                                  sx={{ bgcolor: '#f0fdf4', color: '#16a34a', fontWeight: 600, fontSize: '0.75rem' }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">{o.quantity} pcs</Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" color="text.secondary">
-                                  {new Date(o.date).toLocaleDateString('en-US')}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="right">
-                                <Tooltip title="Edit">
-                                  <IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: 'primary.main', mr: 0.5 }}>
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton size="small" onClick={() => openDeleteOrder(o.id)} sx={{ color: 'error.main' }}>
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+            )}
+
+            {/* CUSTOMERS & ORDERS TABS */}
+            {tab !== 'ai' && (
+              <>
+                {/* Toolbar */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
+                  <TextField
+                    size="small"
+                    placeholder={tab === 'customers' ? 'Search by name or email...' : 'Search product...'}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon sx={{ fontSize: 18, color: 'grey.400' }} />
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                    sx={{ width: 320, bgcolor: 'white', borderRadius: 2 }}
+                  />
+                  <Box sx={{ flex: 1 }} />
+                  <Tooltip title="Refresh">
+                    <IconButton onClick={() => tab === 'customers' ? fetchCustomers() : fetchOrders()} size="small">
+                      <RefreshIcon />
+                    </IconButton>
+                  </Tooltip>
+                  {tab === 'customers' && (
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={openAdd}
+                      disableElevation
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                    >
+                      New Customer
+                    </Button>
+                  )}
+                  {tab === 'orders' && (
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={openAddOrder}
+                      disableElevation
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                    >
+                      New Order
+                    </Button>
+                  )}
+                </Box>
+
+                {/* Table */}
+                {loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                    <CircularProgress color="primary" />
+                  </Box>
+                ) : (
+                  <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          {tab === 'customers' ? (
+                            <>
+                              <TableCell>Customer</TableCell>
+                              <TableCell>Email</TableCell>
+                              <TableCell>Phone</TableCell>
+                              <TableCell>ID</TableCell>
+                              <TableCell align="right">Actions</TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell>Product</TableCell>
+                              <TableCell>Customer</TableCell>
+                              <TableCell>Unit Price</TableCell>
+                              <TableCell>Qty</TableCell>
+                              <TableCell>Total</TableCell>
+                              <TableCell>Date</TableCell>
+                              <TableCell align="right">Actions</TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {tab === 'customers'
+                          ? filteredCustomers.map((c) => (
+                              <TableRow key={c.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                                <TableCell>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light', fontSize: '0.8rem' }}>
+                                      {(c.firstName ?? '?')[0]}{(c.lastName ?? '?')[0]}
+                                    </Avatar>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {c.firstName} {c.lastName}
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2" color="text.secondary">{c.email}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2" color="text.secondary">{c.phone}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Chip label={`#${c.id}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontSize: '0.7rem' }} />
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Tooltip title="Edit">
+                                    <IconButton size="small" onClick={() => openEdit(c)} sx={{ color: 'primary.main', mr: 0.5 }}>
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete">
+                                    <IconButton size="small" onClick={() => openDelete(c.id)} sx={{ color: 'error.main' }}>
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          : orders
+                              .filter((o) => (o.productName ?? '').toLowerCase().includes(search.toLowerCase()))
+                              .map((o) => (
+                                <TableRow key={o.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                                  <TableCell>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{o.productName}</Typography>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: '#e0e7ff', color: '#4338ca' }}>
+                                        {getCustomerName(o.customerId)[0]}
+                                      </Avatar>
+                                      <Typography variant="body2" color="text.secondary">{getCustomerName(o.customerId)}</Typography>
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography variant="body2">{o.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Chip label={`${o.quantity} pcs`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontSize: '0.7rem' }} />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Chip
+                                      label={(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                                      size="small"
+                                      sx={{ bgcolor: '#f0fdf4', color: '#16a34a', fontWeight: 700, fontSize: '0.75rem' }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {new Date(o.date).toLocaleDateString('en-US')}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell align="right">
+                                    <Tooltip title="Edit">
+                                      <IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: 'primary.main', mr: 0.5 }}>
+                                        <EditIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Delete">
+                                      <IconButton size="small" onClick={() => openDeleteOrder(o.id)} sx={{ color: 'error.main' }}>
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </>
             )}
           </Container>
         </Box>
@@ -584,7 +833,6 @@ export default function Home() {
           <Divider />
           <DialogContent sx={{ pt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-              {/* Customer Type Toggle */}
               <FormControl size="small" fullWidth>
                 <InputLabel>Customer Type</InputLabel>
                 <Select
@@ -602,8 +850,6 @@ export default function Home() {
                   <MenuItem value="company">Company / Organization</MenuItem>
                 </Select>
               </FormControl>
-
-              {/* Name Fields */}
               {customerType === 'individual' ? (
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <TextField
@@ -636,7 +882,6 @@ export default function Home() {
                   helperText={formErrors.firstName}
                 />
               )}
-
               <TextField
                 label={`Email${!editCustomer.phone?.trim() ? ' *' : ''}`}
                 fullWidth
