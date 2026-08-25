@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import AppHeader from "@/components/AppHeader";
 
 export const metadata: Metadata = {
   title: "Customer Management System",
@@ -12,7 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, padding: 0 }}>{children}</body>
+      <body style={{ margin: 0, padding: 0 }}>
+        <AppHeader />
+        <div style={{ marginTop: 64 }}>{children}</div>
+      </body>
     </html>
   );
 }

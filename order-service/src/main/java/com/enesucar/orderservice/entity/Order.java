@@ -25,4 +25,6 @@ public class Order {
     private Integer quantity;
 
     private LocalDateTime date;
+	
+	private String status;
 }

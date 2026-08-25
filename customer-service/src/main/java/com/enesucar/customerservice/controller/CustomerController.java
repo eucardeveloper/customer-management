@@ -1,5 +1,6 @@
 package com.enesucar.customerservice.controller;
 
+import jakarta.validation.Valid;
 import com.enesucar.customerservice.dto.CustomerRequestDTO;
 import com.enesucar.customerservice.dto.CustomerResponseDTO;
 import com.enesucar.customerservice.service.CustomerService;
@@ -29,14 +30,14 @@ public class CustomerController {
     }
 
     @PostMapping
-    public ResponseEntity<CustomerResponseDTO> createCustomer(@RequestBody CustomerRequestDTO request) {
+    public ResponseEntity<CustomerResponseDTO> createCustomer(@RequestBody @Valid CustomerRequestDTO request) {
         return ResponseEntity.ok(customerService.createCustomer(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CustomerResponseDTO> updateCustomer(@PathVariable Long id, @RequestBody CustomerRequestDTO request) {
-        return ResponseEntity.ok(customerService.updateCustomer(id, request));
-    }
+	public ResponseEntity<CustomerResponseDTO> updateCustomer(@PathVariable Long id, @RequestBody @Valid CustomerRequestDTO request) {
+    return ResponseEntity.ok(customerService.updateCustomer(id, request));
+}
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {

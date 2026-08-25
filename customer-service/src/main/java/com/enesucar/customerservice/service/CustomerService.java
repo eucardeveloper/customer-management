@@ -32,6 +32,7 @@ public class CustomerService {
         customer.setLastName(request.getLastName());
         customer.setEmail(request.getEmail());
         customer.setPhone(request.getPhone());
+		customer.setCustomerType(request.getCustomerType());
         Customer saved = customerRepository.save(customer);
         return toResponse(saved);
     }
@@ -49,6 +50,7 @@ public class CustomerService {
         customer.setLastName(request.getLastName());
         customer.setEmail(request.getEmail());
         customer.setPhone(request.getPhone());
+		customer.setCustomerType(request.getCustomerType());
         Customer saved = customerRepository.save(customer);
         return toResponse(saved);
     }
@@ -67,6 +69,7 @@ public class CustomerService {
         response.setLastName(customer.getLastName());
         response.setEmail(customer.getEmail());
         response.setPhone(customer.getPhone());
+		response.setCustomerType(customer.getCustomerType());
         return response;
     }
 }

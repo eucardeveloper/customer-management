@@ -36,6 +36,7 @@ public class OrderService {
         order.setPrice(request.getPrice());
         order.setQuantity(request.getQuantity());
         order.setDate(LocalDateTime.now());
+		order.setStatus(request.getStatus() != null ? request.getStatus() : "PENDING");
         Order saved = orderRepository.save(order);
         orderProducer.sendOrderEvent("Order created: " + saved.getId());
         return toResponse(saved);
@@ -52,6 +53,7 @@ public class OrderService {
         order.setProductName(request.getProductName());
         order.setPrice(request.getPrice());
         order.setQuantity(request.getQuantity());
+		if (request.getStatus() != null) order.setStatus(request.getStatus());
         Order saved = orderRepository.save(order);
         return toResponse(saved);
     }
@@ -69,6 +71,7 @@ public class OrderService {
         response.setPrice(order.getPrice());
         response.setQuantity(order.getQuantity());
         response.setDate(order.getDate());
+		response.setStatus(order.getStatus());
         return response;
     }
 }
