@@ -187,8 +187,34 @@ services:
     volumes:
       - n8n-data:/home/node/.n8n
 
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - auth-backend
+      - customer-backend
+      - order-backend
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3002:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-data:/var/lib/grafana
 volumes:
   customer-db-data:
   order-db-data:
   auth-db-data:
   n8n-data:
+  grafana-data:
