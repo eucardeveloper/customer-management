@@ -1,4 +1,4 @@
-name: Java CI
+name: CI
 
 on:
   push:
@@ -7,23 +7,59 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  auth-service:
+    name: Auth Service Tests
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('auth-service/pom.xml') }}
+      - name: Run Auth Service Tests
+        run: mvn test --no-transfer-progress
+        working-directory: auth-service
 
-      - name: Build Kunden Service
-        run: mvn clean install -DskipTests -f kundenservice/pom.xml
+  customer-service:
+    name: Customer Service Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('customer-service/pom.xml') }}
+      - name: Run Customer Service Tests
+        run: mvn test --no-transfer-progress
+        working-directory: customer-service
 
-      - name: Build Bestellung Service
-        run: mvn clean install -DskipTests -f bestellungservice/pom.xml
-
-      - name: Build API Gateway
-        run: mvn clean install -DskipTests -f apigateway/pom.xml
+  order-service:
+    name: Order Service Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('order-service/pom.xml') }}
+      - name: Run Order Service Tests
+        run: mvn test --no-transfer-progress
+        working-directory: order-service
