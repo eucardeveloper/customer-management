@@ -35,8 +35,7 @@ public class OrderService {
         order.setProductName(request.getProductName());
         order.setPrice(request.getPrice());
         order.setQuantity(request.getQuantity());
-        order.setDate(LocalDateTime.now());
-		order.setStatus(request.getStatus() != null ? request.getStatus() : "PENDING");
+        order.setDate(request.getDate() != null ? request.getDate() : LocalDateTime.now());		order.setStatus(request.getStatus() != null ? request.getStatus() : "PENDING");
         Order saved = orderRepository.save(order);
         orderProducer.sendOrderEvent("Order created: " + saved.getId());
         return toResponse(saved);

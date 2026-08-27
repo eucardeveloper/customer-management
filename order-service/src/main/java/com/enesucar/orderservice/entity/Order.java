@@ -20,6 +20,7 @@ public class Order {
 
     private String productName;
 
+    @Column(precision = 19, scale = 10)
     private BigDecimal price;
 
     private Integer quantity;

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Box,
   Button,
@@ -14,11 +15,10 @@ import {
   Typography,
   IconButton,
   Alert,
-  Link,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import PersonIcon from '@mui/icons-material/Person';
-import EmailIcon from '@mui/icons-material/Email';
+import PersonOutlineIcon from '@mui/icons-material/Person';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
@@ -26,20 +26,28 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ username: '', email: '', password: '', confirm: '' });
+  const [mounted, setMounted] = useState(false);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (form.password !== form.confirm) {
+    if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    if (form.password.length < 6) {
+    if (password.length < 6) {
       setError('Password must be at least 6 characters');
       return;
     }
@@ -49,11 +57,7 @@ export default function RegisterPage() {
       const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: form.username,
-          email: form.email,
-          password: form.password,
-        }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       if (!res.ok) {
@@ -61,13 +65,16 @@ export default function RegisterPage() {
         throw new Error(body.message || 'Registration failed');
       }
 
-      router.push('/login?registered=true');
+      setSuccess(true);
+      setTimeout(() => router.push('/login'), 2000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
+
+  if (!mounted) return null;
 
   return (
     <Box
@@ -76,112 +83,138 @@ export default function RegisterPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565c0 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1a237e 100%)',
         p: 2,
       }}
     >
-      <Card elevation={24} sx={{ width: '100%', maxWidth: 420, borderRadius: 3 }}>
+      <Card elevation={24} sx={{ width: '100%', maxWidth: 440, borderRadius: 3 }}>
         <CardContent sx={{ p: 5 }}>
+          {/* Logo */}
           <Stack alignItems="center" spacing={1} mb={4}>
             <Box
               sx={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #1565c0, #283593)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 24px rgba(21,101,192,0.4)',
+                width: 64, height: 64, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(99,102,241,0.4)',
               }}
             >
-              <LockOutlinedIcon sx={{ color: '#fff', fontSize: 32 }} />
+              <PersonOutlineIcon sx={{ color: '#fff', fontSize: 32 }} />
             </Box>
-            <Typography variant="h5" fontWeight={700}>
+            <Typography variant="h5" fontWeight={700} color="text.primary">
               Create Account
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Customer Management System
+              Join the CRM Platform
             </Typography>
           </Stack>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-              {error}
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>
+          )}
+          {success && (
+            <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+              Account created! Redirecting to login…
             </Alert>
           )}
 
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <Stack spacing={2.5}>
               <TextField
-                label="Username"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 fullWidth
                 autoFocus
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PersonIcon color="action" />
-                    </InputAdornment>
-                  ),
+                autoComplete="username"
+                variant="outlined"
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PersonOutlineIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  },
                 }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
 
               <TextField
-                label="Email"
+                placeholder="Email address"
                 type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <EmailIcon color="action" />
-                    </InputAdornment>
-                  ),
+                autoComplete="email"
+                variant="outlined"
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <EmailOutlinedIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  },
                 }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
 
               <TextField
-                label="Password"
+                placeholder="Password"
                 type={showPassword ? 'text' : 'password'}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockOutlinedIcon color="action" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setShowPassword((s) => !s)} edge="end" tabIndex={-1}>
-                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
+                autoComplete="new-password"
+                variant="outlined"
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockOutlinedIcon color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowPassword((s) => !s)} edge="end" tabIndex={-1}>
+                          {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
                 }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
 
               <TextField
-                label="Confirm Password"
-                type={showPassword ? 'text' : 'password'}
-                value={form.confirm}
-                onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                placeholder="Confirm password"
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockOutlinedIcon color="action" />
-                    </InputAdornment>
-                  ),
+                autoComplete="new-password"
+                variant="outlined"
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockOutlinedIcon color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowConfirm((s) => !s)} edge="end" tabIndex={-1}>
+                          {showConfirm ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
                 }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
 
               <Button
@@ -189,27 +222,24 @@ export default function RegisterPage() {
                 variant="contained"
                 size="large"
                 fullWidth
-                disabled={loading || !form.username || !form.email || !form.password || !form.confirm}
+                disabled={loading || !username || !password || !confirmPassword || success}
                 sx={{
-                  py: 1.5,
-                  borderRadius: 2,
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                  background: 'linear-gradient(135deg, #1565c0, #283593)',
-                  '&:hover': { background: 'linear-gradient(135deg, #0d47a1, #1a237e)' },
+                  py: 1.5, borderRadius: 2, fontWeight: 600, fontSize: '1rem', mt: 0.5,
+                  background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                  '&:hover': { background: 'linear-gradient(135deg, #4f46e5, #4338ca)' },
                 }}
               >
                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
               </Button>
-
-              <Typography variant="body2" align="center" color="text.secondary">
-                Already have an account?{' '}
-                <Link href="/login" underline="hover" sx={{ fontWeight: 600, color: '#1565c0' }}>
-                  Sign in
-                </Link>
-              </Typography>
             </Stack>
           </Box>
+
+          <Typography variant="body2" align="center" sx={{ mt: 3, color: 'text.secondary' }}>
+            Already have an account?{' '}
+            <Link href="/login" style={{ color: '#6366f1', fontWeight: 600, textDecoration: 'none' }}>
+              Sign in
+            </Link>
+          </Typography>
         </CardContent>
       </Card>
     </Box>

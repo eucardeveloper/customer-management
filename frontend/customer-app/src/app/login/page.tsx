@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -32,11 +32,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export default function LoginPage() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => { setMounted(true); }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -65,6 +68,8 @@ export default function LoginPage() {
     }
   };
 
+  if (!mounted) return null;
+
   return (
     <Box
       sx={{
@@ -76,108 +81,69 @@ export default function LoginPage() {
         p: 2,
       }}
     >
-      <Card
-        elevation={24}
-        sx={{
-          width: '100%',
-          maxWidth: 420,
-          borderRadius: 3,
-          overflow: 'visible',
-        }}
-      >
+      <Card elevation={24} sx={{ width: '100%', maxWidth: 420, borderRadius: 3, overflow: 'visible' }}>
         <CardContent sx={{ p: 5 }}>
-          {/* Logo / Icon */}
-          <Stack alignItems="center" spacing={1} mb={4}>
-            <Box
-              sx={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #1565c0, #283593)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 24px rgba(21,101,192,0.4)',
-              }}
-            >
+          {/* Logo */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 4 }}>
+            <Box sx={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #1565c0, #283593)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 8px 24px rgba(21,101,192,0.4)',
+            }}>
               <LockOutlinedIcon sx={{ color: '#fff', fontSize: 32 }} />
             </Box>
-            <Typography variant="h5" fontWeight={700} color="text.primary">
-              Customer Management
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Sign in to your account
-            </Typography>
-          </Stack>
+            <Typography variant="h5" fontWeight={700} color="text.primary">Customer Management</Typography>
+            <Typography variant="body2" color="text.secondary">Sign in to your account</Typography>
+          </Box>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-              {error}
-            </Alert>
-          )}
+          {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
 
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <Stack spacing={3}>
               <TextField
-                label="Username"
+                placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                required
-                fullWidth
-                autoFocus
-                autoComplete="username"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PersonOutlineIcon color="action" />
-                    </InputAdornment>
-                  ),
+                required fullWidth autoFocus autoComplete="username" variant="outlined"
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start"><PersonOutlineIcon color="action" /></InputAdornment>
+                    ),
+                  },
                 }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
-
               <TextField
-                label="Password"
+                placeholder="Password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
-                fullWidth
-                autoComplete="current-password"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockOutlinedIcon color="action" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword((s) => !s)}
-                        edge="end"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
+                required fullWidth autoComplete="current-password" variant="outlined"
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start"><LockOutlinedIcon color="action" /></InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowPassword((s) => !s)} edge="end" tabIndex={-1}>
+                          {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
                 }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
-
               <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                fullWidth
+                type="submit" variant="contained" size="large" fullWidth
                 disabled={loading || !username || !password}
                 sx={{
-                  py: 1.5,
-                  borderRadius: 2,
-                  fontWeight: 600,
-                  fontSize: '1rem',
+                  py: 1.5, borderRadius: 2, fontWeight: 600, fontSize: '1rem',
                   background: 'linear-gradient(135deg, #1565c0, #283593)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #0d47a1, #1a237e)',
-                  },
+                  '&:hover': { background: 'linear-gradient(135deg, #0d47a1, #1a237e)' },
                 }}
               >
                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}

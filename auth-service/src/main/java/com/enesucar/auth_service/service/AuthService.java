@@ -35,7 +35,7 @@ public class AuthService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
-                .role(Role.USER)
+.role(request.getRole() != null && request.getRole().equalsIgnoreCase("ADMIN") ? Role.ADMIN : Role.USER)
                 .build();
 
         userRepository.save(user);

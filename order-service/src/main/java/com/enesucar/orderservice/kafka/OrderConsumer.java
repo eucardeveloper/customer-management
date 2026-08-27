@@ -41,3 +41,4 @@ public class OrderConsumer {
         logger.error("Dead Letter Queue message received: {}", message);
     }
 }
+

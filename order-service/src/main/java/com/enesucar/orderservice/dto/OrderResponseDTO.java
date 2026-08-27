@@ -1,5 +1,7 @@
 package com.enesucar.orderservice.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.enesucar.orderservice.config.BigDecimalSerializer;
 import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
@@ -15,6 +17,7 @@ public class OrderResponseDTO {
 
     private String productName;
 
+    @JsonSerialize(using = BigDecimalSerializer.class)
     private BigDecimal price;
 
     private Integer quantity;
