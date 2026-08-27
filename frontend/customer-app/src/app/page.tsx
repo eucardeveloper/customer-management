@@ -141,11 +141,11 @@ interface UserItem { id: number; username: string; email: string; role: string; 
 const emptyCustomer: Omit<Customer, 'id'> = { firstName: '', lastName: '', email: '', phone: '', customerType: 'INDIVIDUAL' };
 type CustomerType = 'individual' | 'company';
 const emptyOrder = { customerId: '', productName: '', price: '', quantity: '', status: 'PENDING' };
-const QUICK_QUESTIONS_ADMIN = ['Show total revenue this month', 'Who are the top 5 customers by revenue?', 'What is the fulfillment rate?', 'Top products by revenue'];
-const QUICK_QUESTIONS_USER = ['How many orders are pending?', 'Who are the top 5 customers by orders?', 'What is the fulfillment rate?', 'Show most recent orders'];
+const getQuickQuestionsAdmin = (t: (k: string) => string) => [t('aiQ1'), t('aiQ2'), t('aiQ3'), t('aiQ4')];
+const getQuickQuestionsUser = (t: (k: string) => string) => [t('aiQ5'), t('aiQ6'), t('aiQ3'), t('aiQ7')];
 const ORDER_STATUSES = ['PENDING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 
-const statusChip = (status?: string) => {
+const statusChip = (status?: string, tFn?: (k: string) => string) => {
   const s = status ?? 'PENDING';
   const map: Record<string, { bg: string; color: string; border: string }> = {
     PENDING:   { bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
@@ -154,13 +154,22 @@ const statusChip = (status?: string) => {
     CANCELLED: { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
   };
   const style = map[s] ?? { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0' };
-  return <Chip label={s} size="small" sx={{ bgcolor: style.bg, color: style.color, border: `1px solid ${style.border}`, fontWeight: 700, fontSize: '0.68rem', height: 22 }} />;
+  const labelMap: Record<string, string> = {
+    PENDING: tFn ? tFn('pending') : 'Pending',
+    SHIPPED: tFn ? tFn('shipped') : 'Shipped',
+    DELIVERED: tFn ? tFn('delivered') : 'Delivered',
+    CANCELLED: tFn ? tFn('cancelled') : 'Cancelled',
+  };
+  const chipLabel = labelMap[s] ?? s;
+  return <Chip label={chipLabel} size="small" sx={{ bgcolor: style.bg, color: style.color, border: `1px solid ${style.border}`, fontWeight: 700, fontSize: '0.68rem', height: 22 }} />;
 };
 
-const customerTypeChip = (c: Customer) => {
+const customerTypeChip = (c: Customer, tFn?: (k: string) => string) => {
   const type = c.customerType ?? (c.lastName?.trim() ? 'INDIVIDUAL' : 'COMPANY');
-  if (type === 'INDIVIDUAL') return <Chip label="Individual" size="small" sx={{ bgcolor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontSize: '0.7rem', fontWeight: 600 }} />;
-  return <Chip label="Company" size="small" sx={{ bgcolor: '#faf5ff', color: '#7c3aed', border: '1px solid #e9d5ff', fontSize: '0.7rem', fontWeight: 600 }} />;
+  const indLabel = tFn ? tFn('individual') : 'Individual';
+  const comLabel = tFn ? tFn('company') : 'Company';
+  if (type === 'INDIVIDUAL') return <Chip label={indLabel} size="small" sx={{ bgcolor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontSize: '0.7rem', fontWeight: 600 }} />;
+  return <Chip label={comLabel} size="small" sx={{ bgcolor: '#faf5ff', color: '#7c3aed', border: '1px solid #e9d5ff', fontSize: '0.7rem', fontWeight: 600 }} />;
 };
 
 const formatDate = (dateStr: string) => {
@@ -226,7 +235,7 @@ export default function Home() {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try { const data = await api.get<Order[]>('/api/orders'); setOrders(Array.isArray(data) ? data : []); }
-    catch { showSnackbar('Failed to load orders.', 'error'); }
+    catch { showSnackbar(t('error'), 'error'); }
     finally { setLoading(false); }
   }, []);
 
@@ -259,14 +268,14 @@ export default function Home() {
   const validateCustomer = () => {
     const errors: Record<string, string> = {};
     if (customerType === 'individual') {
-      if (!editCustomer.firstName?.trim()) errors.firstName = 'First name is required';
-      if (!editCustomer.lastName?.trim()) errors.lastName = 'Last name is required';
+      if (!editCustomer.firstName?.trim()) errors.firstName = t('firstNameRequired');
+      if (!editCustomer.lastName?.trim()) errors.lastName = t('lastNameRequired');
     } else {
-      if (!editCustomer.firstName?.trim()) errors.firstName = 'Company name is required';
+      if (!editCustomer.firstName?.trim()) errors.firstName = t('companyNameRequired');
     }
     if (!editCustomer.email?.trim() && !editCustomer.phone?.trim()) {
-      errors.email = 'Email or phone is required';
-      errors.phone = 'Email or phone is required';
+      errors.email = t('emailOrPhoneRequired');
+      errors.phone = t('emailOrPhoneRequired');
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -334,7 +343,7 @@ export default function Home() {
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
-    try { await api.put(`/api/orders/${orderId}`, { customerId: order.customerId, productName: order.productName, price: order.price, quantity: order.quantity, status: newStatus }); showSnackbar(`Status updated to ${newStatus}`, 'success'); fetchOrders(); }
+    try { await api.put(`/api/orders/${orderId}`, { customerId: order.customerId, productName: order.productName, price: order.price, quantity: order.quantity, status: newStatus }); showSnackbar(t('saved'), 'success'); fetchOrders(); }
     catch { showSnackbar('Status update failed.', 'error'); }
   };
 
@@ -490,19 +499,19 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
   // Stat cards per tab
   const statCards = tab === 'customers'
     ? [
-        { label: 'Total Customers', value: customers.length, icon: <PeopleIcon />, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-        { label: 'Individual', value: customers.filter(c => (c.customerType ?? 'INDIVIDUAL') === 'INDIVIDUAL').length, icon: <PeopleIcon />, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-        { label: 'Company', value: customers.filter(c => c.customerType === 'COMPANY').length, icon: <StorefrontIcon />, color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
-        ...(isAdmin ? [{ label: 'Total Revenue', value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#d97706', bg: '#fffbeb', border: '#fde68a' }] : []),
+        { label: t('totalCustomers2'), value: customers.length, icon: <PeopleIcon />, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+        { label: t('individual'), value: customers.filter(c => (c.customerType ?? 'INDIVIDUAL') === 'INDIVIDUAL').length, icon: <PeopleIcon />, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+        { label: t('company'), value: customers.filter(c => c.customerType === 'COMPANY').length, icon: <StorefrontIcon />, color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
+        ...(isAdmin ? [{ label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#d97706', bg: '#fffbeb', border: '#fde68a' }] : []),
       ]
     : tab === 'orders'
     ? [
-        { label: 'Total Orders', value: orders.length, icon: <ReceiptIcon />, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+        { label: t('totalOrdersLabel'), value: orders.length, icon: <ReceiptIcon />, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
         ...(isAdmin ? [
-          { label: 'Total Revenue', value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
-          { label: 'Avg Order Value', value: avgOrderValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <TrendingUpIcon />, color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+          { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
+          { label: t('avgOrderValue'), value: avgOrderValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <TrendingUpIcon />, color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
         ] : []),
-        { label: 'Pending Orders', value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, icon: <ShoppingCartIcon />, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+        { label: t('pendingOrders2'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, icon: <ShoppingCartIcon />, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
       ]
     : [];
 
@@ -579,14 +588,14 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                       <Typography sx={{ color: 'white', fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentUser.username}</Typography>
                       <Typography sx={{ color: isAdmin ? '#34d399' : 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{currentUser.role}</Typography>
                     </Box>
-                    <Tooltip title="Sign out">
+                    <Tooltip title={t("signOut")}>
                       <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }}>
                         <LogoutIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
                   </Box>
                 )}
-                <Typography sx={{ color: 'rgba(255,255,255,0.12)', fontSize: '0.58rem', letterSpacing: '0.04em' }}>Spring Boot · Kafka · PostgreSQL</Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.12)', fontSize: '0.58rem', letterSpacing: '0.04em' }}>{t('springBootKafkaPostgres')}</Typography>
               </Box>
             </Box>
           );
@@ -625,13 +634,13 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                 <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', lineHeight: 1.2, color: 'white' }}>{pageTitle}</Typography>
                 <Typography sx={{ fontSize: '0.67rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1, mt: 0.2 }}>
                   {tab === 'dashboard' && (isAdmin
-                    ? `${customers.length} customers · ${orders.length} orders · ${totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} revenue`
-                    : `${customers.length} customers · ${orders.length} orders`
+                    ? `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')} · ${totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} ${t('totalRevenue').toLowerCase()}`
+                    : `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')}`
                   )}
-                  {tab === 'customers' && `${customers.length} total · ${customers.filter(c => c.customerType === 'COMPANY').length} companies · ${customers.filter(c => (c.customerType ?? 'INDIVIDUAL') === 'INDIVIDUAL').length} individuals`}
-                  {tab === 'orders' && `${orders.length} total · ${orders.filter(o => o.status === 'DELIVERED').length} delivered · ${orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length} pending`}
-                  {tab === 'analytics' && 'Business intelligence & performance metrics'}
-                  {tab === 'ai' && 'Gemini 2.5 Flash · Natural language data analysis'}
+                  {tab === 'customers' && `${customers.length} ${t('total')} · ${customers.filter(c => c.customerType === 'COMPANY').length} ${t('companies')} · ${customers.filter(c => (c.customerType ?? 'INDIVIDUAL') === 'INDIVIDUAL').length} ${t('individuals')}`}
+                  {tab === 'orders' && `${orders.length} ${t('total')} · ${orders.filter(o => o.status === 'DELIVERED').length} ${t('delivered')} · ${orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length} ${t('pending')}`}
+                  {tab === 'analytics' && t('businessIntelligence')}
+                  {tab === 'ai' && t('aiSubtitle')}
                   {tab === 'users' && `${users.length} ${t('registeredAccounts')}`}
                 </Typography>
               </Box>
@@ -677,17 +686,17 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
             {tab === 'customers' && (
               <Paper elevation={0} sx={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid #f1f5f9', flexShrink: 0, bgcolor: 'white' }}>
-                  <TextField size="small" placeholder="Search by name, email or phone..." value={custSearch}
+                  <TextField size="small" placeholder={t('searchCustomers')} value={custSearch}
                     onChange={(e) => { setCustSearch(e.target.value); setCustPage(0); }}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
                     sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
-                  <Tooltip title="Export Excel (.xlsx)"><IconButton size="small" onClick={() => exportExcel('customers')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
+                  <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('customers')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchCustomers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                   {isAdmin && (
                     <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} disableElevation size="small"
                       sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', '&:hover': { background: 'linear-gradient(135deg,#4f46e5,#4338ca)' } }}>
-                      New Customer
+                      {t('newCustomer')}
                     </Button>
                   )}
                 </Box>
@@ -699,12 +708,12 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                       <Table stickyHeader size="small">
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ width: 60 }}>ID</TableCell>
-                            <TableCell sx={{ width: 110 }}>Type</TableCell>
-                            <TableCell{t('customer')}</TableCell>
-                            <TableCell>Email</TableCell>
-                            <TableCell>Phone</TableCell>
-                            {isAdmin && <TableCell align="right" sx={{ width: 90 }}{t('actions')}</TableCell>}
+                            <TableCell sx={{ width: 60 }}>{t('id')}</TableCell>
+                            <TableCell sx={{ width: 110 }}>{t('type')}</TableCell>
+                            <TableCell>{t('customer')}</TableCell>
+                            <TableCell>{t('email')}</TableCell>
+                            <TableCell>{t('phone')}</TableCell>
+                            {isAdmin && <TableCell align="right" sx={{ width: 90 }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -713,14 +722,14 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                               <Box sx={{ width: 56, height: 56, borderRadius: 3, bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5 }}>
                                 <PeopleIcon sx={{ fontSize: 28, color: '#94a3b8' }} />
                               </Box>
-                              <Typography sx={{ fontWeight: 700, color: '#475569', fontSize: '0.95rem', mb: 0.5 }}>No customers found</Typography>
-                              <Typography variant="caption" color="text.secondary">{custSearch ? 'Try a different search term' : 'Add your first customer to get started'}</Typography>
+                              <Typography sx={{ fontWeight: 700, color: '#475569', fontSize: '0.95rem', mb: 0.5 }}>{t('noCustomers')}</Typography>
+                              <Typography variant="caption" color="text.secondary">{custSearch ? t('tryDifferentSearch') : t('addFirstCustomer')}</Typography>
                             </TableCell></TableRow>
                           )}
                           {filteredCustomers.slice(custPage * custRowsPerPage, custPage * custRowsPerPage + custRowsPerPage).map(c => (
                             <TableRow key={c.id}>
                               <TableCell><Chip label={`#${c.id}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
-                              <TableCell>{customerTypeChip(c)}</TableCell>
+                              <TableCell>{customerTypeChip(c, t)}</TableCell>
                               <TableCell sx={{ cursor: 'pointer' }} onClick={() => setDrawerCustomer(c)}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                   <Avatar sx={{ width: 30, height: 30, bgcolor: '#dbeafe', color: '#1d4ed8', fontSize: '0.72rem', fontWeight: 700 }}>
@@ -745,7 +754,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                     <TablePagination component="div" count={filteredCustomers.length} page={custPage}
                       onPageChange={(_, p) => setCustPage(p)} rowsPerPage={custRowsPerPage}
                       onRowsPerPageChange={e => { setCustRowsPerPage(parseInt(e.target.value)); setCustPage(0); }}
-                      rowsPerPageOptions={[5, 10, 25, 50]} sx={{ borderTop: '1px solid #f1f5f9', flexShrink: 0 }} />
+                      rowsPerPageOptions={[5, 10, 25, 50]} labelRowsPerPage={t('rowsPerPage')} labelDisplayedRows={({ from, to, count }) => `${from}–${to} ${t('of')} ${count}`} sx={{ borderTop: '1px solid #f1f5f9', flexShrink: 0 }} />
                   </>
                 )}
               </Paper>
@@ -755,17 +764,17 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
             {tab === 'orders' && (
               <Paper elevation={0} sx={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid #f1f5f9', flexShrink: 0, bgcolor: 'white' }}>
-                  <TextField size="small" placeholder="Search by product, status or customer..." value={ordSearch}
+                  <TextField size="small" placeholder={t('searchOrders')} value={ordSearch}
                     onChange={(e) => { setOrdSearch(e.target.value); setOrdPage(0); }}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
                     sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
-                  <Tooltip title="Export Excel (.xlsx)"><IconButton size="small" onClick={() => exportExcel('orders')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
+                  <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('orders')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchOrders} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                   {isAdmin && (
                     <Button variant="contained" startIcon={<AddIcon />} onClick={openAddOrder} disableElevation size="small"
                       sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', '&:hover': { background: 'linear-gradient(135deg,#4f46e5,#4338ca)' } }}>
-                      New Order
+                      {t('newOrder')}
                     </Button>
                   )}
                 </Box>
@@ -777,15 +786,15 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                       <Table stickyHeader size="small">
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ width: 55 }}>ID</TableCell>
-                            <TableCell sx={{ width: 140 }}{t('status')}</TableCell>
-                            <TableCell{t('product')}</TableCell>
-                            <TableCell{t('customer')}</TableCell>
-                            {isAdmin && <TableCell sx={{ width: 110 }}>Unit Price</TableCell>}
-                            <TableCell sx={{ width: 70 }}>Qty</TableCell>
-                            {isAdmin && <TableCell sx={{ width: 110 }}{t('total')}</TableCell>}
-                            <TableCell sx={{ width: 110 }}{t('date')}</TableCell>
-                            {isAdmin && <TableCell align="right" sx={{ width: 80 }}{t('actions')}</TableCell>}
+                            <TableCell sx={{ width: 55 }}>{t('id')}</TableCell>
+                            <TableCell sx={{ width: 140 }}>{t('status')}</TableCell>
+                            <TableCell>{t('product')}</TableCell>
+                            <TableCell>{t('customer')}</TableCell>
+                            {isAdmin && <TableCell sx={{ width: 110 }}>{t('unitPrice')}</TableCell>}
+                            <TableCell sx={{ width: 70 }}>{t('qty')}</TableCell>
+                            {isAdmin && <TableCell sx={{ width: 110 }}>{t('total')}</TableCell>}
+                            <TableCell sx={{ width: 110 }}>{t('date')}</TableCell>
+                            {isAdmin && <TableCell align="right" sx={{ width: 80 }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -794,8 +803,8 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                               <Box sx={{ width: 56, height: 56, borderRadius: 3, bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5 }}>
                                 <ShoppingCartIcon sx={{ fontSize: 28, color: '#94a3b8' }} />
                               </Box>
-                              <Typography sx={{ fontWeight: 700, color: '#475569', fontSize: '0.95rem', mb: 0.5 }}>No orders found</Typography>
-                              <Typography variant="caption" color="text.secondary">{ordSearch ? 'Try a different search term' : 'Create your first order to get started'}</Typography>
+                              <Typography sx={{ fontWeight: 700, color: '#475569', fontSize: '0.95rem', mb: 0.5 }}>{t('noOrders')}</Typography>
+                              <Typography variant="caption" color="text.secondary">{ordSearch ? t('tryDifferentSearch') : t('createFirstOrder')}</Typography>
                             </TableCell></TableRow>
                           )}
                           {filteredOrders.slice(ordPage * ordRowsPerPage, ordPage * ordRowsPerPage + ordRowsPerPage).map(o => (
@@ -805,12 +814,12 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                                 {isAdmin ? (
                                   <FormControl size="small">
                                     <Select value={o.status ?? 'PENDING'} onChange={e => { e.stopPropagation(); updateOrderStatus(o.id, e.target.value); }}
-                                      renderValue={v => statusChip(v)}
+                                      renderValue={v => statusChip(v, t)}
                                       sx={{ '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, '& .MuiSelect-select': { p: 0 }, minWidth: 110 }}>
-                                      {ORDER_STATUSES.map(s => <MenuItem key={s} value={s}>{statusChip(s)}</MenuItem>)}
+                                      {ORDER_STATUSES.map(s => <MenuItem key={s} value={s}>{statusChip(s, t)}</MenuItem>)}
                                     </Select>
                                   </FormControl>
-                                ) : statusChip(o.status ?? 'PENDING')}
+                                ) : statusChip(o.status ?? 'PENDING', t)}
                               </TableCell>
                               <TableCell><Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{o.productName}</Typography></TableCell>
                               <TableCell>
@@ -843,7 +852,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                     <TablePagination component="div" count={filteredOrders.length} page={ordPage}
                       onPageChange={(_, p) => setOrdPage(p)} rowsPerPage={ordRowsPerPage}
                       onRowsPerPageChange={e => { setOrdRowsPerPage(parseInt(e.target.value)); setOrdPage(0); }}
-                      rowsPerPageOptions={[5, 10, 25, 50]} sx={{ borderTop: '1px solid #f1f5f9', flexShrink: 0 }} />
+                      rowsPerPageOptions={[5, 10, 25, 50]} labelRowsPerPage={t('rowsPerPage')} labelDisplayedRows={({ from, to, count }) => `${from}–${to} ${t('of')} ${count}`} sx={{ borderTop: '1px solid #f1f5f9', flexShrink: 0 }} />
                   </>
                 )}
               </Paper>
@@ -864,11 +873,11 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ width: 60 }}>ID</TableCell>
-                        <TableCell{t('username')}</TableCell>
-                        <TableCell>Email</TableCell>
-                        <TableCell sx={{ width: 100 }}{t('role')}</TableCell>
-                        <TableCell align="right" sx={{ width: 100 }}{t('actions')}</TableCell>
+                        <TableCell sx={{ width: 60 }}>{t('id')}</TableCell>
+                        <TableCell>{t('username')}</TableCell>
+                        <TableCell>{t('email')}</TableCell>
+                        <TableCell sx={{ width: 100 }}>{t('role')}</TableCell>
+                        <TableCell align="right" sx={{ width: 100 }}>{t('actions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -892,12 +901,12 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                             <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? '#f0fdf4' : '#eff6ff', color: u.role === 'ADMIN' ? '#059669' : '#2563eb', border: `1px solid ${u.role === 'ADMIN' ? '#bbf7d0' : '#bfdbfe'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>
                           <TableCell align="right">
-                            <Tooltip title="Change Role">
+                            <Tooltip title={t('changeRole')}>
                               <IconButton size="small" sx={{ color: '#059669', mr: 0.5 }} onClick={() => { setSelectedUserId(u.id); setSelectedRole(u.role); setRoleDialogOpen(true); }}>
                                 <AdminPanelSettingsIcon sx={{ fontSize: 16 }} />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Delete User">
+                            <Tooltip title={t('deleteUser')}>
                               <IconButton size="small" sx={{ color: '#ef4444' }} disabled={u.username === currentUser?.username} onClick={() => { setDeleteUserId(u.id); setDeleteUserDialogOpen(true); }}>
                                 <DeleteIcon sx={{ fontSize: 16 }} />
                               </IconButton>
@@ -959,24 +968,24 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,1fr)', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
                     {(() => {
                       const fmtTrend = (val: string | null, higherIsBetter = true) => {
-                        if (val === null) return { label: 'vs last 30d', up: true };
+                        if (val === null) return { label: t('vsLast30d'), up: true };
                         const n = parseFloat(val);
-                        return { label: `${n >= 0 ? '+' : ''}${val}% vs 30d`, up: higherIsBetter ? n >= 0 : n <= 0 };
+                        return { label: `${n >= 0 ? '+' : ''}${val}% ${t('vsLast30d')}`, up: higherIsBetter ? n >= 0 : n <= 0 };
                       };
                       const revT = fmtTrend(revTrend);
                       const fufT = fmtTrend(fulfillTrend);
                       const pndT = fmtTrend(pendTrend, false);
                       const adminCards = [
-                        { label: 'Total Revenue', value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} orders total`, icon: <AttachMoneyIcon />, color: '#6366f1', bg: '#f5f3ff', border: '#e0e7ff', trend: revT.label, up: revT.up },
-                        { label: 'Total Customers', value: customers.length.toString(), sub: `${customers.filter(c => c.customerType === 'COMPANY').length} companies`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: 'All time', up: true },
-                        { label: 'Fulfillment Rate', value: `${fulfillmentRate}%`, sub: `${delivered} of ${orders.length} delivered`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
-                        { label: 'Pending Orders', value: pending.toString(), sub: `${cancelled} cancelled`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
+                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#6366f1', bg: '#f5f3ff', border: '#e0e7ff', trend: revT.label, up: revT.up },
+                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(c => c.customerType === 'COMPANY').length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
                       ];
                       const userCards = [
-                        { label: 'Total Orders', value: orders.length.toString(), sub: `${delivered} delivered`, icon: <ReceiptIcon />, color: '#6366f1', bg: '#f5f3ff', border: '#e0e7ff', trend: 'All time', up: true },
-                        { label: 'Total Customers', value: customers.length.toString(), sub: `${customers.filter(c => c.customerType === 'COMPANY').length} companies`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: 'All time', up: true },
-                        { label: 'Fulfillment Rate', value: `${fulfillmentRate}%`, sub: `${delivered} of ${orders.length} delivered`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
-                        { label: 'Pending Orders', value: pending.toString(), sub: `${cancelled} cancelled`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
+                        { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#6366f1', bg: '#f5f3ff', border: '#e0e7ff', trend: t('allTime'), up: true },
+                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(c => c.customerType === 'COMPANY').length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
                       ];
                       return (isAdmin ? adminCards : userCards).map(card => (
                         <Paper key={card.label} elevation={0} sx={{
@@ -1020,22 +1029,22 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                     {isAdmin && (
                       <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} disableElevation size="small"
                         sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', '&:hover': { background: 'linear-gradient(135deg,#4f46e5,#4338ca)' } }}>
-                        New Customer
+                        {t('newCustomer')}
                       </Button>
                     )}
                     {isAdmin && (
                       <Button variant="contained" startIcon={<AddIcon />} onClick={openAddOrder} disableElevation size="small"
                         sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', bgcolor: '#0ea5e9', '&:hover': { bgcolor: '#0284c7' } }}>
-                        New Order
+                        {t('newOrder')}
                       </Button>
                     )}
                     <Button variant="outlined" startIcon={<BarChartIcon />} onClick={() => setTab('analytics')} size="small"
                       sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: '#e2e8f0', color: '#64748b', '&:hover': { borderColor: '#6366f1', color: '#6366f1', bgcolor: '#f5f3ff' } }}>
-                      Analytics
+                      {t('analytics')}
                     </Button>
                     <Button variant="outlined" startIcon={<SmartToyIcon />} onClick={() => setTab('ai')} size="small"
                       sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: '#e2e8f0', color: '#64748b', '&:hover': { borderColor: '#6366f1', color: '#6366f1', bgcolor: '#f5f3ff' } }}>
-                      AI Agent
+                      {t('aiAgent')}
                     </Button>
                   </Box>
 
@@ -1043,8 +1052,8 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: isAdmin ? '3fr 2fr' : '1fr' }, gap: 2 }}>
                     {isAdmin && (
                       <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 0.5 }}>Revenue Trend</Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8', mb: 2 }}>Monthly revenue overview</Typography>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 0.5 }}>{t('revenueTrend')}</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8', mb: 2 }}>{t('monthlyRevenueOverview')}</Typography>
                         {revenueChartData.length > 0 ? (
                           <ResponsiveContainer width="100%" height={200}>
                             <LineChart data={revenueChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -1071,9 +1080,9 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
                     {/* Top Customers */}
                     <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>Top Customers</Typography>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('topCustomers')}</Typography>
                       {topCustomers.length === 0 ? (
-                        <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', py: 4 }}>No data yet</Typography>
+                        <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', py: 4 }}>{t('noDataYet')}</Typography>
                       ) : (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                           {topCustomers.map(({ customer: c, rev }, i) => (
@@ -1084,7 +1093,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                               <Avatar sx={{ width: 28, height: 28, bgcolor: '#e0e7ff', color: '#4338ca', fontSize: '0.7rem', fontWeight: 700 }}>{(c!.firstName ?? '?')[0]}</Avatar>
                               <Box sx={{ flex: 1, overflow: 'hidden' }}>
                                 <Typography sx={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c!.firstName} {c!.lastName}</Typography>
-                                <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{orders.filter(o => o.customerId === c!.id).length} orders</Typography>
+                                <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{orders.filter(o => o.customerId === c!.id).length} {t('orders')}</Typography>
                               </Box>
                               {isAdmin && (
                                 <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#10b981', flexShrink: 0 }}>
@@ -1102,12 +1111,12 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
                     <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
                       <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>Recent Orders</Typography>
-                        <Button size="small" onClick={() => setTab('orders')} sx={{ textTransform: 'none', fontSize: '0.78rem', color: '#6366f1', fontWeight: 600, p: 0 }}>View all →</Button>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{t('recentOrders')}</Typography>
+                        <Button size="small" onClick={() => setTab('orders')} sx={{ textTransform: 'none', fontSize: '0.78rem', color: '#6366f1', fontWeight: 600, p: 0 }}>{t('viewAll')} →</Button>
                       </Box>
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         {recentOrders.length === 0 ? (
-                          <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', py: 4 }}>No orders yet</Typography>
+                          <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', py: 4 }}>{t('noOrders')}</Typography>
                         ) : recentOrders.map((o, i) => (
                           <Box key={o.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2.5, py: 1.5, borderBottom: i < recentOrders.length - 1 ? '1px solid #f8fafc' : 'none', '&:hover': { bgcolor: '#fafbfc' }, transition: 'background 0.15s' }}>
                             <Avatar sx={{ width: 32, height: 32, bgcolor: '#e0e7ff', color: '#4338ca', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
@@ -1121,7 +1130,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                               {isAdmin && (
                                 <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#15803d' }}>{(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
                               )}
-                              <Box sx={{ mt: 0.3 }}>{statusChip(o.status)}</Box>
+                              <Box sx={{ mt: 0.3 }}>{statusChip(o.status, t)}</Box>
                             </Box>
                           </Box>
                         ))}
@@ -1130,10 +1139,10 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
                     {/* Order Status Summary */}
                     <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>Order Status</Typography>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('orderStatus')}</Typography>
                       {(() => {
                         const PIE_COLORS = ['#f59e0b','#6366f1','#10b981','#ef4444'];
-                        const allPie = ORDER_STATUSES.map((s, i) => ({ name: s, value: orders.filter(o => (o.status ?? 'PENDING') === s).length || 0.001, realCount: orders.filter(o => (o.status ?? 'PENDING') === s).length, color: PIE_COLORS[i] }));
+                        const allPie = ORDER_STATUSES.map((s, i) => ({ name: s === 'PENDING' ? t('pending') : s === 'SHIPPED' ? t('shipped') : s === 'DELIVERED' ? t('delivered') : t('cancelled'), value: orders.filter(o => (o.status ?? 'PENDING') === s).length || 0.001, realCount: orders.filter(o => (o.status ?? 'PENDING') === s).length, color: PIE_COLORS[i] }));
                         return (
                           <>
                             <ResponsiveContainer width="100%" height={140}>
@@ -1151,7 +1160,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                                   <Box key={s} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: PIE_COLORS[i] }} />
-                                      <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{s.charAt(0) + s.slice(1).toLowerCase()}</Typography>
+                                      <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{s === 'PENDING' ? t('pending') : s === 'SHIPPED' ? t('shipped') : s === 'DELIVERED' ? t('delivered') : t('cancelled')}</Typography>
                                     </Box>
                                     <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a' }}>
                                       {count} ({orders.length > 0 ? ((count / orders.length) * 100).toFixed(0) : 0}%)
@@ -1191,12 +1200,12 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                   const aNowPend = aNow.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
                   const aPrevPend = aPrev.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
                   const pendTrendA = calcTrend(aNowPend, aPrevPend);
-                  const fmtA = (v: string | null, up?: boolean) => v === null ? { text: 'vs last 30d', up: up ?? true } : { text: `${parseFloat(v) >= 0 ? '+' : ''}${v}% vs 30d`, up: up !== undefined ? up : parseFloat(v) >= 0 };
+                  const fmtA = (v: string | null, up?: boolean) => v === null ? { text: t('vsLast30d'), up: up ?? true } : { text: `${parseFloat(v) >= 0 ? '+' : ''}${v}% ${t('vsLast30d')}`, up: up !== undefined ? up : parseFloat(v) >= 0 };
                   const allAnalyticsCards = [
-                    { label: 'TOTAL REVENUE', value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), trend: fmtA(revTrendA).text, trendUp: fmtA(revTrendA).up, color: '#6366f1', sparkColor: '#6366f1', adminOnly: true },
-                    { label: 'TOTAL ORDERS', value: orders.length.toString(), trend: fmtA(orderTrendA).text, trendUp: fmtA(orderTrendA).up, color: '#10b981', sparkColor: '#10b981', adminOnly: false },
-                    { label: 'AVG ORDER VALUE', value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), trend: fmtA(avgTrendA).text, trendUp: fmtA(avgTrendA).up, color: '#f59e0b', sparkColor: '#f59e0b', adminOnly: true },
-                    { label: 'PENDING ORDERS', value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length.toString(), trend: fmtA(pendTrendA, pendTrendA !== null ? parseFloat(pendTrendA) <= 0 : true).text, trendUp: fmtA(pendTrendA, pendTrendA !== null ? parseFloat(pendTrendA) <= 0 : true).up, color: '#ef4444', sparkColor: '#ef4444', adminOnly: false },
+                    { label: t('totalRevenue').toUpperCase(), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), trend: fmtA(revTrendA).text, trendUp: fmtA(revTrendA).up, color: '#6366f1', sparkColor: '#6366f1', adminOnly: true },
+                    { label: t('totalOrders').toUpperCase(), value: orders.length.toString(), trend: fmtA(orderTrendA).text, trendUp: fmtA(orderTrendA).up, color: '#10b981', sparkColor: '#10b981', adminOnly: false },
+                    { label: t('avgOrderValue').toUpperCase(), value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), trend: fmtA(avgTrendA).text, trendUp: fmtA(avgTrendA).up, color: '#f59e0b', sparkColor: '#f59e0b', adminOnly: true },
+                    { label: t('pendingOrders').toUpperCase(), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length.toString(), trend: fmtA(pendTrendA, pendTrendA !== null ? parseFloat(pendTrendA) <= 0 : true).text, trendUp: fmtA(pendTrendA, pendTrendA !== null ? parseFloat(pendTrendA) <= 0 : true).up, color: '#ef4444', sparkColor: '#ef4444', adminOnly: false },
                   ];
                   const analyticsCards = allAnalyticsCards.filter(c => isAdmin || !c.adminOnly);
                   // Sparkline: monthly order counts for last 12 months
@@ -1230,13 +1239,13 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                   {isAdmin && <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
                       <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>Revenue Overview</Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>Total Revenue</Typography>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{t('revenueOverview')}</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('totalRevenue')}</Typography>
                         <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: '#0f172a', mt: 0.5 }}>{totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
                       </Box>
                       <ToggleButtonGroup value={chartMode} exclusive onChange={(_, v) => v && setChartMode(v)} size="small">
-                        <ToggleButton value="daily" sx={{ fontSize: '0.72rem', px: 1.5, py: 0.4, textTransform: 'none' }}>Daily</ToggleButton>
-                        <ToggleButton value="monthly" sx={{ fontSize: '0.72rem', px: 1.5, py: 0.4, textTransform: 'none' }}>Monthly</ToggleButton>
+                        <ToggleButton value="daily" sx={{ fontSize: '0.72rem', px: 1.5, py: 0.4, textTransform: 'none' }}>{t('daily')}</ToggleButton>
+                        <ToggleButton value="monthly" sx={{ fontSize: '0.72rem', px: 1.5, py: 0.4, textTransform: 'none' }}>{t('monthly')}</ToggleButton>
                       </ToggleButtonGroup>
                     </Box>
                     <ResponsiveContainer width="100%" height={200}>
@@ -1258,10 +1267,11 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
                   {/* Order Status Donut */}
                   <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>Order Status Distribution</Typography>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('orderStatusDistribution')}</Typography>
                     {(() => {
                       const PIE_COLORS = ['#f59e0b', '#6366f1', '#10b981', '#ef4444'];
-                      const allPie = statusCounts.map((s) => ({ name: s.status, value: s.count || 0.001, realCount: s.count, color: PIE_COLORS[ORDER_STATUSES.indexOf(s.status)] }));
+                      const statusLabel = (s: string) => s === 'PENDING' ? t('pending') : s === 'SHIPPED' ? t('shipped') : s === 'DELIVERED' ? t('delivered') : t('cancelled');
+                      const allPie = statusCounts.map((s) => ({ name: statusLabel(s.status), value: s.count || 0.001, realCount: s.count, color: PIE_COLORS[ORDER_STATUSES.indexOf(s.status)] }));
                       return (
                         <>
                           <ResponsiveContainer width="100%" height={160}>
@@ -1277,7 +1287,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                               <Box key={s.status} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: PIE_COLORS[i] }} />
-                                  <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{s.status.charAt(0) + s.status.slice(1).toLowerCase()}</Typography>
+                                  <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{s.status === 'PENDING' ? t('pending') : s.status === 'SHIPPED' ? t('shipped') : s.status === 'DELIVERED' ? t('delivered') : t('cancelled')}</Typography>
                                 </Box>
                                 <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a' }}>
                                   {s.count} ({orders.length > 0 ? ((s.count / orders.length) * 100).toFixed(0) : 0}%)
@@ -1294,13 +1304,13 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                 {/* Customer Types Pie + Top Products */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: isAdmin ? '1fr 2fr' : '1fr' }, gap: 2 }}>
                   <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>Customer Types</Typography>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('customerTypes')}</Typography>
                     {(() => {
                       const individual = customers.filter(c => (c.customerType ?? 'INDIVIDUAL') === 'INDIVIDUAL').length;
                       const company = customers.filter(c => c.customerType === 'COMPANY').length;
                       const pieData = [
-                        { name: 'Individual', value: individual || 0.001, realCount: individual, pct: customers.length > 0 ? Math.round((individual / customers.length) * 100) : 0, color: '#6366f1' },
-                        { name: 'Company', value: company || 0.001, realCount: company, pct: customers.length > 0 ? Math.round((company / customers.length) * 100) : 0, color: '#10b981' },
+                        { name: t('individual'), value: individual || 0.001, realCount: individual, pct: customers.length > 0 ? Math.round((individual / customers.length) * 100) : 0, color: '#6366f1' },
+                        { name: t('company'), value: company || 0.001, realCount: company, pct: customers.length > 0 ? Math.round((company / customers.length) * 100) : 0, color: '#10b981' },
                       ];
                       return (
                         <>
@@ -1330,13 +1340,13 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
                   {isAdmin && <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', flex: 1 }}>Top Products by Revenue</Typography>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', flex: 1 }}>{t('topProductsByRevenue')}</Typography>
                     </Box>
                     {(() => {
                       const productMap: Record<string, number> = {};
                       orders.forEach(o => { productMap[o.productName] = (productMap[o.productName] ?? 0) + o.price * o.quantity; });
                       const top = Object.entries(productMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name: name.length > 16 ? name.slice(0, 16) + '…' : name, value }));
-                      if (top.length === 0) return <Typography variant="body2" color="text.secondary">No orders yet.</Typography>;
+                      if (top.length === 0) return <Typography variant="body2" color="text.secondary">{t('noOrders')}</Typography>;
                       const PROD_COLORS = ['#6366f1','#3b82f6','#10b981','#f59e0b','#ef4444'];
                       return (
                         <ResponsiveContainer width="100%" height={200}>
@@ -1364,7 +1374,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden', minHeight: 0 }}>
                   {/* Quick questions */}
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', flexShrink: 0 }}>
-                    {(isAdmin ? QUICK_QUESTIONS_ADMIN : QUICK_QUESTIONS_USER).map(q => (
+                    {(isAdmin ? getQuickQuestionsAdmin(t) : getQuickQuestionsUser(t)).map(q => (
                       <Chip key={q} label={q} clickable onClick={() => sendMessage(q)}
                         sx={{ bgcolor: '#f5f3ff', color: '#6366f1', border: '1px solid #e0e7ff', fontWeight: 500, fontSize: '0.78rem', '&:hover': { bgcolor: '#ede9fe' } }} />
                     ))}
@@ -1375,10 +1385,10 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                     <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 3, background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                       <Box sx={{ flex: 1 }}>
                         <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e1b4b', mb: 0.5 }}>
-                          Hello, {currentUser?.username ?? 'User'}! 👋
+                          {t('aiWelcome')}, {currentUser?.username ?? 'User'}! 👋
                         </Typography>
                         <Typography sx={{ color: '#4c1d95', fontSize: '0.85rem', lineHeight: 1.6 }}>
-                          I analyze your data, answer your questions,<br />and provide intelligent insights.
+                          {t('aiDescription')}
                         </Typography>
                       </Box>
                       <Box sx={{ width: 80, height: 80, borderRadius: 3, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1392,8 +1402,8 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                     {chatMessages.length === 0 && (
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 1.5, py: 4 }}>
                         <SmartToyIcon sx={{ fontSize: 48, color: '#c7d2fe' }} />
-                        <Typography sx={{ fontWeight: 600, color: '#64748b', fontSize: '0.95rem' }}>Ask a question and AI Agent will answer instantly.</Typography>
-                        <Typography sx={{ color: '#94a3b8', fontSize: '0.82rem' }}>{isAdmin ? 'Example: "Show total revenue this month"' : 'Example: "How many orders are pending?"'}</Typography>
+                        <Typography sx={{ fontWeight: 600, color: '#64748b', fontSize: '0.95rem' }}>{t('aiEmptyTitle')}</Typography>
+                        <Typography sx={{ color: '#94a3b8', fontSize: '0.82rem' }}>{isAdmin ? t('aiEmptyExample') : t('aiEmptyExample')}</Typography>
                       </Box>
                     )}
                     {chatMessages.map((msg, i) => (
@@ -1420,7 +1430,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
                   {/* Input */}
                   <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
-                    <TextField fullWidth size="small" placeholder="Ask a question about your data…" value={chatInput}
+                    <TextField fullWidth size="small" placeholder={t('aiPlaceholder')} value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(chatInput); } }}
                       disabled={chatLoading}
@@ -1436,13 +1446,13 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                 <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', gap: 2, overflow: 'auto' }}>
                   {/* Quick Stats panel */}
                   <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a', mb: 1.5 }}>Quick Stats</Typography>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a', mb: 1.5 }}>{t('quickStats')}</Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
                       {[
-                        { label: 'Total Orders', value: orders.length, color: '#6366f1', icon: '🛒' },
-                        { label: 'Delivered', value: orders.filter(o => o.status === 'DELIVERED').length, color: '#10b981', icon: '✅' },
-                        { label: 'Pending', value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, color: '#f59e0b', icon: '⏳' },
-                        { label: 'Cancelled', value: orders.filter(o => o.status === 'CANCELLED').length, color: '#ef4444', icon: '❌' },
+                        { label: t('totalOrdersLabel'), value: orders.length, color: '#6366f1', icon: '🛒' },
+                        { label: t('deliveredLabel'), value: orders.filter(o => o.status === 'DELIVERED').length, color: '#10b981', icon: '✅' },
+                        { label: t('pendingLabel'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, color: '#f59e0b', icon: '⏳' },
+                        { label: t('cancelledLabel'), value: orders.filter(o => o.status === 'CANCELLED').length, color: '#ef4444', icon: '❌' },
                       ].map(s => (
                         <Box key={s.label} sx={{ bgcolor: '#f8fafc', borderRadius: 2, p: 1.5, border: '1px solid #f1f5f9' }}>
                           <Typography sx={{ fontSize: '0.65rem', color: '#94a3b8', mb: 0.3 }}>{s.label}</Typography>
@@ -1454,7 +1464,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
                   {/* Recent Questions */}
                   <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2, flex: 1 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a', mb: 1.5 }}>Recent Questions</Typography>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a', mb: 1.5 }}>{t('recentQuestions')}</Typography>
                     {chatMessages.filter(m => m.role === 'user').slice(-5).reverse().map((m, i) => (
                       <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5, cursor: 'pointer', '&:hover .q-text': { color: '#6366f1' } }} onClick={() => sendMessage(m.content)}>
                         <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1462,20 +1472,20 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                         </Box>
                         <Box>
                           <Typography className="q-text" sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', transition: 'color 0.15s' }}>{m.content}</Typography>
-                          <Typography sx={{ fontSize: '0.65rem', color: '#94a3b8' }}>Just now</Typography>
+                          <Typography sx={{ fontSize: '0.65rem', color: '#94a3b8' }}>{t('justNow')}</Typography>
                         </Box>
                       </Box>
                     ))}
                     {chatMessages.filter(m => m.role === 'user').length === 0 && (
-                      <Typography sx={{ fontSize: '0.78rem', color: '#94a3b8', textAlign: 'center', py: 2 }}>No questions yet</Typography>
+                      <Typography sx={{ fontSize: '0.78rem', color: '#94a3b8', textAlign: 'center', py: 2 }}>{t('noQuestionsYet')}</Typography>
                     )}
                   </Paper>
 
                   {/* Pro Tip */}
                   <Paper elevation={0} sx={{ border: 'none', borderRadius: 2.5, p: 2, background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'white', mb: 0.5 }}>💡 Pro Tip</Typography>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'white', mb: 0.5 }}>💡 {t('proTip')}</Typography>
                     <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6 }}>
-                      Ask in natural language.<br />The more specific your question,<br />the better the answer.
+                      {t('proTipText')}
                     </Typography>
                   </Paper>
                 </Box>
@@ -1489,15 +1499,15 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
         {/* Customer Add/Edit */}
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-          <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{isEditing ? 'Edit Customer' : 'Add New Customer'}</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{isEditing ? t('editCustomer') : t('addCustomer')}</DialogTitle>
           <Divider />
           <DialogContent sx={{ pt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <FormControl size="small" fullWidth>
-                <InputLabel>Customer Type</InputLabel>
+                <InputLabel>{t('customerType')}</InputLabel>
                 <Select value={customerType} label={t('customerType')} onChange={e => { setCustomerType(e.target.value as CustomerType); setFormErrors({}); if (e.target.value === 'company') setEditCustomer(p => ({ ...p, lastName: '' })); }}>
-                  <MenuItem value="individual">Individual (Person)</MenuItem>
-                  <MenuItem value="company">Company / Organization</MenuItem>
+                  <MenuItem value="individual">{t('individualPerson')}</MenuItem>
+                  <MenuItem value="company">{t('companyOrg')}</MenuItem>
                 </Select>
               </FormControl>
               {customerType === 'individual' ? (
@@ -1506,21 +1516,21 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                   <TextField label="Last Name *" fullWidth size="small" value={editCustomer.lastName || ''} onChange={e => { setEditCustomer({ ...editCustomer, lastName: e.target.value }); setFormErrors(p => ({ ...p, lastName: '' })); }} error={!!formErrors.lastName} helperText={formErrors.lastName} />
                 </Box>
               ) : (
-                <TextField label="Company Name *" fullWidth size="small" value={editCustomer.firstName || ''} onChange={e => { setEditCustomer({ ...editCustomer, firstName: e.target.value }); setFormErrors(p => ({ ...p, firstName: '' })); }} error={!!formErrors.firstName} helperText={formErrors.firstName} />
+                <TextField label={`${t('firstName')} *`} fullWidth size="small" value={editCustomer.firstName || ''} onChange={e => { setEditCustomer({ ...editCustomer, firstName: e.target.value }); setFormErrors(p => ({ ...p, firstName: '' })); }} error={!!formErrors.firstName} helperText={formErrors.firstName} />
               )}
-              <TextField label={`Email${!editCustomer.phone?.trim() ? ' *' : ''}`} fullWidth size="small" value={editCustomer.email || ''} onChange={e => { setEditCustomer({ ...editCustomer, email: e.target.value }); setFormErrors(p => ({ ...p, email: '', phone: '' })); }} error={!!formErrors.email} helperText={formErrors.email || 'Email or phone — at least one required'} />
+              <TextField label={`Email${!editCustomer.phone?.trim() ? ' *' : ''}`} fullWidth size="small" value={editCustomer.email || ''} onChange={e => { setEditCustomer({ ...editCustomer, email: e.target.value }); setFormErrors(p => ({ ...p, email: '', phone: '' })); }} error={!!formErrors.email} helperText={formErrors.email || t('emailOrPhoneHint')} />
               <TextField label={`Phone${!editCustomer.email?.trim() ? ' *' : ''}`} fullWidth size="small" value={editCustomer.phone || ''} onChange={e => { setEditCustomer({ ...editCustomer, phone: e.target.value }); setFormErrors(p => ({ ...p, email: '', phone: '' })); }} error={!!formErrors.phone} helperText={formErrors.phone} />
             </Box>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
-            <Button variant="contained" onClick={handleSave} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{isEditing ? 'Update' : 'Add Customer'}</Button>
+            <Button variant="contained" onClick={handleSave} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{isEditing ? t('update') : t('addCustomer')}</Button>
           </DialogActions>
         </Dialog>
 
         {/* Customer Delete */}
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-          <DialogTitle sx={{ fontWeight: 700 }}>Delete Customer</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteCustomerTitle')}</DialogTitle>
           <DialogContent><Typography variant="body2" color="text.secondary">Are you sure? This action cannot be undone.</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setDeleteDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
@@ -1530,38 +1540,38 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
         {/* Order Add/Edit */}
         <Dialog open={orderDialogOpen} onClose={() => setOrderDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-          <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{isEditingOrder ? 'Edit Order' : 'Add New Order'}</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{isEditingOrder ? t('editOrder') : t('addOrder')}</DialogTitle>
           <Divider />
           <DialogContent sx={{ pt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <FormControl size="small" fullWidth>
-                <InputLabel>Customer</InputLabel>
-                <Select value={editOrder.customerId} label="Customer" onChange={e => setEditOrder({ ...editOrder, customerId: e.target.value })}>
+                <InputLabel>{t('customer')}</InputLabel>
+                <Select value={editOrder.customerId} label={t('customer')} onChange={e => setEditOrder({ ...editOrder, customerId: e.target.value })}>
                   {customers.map(c => <MenuItem key={c.id} value={c.id.toString()}>{c.firstName} {c.lastName}</MenuItem>)}
                 </Select>
               </FormControl>
-              <TextField label="Product Name" fullWidth size="small" value={editOrder.productName} onChange={e => setEditOrder({ ...editOrder, productName: e.target.value })} />
+              <TextField label={t('productName')} fullWidth size="small" value={editOrder.productName} onChange={e => setEditOrder({ ...editOrder, productName: e.target.value })} />
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField label={t('price')} type="text" inputMode="decimal" fullWidth size="small" value={editOrder.price} onChange={e => setEditOrder({ ...editOrder, price: e.target.value })} />
                 <TextField label={t('quantity')} type="number" fullWidth size="small" value={editOrder.quantity} onChange={e => setEditOrder({ ...editOrder, quantity: e.target.value })} />
               </Box>
               <FormControl size="small" fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select value={editOrder.status} label="Status" onChange={e => setEditOrder({ ...editOrder, status: e.target.value })}>
-                  {ORDER_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                <InputLabel>{t('status')}</InputLabel>
+                <Select value={editOrder.status} label={t('status')} onChange={e => setEditOrder({ ...editOrder, status: e.target.value })}>
+                  {ORDER_STATUSES.map(s => <MenuItem key={s} value={s}>{s === 'PENDING' ? t('pending') : s === 'SHIPPED' ? t('shipped') : s === 'DELIVERED' ? t('delivered') : t('cancelled')}</MenuItem>)}
                 </Select>
               </FormControl>
             </Box>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setOrderDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
-            <Button variant="contained" onClick={handleSaveOrder} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{isEditingOrder ? 'Update' : 'Add Order'}</Button>
+            <Button variant="contained" onClick={handleSaveOrder} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{isEditingOrder ? t('update') : t('addOrder')}</Button>
           </DialogActions>
         </Dialog>
 
         {/* Order Delete */}
         <Dialog open={orderDeleteDialogOpen} onClose={() => setOrderDeleteDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-          <DialogTitle sx={{ fontWeight: 700 }}>Delete Order</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteOrderTitle')}</DialogTitle>
           <DialogContent><Typography variant="body2" color="text.secondary">Are you sure? This action cannot be undone.</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setOrderDeleteDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
@@ -1571,7 +1581,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
         {/* User Delete */}
         <Dialog open={addUserDialogOpen} onClose={() => setAddUserDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-          <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem', pb: 1 }}{t('addUser')}</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem', pb: 1 }}>{t('addUser')}</DialogTitle>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '8px !important' }}>
             <TextField label={t('username')} fullWidth size="small" value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} />
             <TextField label={t('email')} fullWidth size="small" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
@@ -1588,7 +1598,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
         </Dialog>
 
         <Dialog open={deleteUserDialogOpen} onClose={() => setDeleteUserDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-          <DialogTitle sx={{ fontWeight: 700 }}>Delete User</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteUserTitle')}</DialogTitle>
           <DialogContent><Typography variant="body2" color="text.secondary">Are you sure? This action cannot be undone.</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setDeleteUserDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
@@ -1598,10 +1608,10 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
 
         {/* Role Change */}
         <Dialog open={roleDialogOpen} onClose={() => setRoleDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-          <DialogTitle sx={{ fontWeight: 700 }}>Change Role</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 700 }}>{t('changeRoleTitle')}</DialogTitle>
           <DialogContent sx={{ pt: 2 }}>
             <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-              <InputLabel>Role</InputLabel>
+              <InputLabel>{t('role')}</InputLabel>
               <Select value={selectedRole} label={t('role')} onChange={e => setSelectedRole(e.target.value)}>
                 <MenuItem value="USER">USER</MenuItem>
                 <MenuItem value="ADMIN">ADMIN</MenuItem>
@@ -1632,30 +1642,30 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                     </Avatar>
                     <Box>
                       <Typography sx={{ fontWeight: 700, fontSize: '1rem' }}>{drawerCustomer.firstName} {drawerCustomer.lastName}</Typography>
-                      <Box sx={{ mt: 0.5 }}>{customerTypeChip(drawerCustomer)}</Box>
+                      <Box sx={{ mt: 0.5 }}>{customerTypeChip(drawerCustomer, t)}</Box>
                     </Box>
                   </Box>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.2, mb: 2.5 }}>
                     {drawerCustomer.email && <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>Email</Typography><Typography sx={{ fontSize: '0.875rem' }}>{drawerCustomer.email}</Typography></Box>}
-                    {drawerCustomer.phone && <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>Phone</Typography><Typography sx={{ fontSize: '0.875rem' }}>{drawerCustomer.phone}</Typography></Box>}
-                    <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>ID</Typography><Typography sx={{ fontSize: '0.875rem' }}>#{drawerCustomer.id}</Typography></Box>
+                    {drawerCustomer.phone && <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>{t('phone')}</Typography><Typography sx={{ fontSize: '0.875rem' }}>{drawerCustomer.phone}</Typography></Box>}
+                    <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>{t('id')}</Typography><Typography sx={{ fontSize: '0.875rem' }}>#{drawerCustomer.id}</Typography></Box>
                   </Box>
                   <Box sx={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr' : '1fr', gap: 1.5, mb: 2.5 }}>
                     <Box sx={{ p: 2, bgcolor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 2, textAlign: 'center' }}>
                       <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: '#1d4ed8' }}>{custOrders.length}</Typography>
-                      <Typography sx={{ fontSize: '0.72rem', color: '#64748b' }}>Total Orders</Typography>
+                      <Typography sx={{ fontSize: '0.72rem', color: '#64748b' }}>{t('totalOrdersLabel')}</Typography>
                     </Box>
                     {isAdmin && (
                       <Box sx={{ p: 2, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 2, textAlign: 'center' }}>
                         <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#15803d' }}>{custRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
-                        <Typography sx={{ fontSize: '0.72rem', color: '#64748b' }}>Total Spent</Typography>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#64748b' }}>{t('totalSpent')}</Typography>
                       </Box>
                     )}
                   </Box>
                   <Divider sx={{ mb: 2 }} />
-                  <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', mb: 1.5 }}>Order History</Typography>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', mb: 1.5 }}>{t('orderHistory')}</Typography>
                   {custOrders.length === 0 ? (
-                    <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', py: 3 }}>No orders yet</Typography>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', py: 3 }}>{t('noOrders')}</Typography>
                   ) : (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {custOrders.map(o => (
@@ -1668,7 +1678,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                             {isAdmin && (
                               <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#15803d' }}>{(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
                             )}
-                            {statusChip(o.status)}
+                            {statusChip(o.status, t)}
                           </Box>
                         </Box>
                       ))}
