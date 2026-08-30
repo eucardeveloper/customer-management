@@ -230,14 +230,14 @@ export default function Home() {
     try { const data = await api.get<Customer[]>('/api/customers'); setCustomers(Array.isArray(data) ? data : []); }
     catch { showSnackbar('Failed to load customers.', 'error'); }
     finally { setLoading(false); }
-  }, []);
+  }, [t]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try { const data = await api.get<Order[]>('/api/orders'); setOrders(Array.isArray(data) ? data : []); }
     catch { showSnackbar(t('error'), 'error'); }
     finally { setLoading(false); }
-  }, []);
+  }, [t]);
 
   const fetchUsers = useCallback(async () => {
     try { const data = await api.get<UserItem[]>('/api/users'); setUsers(Array.isArray(data) ? data : []); }
@@ -298,8 +298,15 @@ export default function Home() {
   };
 
   const handleSaveOrder = async () => {
+    const customerId = parseInt(editOrder.customerId);
+    const price = parseFloat(editOrder.price);
+    const quantity = parseInt(editOrder.quantity);
+    if (!editOrder.productName.trim()) { showSnackbar('Product name is required', 'error'); return; }
+    if (isNaN(customerId) || customerId <= 0) { showSnackbar('Valid customer ID is required', 'error'); return; }
+    if (isNaN(price) || price < 0) { showSnackbar('Valid price is required', 'error'); return; }
+    if (isNaN(quantity) || quantity <= 0) { showSnackbar('Valid quantity is required', 'error'); return; }
     try {
-      const body: Record<string, unknown> = { customerId: parseInt(editOrder.customerId), productName: editOrder.productName, price: parseFloat(editOrder.price), quantity: parseInt(editOrder.quantity), status: editOrder.status || 'PENDING' };
+      const body: Record<string, unknown> = { customerId, productName: editOrder.productName.trim(), price, quantity, status: editOrder.status || 'PENDING' };
       if (isEditingOrder && editOrderId) {
         if (editOrder.date) body.date = editOrder.date;
         await api.put(`/api/orders/${editOrderId}`, body); showSnackbar(t('saved'), 'success');
@@ -422,7 +429,12 @@ export default function Home() {
     setChatLoading(true);
     try {
       // Build system context from real data
-      const customerSummary = customers.map(c => `- ID:${c.id} ${c.firstName} ${c.lastName} (${c.customerType ?? 'INDIVIDUAL'}) email:${c.email} phone:${c.phone}`).join('\n');
+      const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'ROLE_ADMIN';
+  const customerSummary = customers.map(c =>
+    isAdmin
+      ? `- ID:${c.id} ${c.firstName} ${c.lastName} (${c.customerType ?? 'INDIVIDUAL'}) email:${c.email} phone:${c.phone}`
+      : `- ID:${c.id} ${c.firstName} ${c.lastName} (${c.customerType ?? 'INDIVIDUAL'})`
+  ).join('\n');
       const isAdminUser = currentUser?.role === 'ADMIN';
       const orderSummary = orders.map(o => {
         const base = `- ID:${o.id} product:"${o.productName}" customer_id:${o.customerId} qty:${o.quantity} status:${o.status ?? 'PENDING'} date:${o.date ? new Date(o.date).toLocaleDateString('en-US') : '-'}`;
@@ -589,7 +601,7 @@ ${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information —
                       <Typography sx={{ color: isAdmin ? '#34d399' : 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{currentUser.role}</Typography>
                     </Box>
                     <Tooltip title={t("signOut")}>
-                      <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }}>
+                      <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); document.cookie = 'auth_token=; path=/; max-age=0'; window.location.href = '/login'; }}>
                         <LogoutIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
