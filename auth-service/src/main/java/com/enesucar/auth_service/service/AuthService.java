@@ -35,7 +35,7 @@ public class AuthService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
-.role(request.getRole() != null && request.getRole().equalsIgnoreCase("ADMIN") ? Role.ADMIN : Role.USER)
+                .role(Role.USER) // SECURITY: public registration is always ROLE_USER, never client-controlled
                 .build();
 
         userRepository.save(user);

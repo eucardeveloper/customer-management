@@ -22,5 +22,8 @@ public class RegisterRequest {
     @Email(message = "Invalid email format")
     private String email;
 
-    private String role; // optional, defaults to USER
+    // SECURITY: role is intentionally NOT part of the public registration payload.
+    // Public self-registration always yields ROLE_USER. Elevating a user to ADMIN is
+    // done exclusively through PATCH /api/users/{id}/role, which is @PreAuthorize("hasRole('ADMIN')").
+    // Accepting a client-supplied role here was a privilege-escalation hole.
 }

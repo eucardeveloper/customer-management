@@ -11,6 +11,7 @@ import com.enesucar.auth_service.security.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -80,6 +81,39 @@ class AuthServiceTest {
         assertThat(response.getUsername()).isEqualTo("testuser");
         assertThat(response.getRole()).isEqualTo("USER");
         verify(userRepository).save(any(User.class));
+    }
+
+    /**
+     * SECURITY REGRESSION TEST.
+     *
+     * Before this was fixed, RegisterRequest carried a client-supplied "role" field and
+     * AuthService trusted it:
+     *     .role("ADMIN".equalsIgnoreCase(request.getRole()) ? Role.ADMIN : Role.USER)
+     * Because POST /api/auth/register is permitAll() at both the gateway and the service,
+     * anyone on the internet could obtain a full ADMIN account with a single request.
+     *
+     * The field is gone and the role is now hardcoded. This test captures the invariant so
+     * the hole cannot be reopened: whatever the caller sends, a self-registered user is USER.
+     */
+    @Test
+    void register_shouldAlwaysCreateUserRole_andNeverAdmin() {
+        when(userRepository.existsByUsername("testuser")).thenReturn(false);
+        when(userRepository.existsByEmail("test@test.com")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
+        when(userRepository.save(any(User.class))).thenReturn(user);
+        when(jwtUtil.generateToken("testuser", "USER")).thenReturn("jwt-token");
+
+        authService.register(registerRequest);
+
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(saved.capture());
+        assertThat(saved.getValue().getRole())
+                .as("public self-registration must never yield ADMIN")
+                .isEqualTo(Role.USER);
+
+        // The token must also be minted with USER, not an elevated claim.
+        verify(jwtUtil).generateToken("testuser", "USER");
+        verify(jwtUtil, never()).generateToken(anyString(), eq("ADMIN"));
     }
 
     @Test
