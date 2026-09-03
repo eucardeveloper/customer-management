@@ -95,25 +95,16 @@ A common question: *"Why use Kafka for a CRM app — isn't REST enough?"*
 
 ```
 customer-management/
-├── order-backend/          # Spring Boot 3 — REST API + Kafka producer
-│   ├── src/main/java/
-│   │   ├── controller/     # AuthController, CustomerController, OrderController
-│   │   ├── service/        # Business logic
-│   │   ├── model/          # JPA entities (Customer, Order, User)
-│   │   ├── security/       # JWT filter, UserDetailsService
-│   │   └── kafka/          # OrderEventProducer, OrderEventConsumer
-│   └── docker/
-├── customer-app/           # Next.js 15 frontend
-│   └── src/
-│       ├── app/
-│       │   ├── page.tsx        # Main dashboard (all tabs)
-│       │   ├── login/page.tsx  # Login page
-│       │   └── register/page.tsx
-│       ├── lib/
-│       │   └── auth.ts         # JWT storage helpers
-│       └── middleware.ts       # Route protection
-├── seed-data.js            # Demo data generator (20 customers, 180 orders)
-└── docker-compose.yml      # PostgreSQL + Kafka + Zookeeper + Backend + Frontend
+├── apigateway/             # Spring Cloud Gateway — routes all requests, JWT validation
+├── auth-service/           # Spring Boot — authentication, user management, BCrypt + JWT
+├── customer-service/       # Spring Boot — customer CRUD, role-based access
+├── order-service/          # Spring Boot — order CRUD, Kafka producer + consumer
+├── frontend/
+│   ├── customer-app/       # Next.js 15 — main CRM dashboard (customers, orders, analytics, AI)
+│   └── ai-agent-app/       # Next.js 15 — standalone AI agent interface
+├── monitoring/             # Prometheus config
+├── seeddata.js             # Demo data generator (20 customers, 180 orders)
+└── docker-compose.yml      # Full stack: Kafka + Zookeeper + 3 DBs + 4 backends + 2 frontends + monitoring
 ```
 
 ---
