@@ -99,6 +99,23 @@ export default function LoginPage() {
 
           {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
 
+          {/* Demo credentials hint */}
+          <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(21,101,192,0.06)', border: '1px solid rgba(21,101,192,0.2)' }}>
+            <Typography variant="caption" display="block" fontWeight={700} color="primary" sx={{ mb: 0.5 }}>
+              Demo Credentials
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 3 }}>
+              <Box>
+                <Typography variant="caption" display="block" color="text.secondary">Admin</Typography>
+                <Typography variant="caption" display="block" fontWeight={600} sx={{ fontFamily: 'monospace' }}>admin / admin123</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" display="block" color="text.secondary">User</Typography>
+                <Typography variant="caption" display="block" fontWeight={600} sx={{ fontFamily: 'monospace' }}>user1 / user123</Typography>
+              </Box>
+            </Box>
+          </Box>
+
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <Stack spacing={3}>
               <TextField
