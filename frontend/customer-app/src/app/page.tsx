@@ -223,7 +223,7 @@ export default function Home() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [chartMode, setChartMode] = useState<'daily' | 'monthly'>('monthly');
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
