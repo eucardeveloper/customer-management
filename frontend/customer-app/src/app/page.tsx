@@ -225,6 +225,8 @@ export default function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
 
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => setSnackbar({ open: true, message, severity }), []);
+
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try { const data = await api.get<Customer[]>('/api/customers'); setCustomers(Array.isArray(data) ? data : []); }
@@ -259,8 +261,6 @@ export default function Home() {
     else if (tab === 'orders') { fetchOrders(); fetchCustomers(); }
     else if (tab === 'users') fetchUsers();
   }, [tab, fetchCustomers, fetchOrders, fetchUsers]);
-
-  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => setSnackbar({ open: true, message, severity }), []);
 
   const totalRevenue = orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
   const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
