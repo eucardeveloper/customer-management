@@ -148,6 +148,7 @@ services:
       CUSTOMER_SERVICE_URL: http://customer-backend:8081
       ORDER_SERVICE_URL: http://order-backend:8082
       AUTH_SERVICE_URL: http://auth-backend:8083
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
 
   customer-frontend:
     build:
