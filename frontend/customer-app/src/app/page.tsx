@@ -230,14 +230,14 @@ export default function Home() {
     try { const data = await api.get<Customer[]>('/api/customers'); setCustomers(Array.isArray(data) ? data : []); }
     catch { showSnackbar('Failed to load customers.', 'error'); }
     finally { setLoading(false); }
-  }, [t]);
+  }, [showSnackbar]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try { const data = await api.get<Order[]>('/api/orders'); setOrders(Array.isArray(data) ? data : []); }
-    catch { showSnackbar(t('error'), 'error'); }
+    catch { showSnackbar('Failed to load orders.', 'error'); }
     finally { setLoading(false); }
-  }, [t]);
+  }, [showSnackbar]);
 
   const fetchUsers = useCallback(async () => {
     try { const data = await api.get<UserItem[]>('/api/users'); setUsers(Array.isArray(data) ? data : []); }
@@ -260,7 +260,7 @@ export default function Home() {
     else if (tab === 'users') fetchUsers();
   }, [tab, fetchCustomers, fetchOrders, fetchUsers]);
 
-  const showSnackbar = (message: string, severity: 'success' | 'error') => setSnackbar({ open: true, message, severity });
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => setSnackbar({ open: true, message, severity }), []);
 
   const totalRevenue = orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
   const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
