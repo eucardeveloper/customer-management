@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -21,6 +21,7 @@ import PersonOutlineIcon from '@mui/icons-material/Person';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { saveAuth } from '@/lib/auth';
+import { useMounted } from '@/lib/useMounted';
 
 interface AuthResponse {
   token: string;
@@ -32,14 +33,12 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => { setMounted(true); }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -93,7 +92,7 @@ export default function LoginPage() {
             }}>
               <LockOutlinedIcon sx={{ color: '#fff', fontSize: 32 }} />
             </Box>
-            <Typography variant="h5" fontWeight={700} color="text.primary">Customer Management</Typography>
+            <Typography sx={{ fontWeight: 700 }} variant="h5" color="text.primary">Customer Management</Typography>
             <Typography variant="body2" color="text.secondary">Sign in to your account</Typography>
           </Box>
 
@@ -101,17 +100,17 @@ export default function LoginPage() {
 
           {/* Demo credentials hint */}
           <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(21,101,192,0.06)', border: '1px solid rgba(21,101,192,0.2)' }}>
-            <Typography variant="caption" display="block" fontWeight={700} color="primary" sx={{ mb: 0.5 }}>
+            <Typography variant="caption" color="primary" sx={{ display: "block", fontWeight: 700, mb: 0.5 }}>
               Demo Credentials
             </Typography>
             <Box sx={{ display: 'flex', gap: 3 }}>
               <Box>
-                <Typography variant="caption" display="block" color="text.secondary">Admin</Typography>
-                <Typography variant="caption" display="block" fontWeight={600} sx={{ fontFamily: 'monospace' }}>admin / admin123</Typography>
+                <Typography sx={{ display: "block" }} variant="caption" color="text.secondary">Admin</Typography>
+                <Typography variant="caption" sx={{ display: "block", fontWeight: 600, fontFamily: 'monospace' }}>admin / admin123</Typography>
               </Box>
               <Box>
-                <Typography variant="caption" display="block" color="text.secondary">User</Typography>
-                <Typography variant="caption" display="block" fontWeight={600} sx={{ fontFamily: 'monospace' }}>user1 / user123</Typography>
+                <Typography sx={{ display: "block" }} variant="caption" color="text.secondary">User</Typography>
+                <Typography variant="caption" sx={{ display: "block", fontWeight: 600, fontFamily: 'monospace' }}>user1 / user123</Typography>
               </Box>
             </Box>
           </Box>

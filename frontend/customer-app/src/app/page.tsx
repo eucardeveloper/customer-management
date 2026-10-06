@@ -4,6 +4,8 @@ import * as XLSX from 'xlsx';
 import { PieChart, Pie, Cell, Tooltip as ReTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { api } from '@/lib/api';
 import { getAuthUser } from '@/lib/auth';
+import { useAuthUser } from '@/lib/useAuthUser';
+import { useMounted } from '@/lib/useMounted';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
@@ -184,7 +186,7 @@ export default function Home() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
-  const [currentUser, setCurrentUser] = useState<{ username: string; role: string } | null>(null);
+  const currentUser = useAuthUser();
   const [loading, setLoading] = useState(false);
   const [custSearch, setCustSearch] = useState('');
   const [ordSearch, setOrdSearch] = useState('');
@@ -216,8 +218,9 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  const [sessionId, setSessionId] = useState('session-init');
-  const [mounted, setMounted] = useState(false);
+  const [sessionId] = useState(() => `session-${Date.now()}`);
+  const [now, setNow] = useState(() => Date.now());
+  const mounted = useMounted();
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [chartMode, setChartMode] = useState<'daily' | 'monthly'>('monthly');
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -234,7 +237,7 @@ export default function Home() {
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
-    try { const data = await api.get<Order[]>('/api/orders'); setOrders(Array.isArray(data) ? data : []); }
+    try { const data = await api.get<Order[]>('/api/orders'); setOrders(Array.isArray(data) ? data : []); setNow(Date.now()); }
     catch { showSnackbar('Failed to load orders.', 'error'); }
     finally { setLoading(false); }
   }, [showSnackbar]);
@@ -245,16 +248,15 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    setMounted(true);
-    setSessionId(`session-${Date.now()}`);
     const user = getAuthUser();
-    setCurrentUser(user);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load on mount
     fetchCustomers();
     fetchOrders();
     if (user?.role === 'ADMIN') fetchUsers();
   }, [fetchCustomers, fetchOrders, fetchUsers]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag is set by the fetcher; this is the data load for the active tab
     if (tab === 'customers') fetchCustomers();
     else if (tab === 'orders') { fetchOrders(); fetchCustomers(); }
     else if (tab === 'users') fetchUsers();
@@ -897,7 +899,6 @@ export default function Home() {
               const cancelled = orders.filter(o => o.status === 'CANCELLED').length;
               const fulfillmentRate = orders.length > 0 ? ((delivered / orders.length) * 100).toFixed(1) : '0';
               // Real trend: compare last 30 days vs prior 30 days
-              const now = Date.now();
               const d30 = 30 * 24 * 60 * 60 * 1000;
               const recentOrders30 = orders.filter(o => o.date && (now - new Date(o.date).getTime()) < d30);
               const prevOrders30 = orders.filter(o => o.date && (now - new Date(o.date).getTime()) >= d30 && (now - new Date(o.date).getTime()) < 2 * d30);
@@ -1036,7 +1037,7 @@ export default function Home() {
                               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                               <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-                              <ReTooltip formatter={(v: number) => [v.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                              <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
                               <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 4 }} activeDot={{ r: 6 }} />
                             </LineChart>
                           </ResponsiveContainer>
@@ -1120,7 +1121,7 @@ export default function Home() {
                                 <Pie data={allPie} cx="50%" cy="50%" innerRadius={38} outerRadius={60} paddingAngle={2} dataKey="value">
                                   {allPie.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" opacity={entry.realCount === 0 ? 0.2 : 1} />)}
                                 </Pie>
-                                <ReTooltip formatter={(v: number, name: string, props: any) => [props.payload.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                                <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
                               </PieChart>
                             </ResponsiveContainer>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, mt: 1 }}>
@@ -1155,7 +1156,7 @@ export default function Home() {
                 {/* Stat Cards with sparklines */}
                 {(() => {
                   // Real trend: last 30 days vs prior 30 days
-                  const now2 = Date.now();
+                  const now2 = now;
                   const d30a = 30 * 24 * 60 * 60 * 1000;
                   const aNow = orders.filter(o => o.date && (now2 - new Date(o.date).getTime()) < d30a);
                   const aPrev = orders.filter(o => o.date && (now2 - new Date(o.date).getTime()) >= d30a && (now2 - new Date(o.date).getTime()) < 2 * d30a);
@@ -1229,7 +1230,7 @@ export default function Home() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                        <ReTooltip formatter={(v: number) => [v.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                        <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
                         <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 4 }} activeDot={{ r: 6 }} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -1249,7 +1250,7 @@ export default function Home() {
                               <Pie data={allPie} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={2} dataKey="value">
                                 {allPie.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" opacity={entry.realCount === 0 ? 0.25 : 1} />)}
                               </Pie>
-                              <ReTooltip formatter={(v: number, name: string, props: any) => [props.payload.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                              <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
                             </PieChart>
                           </ResponsiveContainer>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, mt: 1 }}>
@@ -1289,7 +1290,7 @@ export default function Home() {
                               <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={3} dataKey="value">
                                 {pieData.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" />)}
                               </Pie>
-                              <ReTooltip formatter={(v: number, name: string, props: any) => [props.payload.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                              <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
                             </PieChart>
                           </ResponsiveContainer>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
@@ -1324,8 +1325,8 @@ export default function Home() {
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                             <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
                             <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} width={105} />
-                            <ReTooltip formatter={(v: number) => [v.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]} label={{ position: 'right', formatter: (v: number) => `$${(v/1000).toFixed(1)}k`, fontSize: 11, fill: '#64748b' }}>
+                            <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                            <Bar dataKey="value" radius={[0, 4, 4, 0]} label={{ position: 'right', formatter: (v: unknown) => `$${(Number(v)/1000).toFixed(1)}k`, fontSize: 11, fill: '#64748b' }}>
                               {top.map((_, i) => <Cell key={i} fill={PROD_COLORS[i % PROD_COLORS.length]} />)}
                             </Bar>
                           </BarChart>
@@ -1468,7 +1469,7 @@ export default function Home() {
         {/* ── Dialogs ── */}
 
         {/* Customer Add/Edit */}
-        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{isEditing ? t('editCustomer') : t('addCustomer')}</DialogTitle>
           <Divider />
           <DialogContent sx={{ pt: 2 }}>
@@ -1499,7 +1500,7 @@ export default function Home() {
         </Dialog>
 
         {/* Customer Delete */}
-        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteCustomerTitle')}</DialogTitle>
           <DialogContent><Typography variant="body2" color="text.secondary">Are you sure? This action cannot be undone.</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
@@ -1509,7 +1510,7 @@ export default function Home() {
         </Dialog>
 
         {/* Order Add/Edit */}
-        <Dialog open={orderDialogOpen} onClose={() => setOrderDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <Dialog open={orderDialogOpen} onClose={() => setOrderDialogOpen(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{isEditingOrder ? t('editOrder') : t('addOrder')}</DialogTitle>
           <Divider />
           <DialogContent sx={{ pt: 2 }}>
@@ -1540,7 +1541,7 @@ export default function Home() {
         </Dialog>
 
         {/* Order Delete */}
-        <Dialog open={orderDeleteDialogOpen} onClose={() => setOrderDeleteDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <Dialog open={orderDeleteDialogOpen} onClose={() => setOrderDeleteDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteOrderTitle')}</DialogTitle>
           <DialogContent><Typography variant="body2" color="text.secondary">Are you sure? This action cannot be undone.</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
@@ -1550,7 +1551,7 @@ export default function Home() {
         </Dialog>
 
         {/* User Delete */}
-        <Dialog open={addUserDialogOpen} onClose={() => setAddUserDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <Dialog open={addUserDialogOpen} onClose={() => setAddUserDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem', pb: 1 }}>{t('addUser')}</DialogTitle>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '8px !important' }}>
             <TextField label={t('username')} fullWidth size="small" value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} />
@@ -1567,7 +1568,7 @@ export default function Home() {
           </DialogActions>
         </Dialog>
 
-        <Dialog open={deleteUserDialogOpen} onClose={() => setDeleteUserDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <Dialog open={deleteUserDialogOpen} onClose={() => setDeleteUserDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteUserTitle')}</DialogTitle>
           <DialogContent><Typography variant="body2" color="text.secondary">Are you sure? This action cannot be undone.</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
@@ -1577,7 +1578,7 @@ export default function Home() {
         </Dialog>
 
         {/* Role Change */}
-        <Dialog open={roleDialogOpen} onClose={() => setRoleDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <Dialog open={roleDialogOpen} onClose={() => setRoleDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700 }}>{t('changeRoleTitle')}</DialogTitle>
           <DialogContent sx={{ pt: 2 }}>
             <FormControl fullWidth size="small" sx={{ mt: 1 }}>
@@ -1595,7 +1596,7 @@ export default function Home() {
         </Dialog>
 
         {/* Customer Detail */}
-        <Dialog open={!!drawerCustomer} onClose={() => setDrawerCustomer(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <Dialog open={!!drawerCustomer} onClose={() => setDrawerCustomer(null)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           {drawerCustomer && (() => {
             const custOrders = orders.filter(o => o.customerId === drawerCustomer.id);
             const custRevenue = custOrders.reduce((s, o) => s + o.price * o.quantity, 0);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -21,12 +21,13 @@ import PersonOutlineIcon from '@mui/icons-material/Person';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import { useMounted } from '@/lib/useMounted';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,8 +37,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -90,7 +89,7 @@ export default function RegisterPage() {
       <Card elevation={24} sx={{ width: '100%', maxWidth: 440, borderRadius: 3 }}>
         <CardContent sx={{ p: 5 }}>
           {/* Logo */}
-          <Stack alignItems="center" spacing={1} mb={4}>
+          <Stack sx={{ mb: 4, alignItems: "center" }} spacing={1}>
             <Box
               sx={{
                 width: 64, height: 64, borderRadius: '50%',
@@ -101,7 +100,7 @@ export default function RegisterPage() {
             >
               <PersonOutlineIcon sx={{ color: '#fff', fontSize: 32 }} />
             </Box>
-            <Typography variant="h5" fontWeight={700} color="text.primary">
+            <Typography sx={{ fontWeight: 700 }} variant="h5" color="text.primary">
               Create Account
             </Typography>
             <Typography variant="body2" color="text.secondary">

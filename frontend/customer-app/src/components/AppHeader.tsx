@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AppBar,
@@ -19,16 +19,13 @@ import {
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
-import { clearAuth, getAuthUser } from '@/lib/auth';
+import { clearAuth } from '@/lib/auth';
+import { useAuthUser } from '@/lib/useAuthUser';
 
 export default function AppHeader() {
   const router = useRouter();
-  const [user, setUser] = useState<{ username: string; role: string } | null>(null);
+  const user = useAuthUser();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
-  useEffect(() => {
-    setUser(getAuthUser());
-  }, []);
 
   const handleLogout = () => {
     clearAuth();
@@ -46,12 +43,12 @@ export default function AppHeader() {
     >
       <Toolbar sx={{ px: { xs: 2, sm: 3 } }}>
         <PeopleAltIcon sx={{ mr: 1.5, fontSize: 28 }} />
-        <Typography variant="h6" fontWeight={700} sx={{ flexGrow: 1, letterSpacing: 0.5 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1, letterSpacing: 0.5 }}>
           Customer Management
         </Typography>
 
         {user && (
-          <Box display="flex" alignItems="center" gap={1.5}>
+          <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
             <Chip
               label={user.role}
               size="small"
@@ -86,10 +83,10 @@ export default function AppHeader() {
               onClose={() => setAnchorEl(null)}
               transformOrigin={{ horizontal: 'right', vertical: 'top' }}
               anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-              PaperProps={{ elevation: 8, sx: { mt: 1, minWidth: 180, borderRadius: 2 } }}
+              slotProps={{ paper: { elevation: 8, sx: { mt: 1, minWidth: 180, borderRadius: 2 } } }}
             >
-              <Box px={2} py={1.5}>
-                <Typography variant="subtitle2" fontWeight={700}>
+              <Box sx={{ px: 2, py: 1.5 }}>
+                <Typography sx={{ fontWeight: 700 }} variant="subtitle2">
                   {user.username}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
