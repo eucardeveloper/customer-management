@@ -36,8 +36,6 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 
 const DRAWER_WIDTH = 256;
-const OPENROUTER_API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_KEY || '';
-const OPENROUTER_MODEL = 'google/gemini-2.5-flash';
 
 const SIDEBAR_BG = '#0f172a';
 const SIDEBAR_HOVER = 'rgba(255,255,255,0.06)';
@@ -428,71 +426,31 @@ export default function Home() {
     setChatInput('');
     setChatLoading(true);
     try {
-      // Build system context from real data
-      const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'ROLE_ADMIN';
-  const customerSummary = customers.map(c =>
-    isAdmin
-      ? `- ID:${c.id} ${c.firstName} ${c.lastName} (${c.customerType ?? 'INDIVIDUAL'}) email:${c.email} phone:${c.phone}`
-      : `- ID:${c.id} ${c.firstName} ${c.lastName} (${c.customerType ?? 'INDIVIDUAL'})`
-  ).join('\n');
-      const isAdminUser = currentUser?.role === 'ADMIN';
-      const orderSummary = orders.map(o => {
-        const base = `- ID:${o.id} product:"${o.productName}" customer_id:${o.customerId} qty:${o.quantity} status:${o.status ?? 'PENDING'} date:${o.date ? new Date(o.date).toLocaleDateString('en-US') : '-'}`;
-        return isAdminUser ? `${base} price:${o.price} total:${(o.price*o.quantity).toFixed(2)}` : base;
-      }).join('\n');
-      const totalRev = orders.reduce((s, o) => s + o.price * o.quantity, 0);
-      const revenueSection = isAdminUser
-        ? `\n### Revenue Summary:\nTotal revenue: ${totalRev.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} across ${orders.length} orders\nAverage order value: ${orders.length > 0 ? (totalRev / orders.length).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '$0'}`
-        : '';
-      const systemPrompt = `You are a CRM assistant. You have access to the user's real customer and order data and answer questions based on it. Always respond in the same language the user writes in — if they write in Turkish, respond in Turkish; if in English, respond in English.
-
-## Current Data
-
-### Customers (${customers.length} total):
-${customerSummary || 'No customers yet.'}
-
-### Orders (${orders.length} total):
-${orderSummary || 'No orders yet.'}${revenueSection}
-
-## Rules
-- Always respond in the same language the user uses (Turkish if they write Turkish, English if they write English)
-- Give concrete, accurate answers based on the data
-- Perform calculations when needed (rates, averages, totals, etc.)
-- Be concise and clear — avoid unnecessary verbosity
-- Do NOT add, delete, or modify customers/orders — analysis only
-${!isAdminUser ? '- Do NOT reveal pricing, revenue, or financial information — this user does not have permission to see financial data' : ''}`;
-
-      const messages = [
-        ...chatMessages.map(m => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: text }
-      ];
-
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://customer-management-app.com',
-          'X-Title': 'Customer Management CRM',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          model: OPENROUTER_MODEL,
-          messages: [{ role: 'system', content: systemPrompt }, ...messages],
-          max_tokens: 1024,
-          temperature: 0.3,
+          messages: newMessages
+            .filter(m => !(m.role === 'assistant' && m.content.startsWith('⚠️')))
+            .map(m => ({ role: m.role, content: m.content })),
         }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as any)?.error?.message || `HTTP ${res.status}`);
+        throw new Error((err as { error?: string })?.error || `HTTP ${res.status}`);
       }
 
       const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content ?? 'No response received.';
+      const reply = data.reply ?? 'No response received.';
       setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
-    } catch (err: any) {
-      setChatMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Error: ${err?.message ?? 'Connection failed.'}` }]);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Connection failed.';
+      setChatMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Error: ${message}` }]);
     } finally { setChatLoading(false); }
   };
 

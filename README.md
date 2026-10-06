@@ -157,8 +157,8 @@ customer-management/
 git clone https://github.com/your-username/customer-management.git
 cd customer-management
 
-# Set your OpenRouter API key
-echo "NEXT_PUBLIC_OPENROUTER_KEY=sk-or-v1-..." > customer-app/.env.local
+# Set your OpenRouter API key (server-side only, read by docker compose from the shell or a root .env file)
+export OPENROUTER_API_KEY=sk-or-v1-...
 
 docker-compose build customer-frontend
 docker-compose up -d
@@ -194,13 +194,25 @@ npm run dev   # http://localhost:3003
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_OPENROUTER_KEY=sk-or-v1-your-key-here
+# Server-side only (no NEXT_PUBLIC_ prefix): used by the /api/ai/chat route handler
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+# Optional: backend URL as seen from the Next.js server (defaults to NEXT_PUBLIC_API_URL)
+# API_INTERNAL_URL=http://localhost:8080
 ```
+
+### AI assistant: security and data handling
+
+- The OpenRouter key is read only by the Next.js server (`src/app/api/ai/chat/route.ts`). The browser sends chat messages only.
+- The route handler fetches customers and orders itself with the caller's JWT, so the backend decides what the caller may see.
+- Data minimisation: e-mail addresses and phone numbers are never sent to the model. Prices and revenue are sent for `ADMIN` users only. Lists are capped (200 customers, 500 orders).
+- Stored data is passed as an untrusted `<DATA>` block and the model is told not to follow instructions inside it (prompt-injection mitigation).
+- Input is validated (max 20 messages, 2000 characters per user message), calls time out after 30 s, and requests are limited to 20 per minute per user.
+- If a key was ever committed or used with the old `NEXT_PUBLIC_` setup, treat it as leaked and rotate it in the OpenRouter dashboard.
 
 ### Railway Dashboard (production)
 
 Set these in your Railway service environment settings:
-- `NEXT_PUBLIC_OPENROUTER_KEY`
+- `OPENROUTER_API_KEY` (server-side, not `NEXT_PUBLIC_`)
 - `NEXT_PUBLIC_API_URL` → your backend Railway URL
 
 > ⚠️ **Never commit `.env` files or application secrets to git.**
