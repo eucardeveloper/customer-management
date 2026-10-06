@@ -58,6 +58,10 @@ docker compose up --build
 
 Only these entry points are published to the host. Databases, Kafka and the three backend services are reachable only inside the compose network, so nothing else on your machine can talk to them.
 
+### Your data survives restarts
+
+Database data lives in a named Docker volume. `docker compose up -d` after a reboot or after `docker compose stop` / `down` brings everything back with all records intact; containers also restart automatically (`restart: unless-stopped`). The only command that deletes the data is `docker compose down -v` (or `docker volume rm`), so do not use `-v` unless you want a clean slate.
+
 Demo accounts (seeded by Flyway in auth-service):
 
 | Role | Username | Password | Can do |
@@ -69,7 +73,8 @@ These credentials are demo data. Change them before exposing the stack anywhere.
 
 ## Security model
 
-- **Gateway** validates the JWT on every request except login/register; services behind it also authorize by role. Role checks happen on the server for each call; hiding buttons in the UI is only UX.
+- **Gateway** validates the JWT on every request except login/register and forwards the verified user and role to the services; anonymous calls get `401`.
+- **Roles are enforced in the services**: reading customers and orders needs any signed-in user, creating/changing/deleting them needs ADMIN, and order prices are returned as `null` to non-admins, so the restriction holds for curl/Postman as well as for the UI. Public self-registration always creates a USER. `OrderApiAuthorizationTest` and `CustomerApiAuthorizationTest` run the real security chain.
 - **Passwords** are hashed with BCrypt. The JWT secret has no default: `docker compose` refuses to start without `JWT_SECRET`.
 - **Network exposure**: only gateway, frontends, n8n, Prometheus and Grafana are published. DB and Kafka ports are internal.
 - **CORS** is limited to the two frontend origins (`CORS_ALLOWED_ORIGINS` to change).
