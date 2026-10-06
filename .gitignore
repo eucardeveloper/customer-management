@@ -42,3 +42,8 @@ Thumbs.db
 # ---- Private / local-only ----
 _private_not_in_git/
 *.bak
+
+# ---- IDE / local scripts ----
+.idea/
+*.iml
+seeddata.js
