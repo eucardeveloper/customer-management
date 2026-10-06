@@ -283,6 +283,8 @@ export const translations = {
     allTime: 'Tüm zamanlar',
     ordersTotal: 'toplam sipariş',
     total: 'toplam',
+    of: '/',
+    ofDelivered: '{n} teslim edildi',
     companies: 'şirket',
     individuals: 'bireysel',
     cancelledSub: 'iptal edildi',
