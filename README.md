@@ -1,278 +1,130 @@
 # Customer Management System
 
-A full-stack, production-ready CRM built with **Spring Boot**, **Next.js 15**, **Kafka**, and **PostgreSQL** — designed to demonstrate enterprise-level architecture, real-time event streaming, role-based access control, and AI-assisted analytics in a single cohesive project.
-
----
-
-## Live Demo
-
-> **URL:** _Add your Railway URL here after deploy_
->
-> | Account | Username | Password | Access |
-> |---------|----------|----------|--------|
-> | Administrator | `admin` | `admin123` | Full access — revenue, analytics, user management, all CRUD |
-> | Standard User | `enes` | `enes1234` | Read-only — orders & customers visible, no financial data |
-
----
+A microservice CRM: customers, orders and users behind an API gateway, order events over Kafka, a Next.js dashboard with an AI assistant, and Prometheus/Grafana monitoring. Everything runs locally with one `docker compose up`.
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                          CLIENT BROWSER                          │
-│              Next.js 15 · React 19 · MUI v9 · TypeScript         │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │ REST (JWT Bearer)
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                     ORDER BACKEND (Spring Boot 3)                │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
-│  │  Auth API   │  │ Customer API │  │      Order API         │  │
-│  │  /api/auth  │  │/api/customers│  │     /api/orders        │  │
-│  └─────────────┘  └──────────────┘  └───────────┬────────────┘  │
-│                                                  │ Kafka Produce │
-└──────────────────────────────────────────────────┼───────────────┘
-                                                   ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                        KAFKA (Apache)                            │
-│                   Topic: order-events                            │
-│   Decouples order creation from downstream processing            │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │ Kafka Consume
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│               NOTIFICATION / ANALYTICS SERVICE                   │
-│    Listens to order-events → updates aggregate stats             │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                       POSTGRESQL                                 │
-│        customers · orders · users · order_events                 │
-└──────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    Browser["Browser<br/>Next.js dashboard :3000"] -->|"REST + JWT"| GW["API Gateway :8080<br/>Spring Cloud Gateway<br/>JWT validation"]
+    Browser -->|"chat messages only"| NextAPI["Next.js route handler<br/>/api/ai/chat"]
+    NextAPI -->|"caller's JWT"| GW
+    NextAPI -->|"server-side key"| LLM["OpenRouter (LLM)"]
+    GW --> Auth["auth-service :8083"]
+    GW --> Cust["customer-service :8081"]
+    GW --> Ord["order-service :8082"]
+    Auth --> AuthDB[("auth_db")]
+    Cust --> CustDB[("customer_db")]
+    Ord --> OrdDB[("order_db")]
+    Ord -->|"order-events"| Kafka[["Kafka"]]
+    Kafka --> Ord
+    Kafka --> Cust
+    Prom["Prometheus :9090"] -.scrapes.-> Auth & Cust & Ord
+    Grafana["Grafana :3002"] -.-> Prom
 ```
 
----
+Four Spring Boot services (gateway, auth, customer, order), one PostgreSQL database per service, Kafka for order events, and two Next.js apps (the CRM dashboard and a small n8n-backed AI agent UI).
 
-## Technology Stack
+| Component | Technology |
+|-----------|-----------|
+| Frontend | Next.js 16 (App Router), React, MUI 9, TypeScript |
+| Gateway | Spring Cloud Gateway (WebFlux), JWT check, upstream timeouts, restricted CORS |
+| Services | Spring Boot 4.0 (auth-service is still on 3.3, see Known limitations), Spring Security, JPA, Flyway |
+| Data | PostgreSQL 16, one database per service, Flyway migrations with seed data |
+| Messaging | Kafka (order-service produces `order-events`) |
+| Observability | Actuator + Micrometer, Prometheus, Grafana |
+| AI | OpenRouter, called only from a Next.js server route |
 
-| Layer | Technology | Version | Why |
-|-------|-----------|---------|-----|
-| Frontend | Next.js | 15 (App Router) | SSR, file-based routing, React Server Components |
-| UI | Material UI | v9 | Production-grade component library with theme system |
-| Language | TypeScript | 5 | Type safety across entire frontend |
-| Backend | Spring Boot | 3.x | Battle-tested Java framework, auto-configuration |
-| Security | Spring Security + JWT | — | Stateless auth, role-based access |
-| Message Broker | Apache Kafka | — | Event-driven order processing (see justification below) |
-| Database | PostgreSQL | 15 | Relational integrity for customer/order data |
-| AI | OpenRouter API (GPT-4o) | — | CRM assistant with role-aware context injection |
-| Container | Docker + Docker Compose | — | Reproducible local + cloud environment |
-| Cloud | Railway | — | Zero-config PostgreSQL + Kafka hosting |
+## Run it locally
 
----
-
-## Why Kafka?
-
-A common question: *"Why use Kafka for a CRM app — isn't REST enough?"*
-
-**The design decision is intentional and justified:**
-
-1. **Decoupling** — Order creation (write) is separated from downstream processing (analytics, notifications, email). The Order API returns instantly; consumers process at their own pace.
-
-2. **Resilience** — If the analytics service goes down, orders are not lost. Kafka retains events; the consumer catches up when it restarts. A direct REST call would fail and lose data.
-
-3. **Scalability** — At high order volume, multiple consumer instances can read from the same topic in parallel (consumer groups), horizontally scaling processing without touching the producer.
-
-4. **Audit Trail** — Kafka's immutable log gives a complete history of every order event — far easier to replay than reconstructing from a mutable database.
-
-5. **Real-world relevance** — E-commerce, fintech, and logistics systems (Amazon, Uber, LinkedIn) all use event streaming for exactly this pattern. Demonstrating it in a portfolio project shows understanding of production-grade system design.
-
-**In short:** REST is used for synchronous client→server calls. Kafka is used for asynchronous server→server event propagation. Both are correct for their purpose.
-
----
-
-## Project Structure
-
-```
-customer-management/
-├── apigateway/             # Spring Cloud Gateway — routes all requests, JWT validation
-├── auth-service/           # Spring Boot — authentication, user management, BCrypt + JWT
-├── customer-service/       # Spring Boot — customer CRUD, role-based access
-├── order-service/          # Spring Boot — order CRUD, Kafka producer + consumer
-├── frontend/
-│   ├── customer-app/       # Next.js 15 — main CRM dashboard (customers, orders, analytics, AI)
-│   └── ai-agent-app/       # Next.js 15 — standalone AI agent interface
-├── monitoring/             # Prometheus config
-├── seeddata.js             # Demo data generator (20 customers, 180 orders)
-└── docker-compose.yml      # Full stack: Kafka + Zookeeper + 3 DBs + 4 backends + 2 frontends + monitoring
-```
-
----
-
-## Features
-
-### Role-Based Access Control
-
-| Feature | ADMIN | USER |
-|---------|-------|------|
-| View customers & orders | ✅ | ✅ |
-| Add / Edit / Delete customers | ✅ | ❌ |
-| Add / Edit / Delete orders | ✅ | ❌ |
-| View revenue & pricing | ✅ | ❌ |
-| Revenue analytics charts | ✅ | ❌ |
-| Top Products by Revenue | ✅ | ❌ |
-| User Management tab | ✅ | ❌ |
-| AI: revenue questions | ✅ | ❌ |
-| AI: order & customer questions | ✅ | ✅ |
-
-### Dashboard
-- Real-time KPI cards: Total Customers, Total Orders, Total Revenue (admin), Fulfillment Rate
-- Trend badges calculated from last 30 days vs prior 30 days
-- Sparkline chart with real monthly order data
-- Top Customers table and Recent Orders feed
-
-### Analytics
-- Revenue Overview (monthly bar chart) — admin only
-- Order Status Distribution (pie chart)
-- Customer Type breakdown
-- Top Products by Revenue — admin only
-
-### AI Agent
-- Powered by GPT-4o via OpenRouter
-- Role-aware: USER role never receives financial data in context
-- Quick question chips adapt to role
-- Full order history + customer data injected into system prompt
-
----
-
-## Local Development
-
-### Prerequisites
-- Docker Desktop
-- Node.js 20+
-
-### Start with Docker
+Requirements: Docker Desktop. No cloud account is needed.
 
 ```bash
-git clone https://github.com/your-username/customer-management.git
-cd customer-management
-
-# Set your OpenRouter API key (server-side only, read by docker compose from the shell or a root .env file)
-export OPENROUTER_API_KEY=sk-or-v1-...
-
-docker-compose build customer-frontend
-docker-compose up -d
+git clone <this repo> && cd customer-management
+cp .env.example .env
+# put a random value into JWT_SECRET:  openssl rand -hex 32
+# optional: OPENROUTER_API_KEY for the AI assistant (without it the chat answers 503)
+docker compose up --build
 ```
 
-Services:
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:8080
-- **Kafka:** localhost:9092
-- **PostgreSQL:** localhost:5432
+| What | URL |
+|------|-----|
+| Dashboard | http://localhost:3000 |
+| API gateway | http://localhost:8080 |
+| AI agent UI | http://localhost:3001 |
+| n8n | http://localhost:5678 |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3002 (admin / value of `GRAFANA_ADMIN_PASSWORD`) |
 
-### Seed Demo Data
+Only these entry points are published to the host. Databases, Kafka and the three backend services are reachable only inside the compose network, so nothing else on your machine can talk to them.
+
+Demo accounts (seeded by Flyway in auth-service):
+
+| Role | Username | Password | Can do |
+|------|----------|----------|--------|
+| ADMIN | `admin` | `admin123` | everything, including prices, revenue, user management |
+| USER | `user1` | `user123` | read customers and orders, no financial data |
+
+These credentials are demo data. Change them before exposing the stack anywhere.
+
+## Security model
+
+- **Gateway** validates the JWT on every request except login/register; services behind it also authorize by role. Role checks happen on the server for each call; hiding buttons in the UI is only UX.
+- **Passwords** are hashed with BCrypt. The JWT secret has no default: `docker compose` refuses to start without `JWT_SECRET`.
+- **Network exposure**: only gateway, frontends, n8n, Prometheus and Grafana are published. DB and Kafka ports are internal.
+- **CORS** is limited to the two frontend origins (`CORS_ALLOWED_ORIGINS` to change).
+- **Gateway timeouts**: 3 s connect, 15 s response, so a hung service cannot pile up connections.
+- **Token storage**: the JWT is kept in `localStorage`. That is simple but readable by any script on the page (XSS). A production version would use an `HttpOnly`, `SameSite` cookie; see the cookie + Origin-check design in the sibling projects.
+- **Money**: prices are `NUMERIC` in PostgreSQL; a Jackson serializer prevents scientific notation.
+
+### AI assistant: data handling
+
+- The OpenRouter key is read only by the Next.js server (`src/app/api/ai/chat/route.ts`); the browser sends chat messages only.
+- The route fetches customers and orders itself with the caller's JWT, so the backend decides what the caller may see.
+- E-mail addresses and phone numbers are never sent to the model. Prices and revenue are sent for `ADMIN` only. Lists are capped (200 customers, 500 orders).
+- Stored data is passed as an untrusted `<DATA>` block and the model is told not to follow instructions inside it. This reduces prompt-injection risk; it does not remove it.
+- Limits: 20 messages per request, 2000 characters per user message, 30 s upstream timeout, 20 requests/min per user (in memory, per instance).
+- If an API key was ever committed or exposed to a browser bundle, treat it as leaked and rotate it.
+
+## Order events and idempotency
+
+`order-service` publishes `order-events` after an order is created. Kafka delivers at least once, so the consumer stores `group:topic:partition:offset` in a `processed_event` table (primary key) in the same transaction as the handling step. A redelivered record is skipped; a concurrent duplicate loses on the primary key and is retried. Failed records are retried three times (3 s apart) and then published to `order-events.DLT`.
+
+Honest scope: the event payload is a plain notification string and the handler currently logs it. The idempotency and dead-letter plumbing is real; a business side effect (stock, e-mail, analytics) would plug into `OrderConsumer.handle`. `customer-service` also consumes the topic and only logs.
+
+## Tests and checks
 
 ```bash
-node seed-data.js --api http://localhost:8080
+# backend, per service
+cd order-service && ./mvnw verify      # unit tests + PostgreSQL Testcontainers test (needs Docker)
+cd customer-service && ./mvnw verify
+cd auth-service && ./mvnw verify
+
+# frontend
+cd frontend/customer-app && npm ci && npm run lint && npx tsc --noEmit && npm run build
 ```
 
-Creates 20 customers and 180 orders spread across 12 months — giving all charts real, meaningful data.
+The Testcontainers test runs the real Flyway chain on PostgreSQL with Hibernate in `validate` mode and checks that a redelivered Kafka record is recorded once. It is skipped automatically when Docker is not available. The other service tests use H2.
 
-### Frontend Dev Server (hot-reload)
+## API summary
 
-```bash
-cd customer-app
-npm install
-npm run dev   # http://localhost:3003
-```
+All routes go through the gateway on `:8080`; protected routes need `Authorization: Bearer <token>`.
 
----
+| Area | Endpoints | Access |
+|------|-----------|--------|
+| Auth | `POST /api/auth/login`, `POST /api/auth/register` | public |
+| Customers | `GET/POST /api/customers`, `PUT/DELETE /api/customers/{id}` | read: any user, write: ADMIN |
+| Orders | `GET/POST /api/orders`, `PUT/DELETE /api/orders/{id}` | read: any user, write: ADMIN |
+| Users | `GET /api/users`, `PATCH /api/users/{id}/role`, `DELETE /api/users/{id}` | ADMIN |
 
-## Environment Variables
+## Known limitations
 
-### Frontend — `customer-app/.env.local`
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8080
-# Server-side only (no NEXT_PUBLIC_ prefix): used by the /api/ai/chat route handler
-OPENROUTER_API_KEY=sk-or-v1-your-key-here
-# Optional: backend URL as seen from the Next.js server (defaults to NEXT_PUBLIC_API_URL)
-# API_INTERNAL_URL=http://localhost:8080
-```
-
-### AI assistant: security and data handling
-
-- The OpenRouter key is read only by the Next.js server (`src/app/api/ai/chat/route.ts`). The browser sends chat messages only.
-- The route handler fetches customers and orders itself with the caller's JWT, so the backend decides what the caller may see.
-- Data minimisation: e-mail addresses and phone numbers are never sent to the model. Prices and revenue are sent for `ADMIN` users only. Lists are capped (200 customers, 500 orders).
-- Stored data is passed as an untrusted `<DATA>` block and the model is told not to follow instructions inside it (prompt-injection mitigation).
-- Input is validated (max 20 messages, 2000 characters per user message), calls time out after 30 s, and requests are limited to 20 per minute per user.
-- If a key was ever committed or used with the old `NEXT_PUBLIC_` setup, treat it as leaked and rotate it in the OpenRouter dashboard.
-
-### Railway Dashboard (production)
-
-Set these in your Railway service environment settings:
-- `OPENROUTER_API_KEY` (server-side, not `NEXT_PUBLIC_`)
-- `NEXT_PUBLIC_API_URL` → your backend Railway URL
-
-> ⚠️ **Never commit `.env` files or application secrets to git.**
-
----
-
-## Railway Deployment
-
-1. Push this repo to GitHub
-2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
-3. Add a **PostgreSQL** plugin
-4. Add a **Kafka** plugin (or use Upstash Kafka)
-5. Set environment variables in Railway dashboard (see above)
-6. Railway auto-detects Dockerfile and deploys — done
-
----
-
-## API Reference
-
-### Auth
-| Method | Endpoint | Body | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/login` | `{username, password}` | Returns JWT token |
-| POST | `/api/auth/register` | `{username, email, password}` | Creates USER-role account |
-
-### Customers
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/customers` | Bearer | List all customers |
-| POST | `/api/customers` | Bearer (ADMIN) | Create customer |
-| PUT | `/api/customers/{id}` | Bearer (ADMIN) | Update customer |
-| DELETE | `/api/customers/{id}` | Bearer (ADMIN) | Delete customer |
-
-### Users
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/users` | Bearer (ADMIN) | List all users |
-| PATCH | `/api/users/{id}/role` | Bearer (ADMIN) | Update user role |
-| DELETE | `/api/users/{id}` | Bearer (ADMIN) | Delete user |
-
-### Orders
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/orders` | Bearer | List all orders |
-| POST | `/api/orders` | Bearer (ADMIN) | Create order (triggers Kafka event) |
-| PUT | `/api/orders/{id}` | Bearer (ADMIN) | Update order |
-| DELETE | `/api/orders/{id}` | Bearer (ADMIN) | Delete order |
-
----
-
-## Security Notes
-
-- JWT tokens stored in `localStorage` (acceptable for demo; production would use `httpOnly` cookies)
-- Passwords hashed with BCrypt
-- Role enforced server-side on every API call — client-side hiding is UX, not a security boundary
-- Financial data excluded from AI context for USER role at the server/prompt level
-- Price stored as `NUMERIC(19,10)` in PostgreSQL — custom Jackson `BigDecimalSerializer` strips trailing zeros and prevents scientific notation, ensuring exact decimal fidelity from DB to Excel export
-
----
+- `auth-service` still uses Spring Boot 3.3.x, which is out of open-source support; the other services use 4.0.x. Aligning it is the next upgrade step.
+- The JWT lives in `localStorage` (see Security model).
+- The in-memory AI rate limiter is per process; behind several instances it would need a shared store.
+- `next build` and the Java builds are not part of any CI in this repository yet.
+- No cloud deployment is configured on purpose; the project is meant to be demonstrated from `docker compose`.
 
 ## License
 
-MIT — free to use for portfolio, interviews, and personal projects.
+MIT
