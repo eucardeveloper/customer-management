@@ -133,3 +133,6 @@ All routes go through the gateway on `:8080`; protected routes need `Authorizati
 ## License
 
 MIT
+
+## Design decisions
+See [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md).
