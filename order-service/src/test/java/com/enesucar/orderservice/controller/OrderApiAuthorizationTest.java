@@ -32,7 +32,8 @@ class OrderApiAuthorizationTest {
 
     @Autowired WebApplicationContext context;
     @Autowired Filter springSecurityFilterChain;
-    @Autowired ObjectMapper json;
+    // Spring Boot 4 auto-configures Jackson 3; this test only parses JSON, so a plain mapper is enough.
+    private final ObjectMapper json = new ObjectMapper();
 
     MockMvc mvc;
 
