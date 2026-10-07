@@ -143,12 +143,20 @@ type CustomerType = 'individual' | 'company';
 const emptyOrder = { customerId: '', productName: '', price: '', quantity: '', status: 'PENDING' };
 const getQuickQuestionsAdmin = (t: (k: string) => string) => [t('aiQ1'), t('aiQ2'), t('aiQ3'), t('aiQ4')];
 const getQuickQuestionsUser = (t: (k: string) => string) => [t('aiQ5'), t('aiQ6'), t('aiQ3'), t('aiQ7')];
-const ORDER_STATUSES = ['PENDING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+const ORDER_STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+
+// One label per status, used by chips, charts and dropdowns so they can never disagree.
+const statusText = (status: string, tFn: (k: string) => string) =>
+  ({ PENDING: tFn('pending'), PROCESSING: tFn('processing'), SHIPPED: tFn('shipped'), DELIVERED: tFn('delivered'), CANCELLED: tFn('cancelled') } as Record<string, string>)[status] ?? status;
+
+// A customer is a company when the data says COMPANY or CORPORATE (the seed data uses CORPORATE).
+const isCompany = (c: { customerType?: string }) => c.customerType === 'COMPANY' || c.customerType === 'CORPORATE';
 
 const statusChip = (status?: string, tFn?: (k: string) => string) => {
   const s = status ?? 'PENDING';
   const map: Record<string, { bg: string; color: string; border: string }> = {
     PENDING:   { bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
+    PROCESSING: { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
     SHIPPED:   { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
     DELIVERED: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
     CANCELLED: { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
@@ -156,6 +164,7 @@ const statusChip = (status?: string, tFn?: (k: string) => string) => {
   const style = map[s] ?? { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0' };
   const labelMap: Record<string, string> = {
     PENDING: tFn ? tFn('pending') : 'Pending',
+    PROCESSING: tFn ? tFn('processing') : 'Processing',
     SHIPPED: tFn ? tFn('shipped') : 'Shipped',
     DELIVERED: tFn ? tFn('delivered') : 'Delivered',
     CANCELLED: tFn ? tFn('cancelled') : 'Cancelled',
@@ -472,8 +481,8 @@ export default function Home() {
   const statCards = tab === 'customers'
     ? [
         { label: t('totalCustomers2'), value: customers.length, icon: <PeopleIcon />, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-        { label: t('individual'), value: customers.filter(c => (c.customerType ?? 'INDIVIDUAL') === 'INDIVIDUAL').length, icon: <PeopleIcon />, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-        { label: t('company'), value: customers.filter(c => c.customerType === 'COMPANY').length, icon: <StorefrontIcon />, color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
+        { label: t('individual'), value: customers.filter(c => !isCompany(c)).length, icon: <PeopleIcon />, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+        { label: t('company'), value: customers.filter(isCompany).length, icon: <StorefrontIcon />, color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
         ...(isAdmin ? [{ label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#d97706', bg: '#fffbeb', border: '#fde68a' }] : []),
       ]
     : tab === 'orders'
@@ -609,7 +618,7 @@ export default function Home() {
                     ? `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')} · ${totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} ${t('totalRevenue').toLowerCase()}`
                     : `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')}`
                   )}
-                  {tab === 'customers' && `${customers.length} ${t('total')} · ${customers.filter(c => c.customerType === 'COMPANY').length} ${t('companies')} · ${customers.filter(c => (c.customerType ?? 'INDIVIDUAL') === 'INDIVIDUAL').length} ${t('individuals')}`}
+                  {tab === 'customers' && `${customers.length} ${t('total')} · ${customers.filter(isCompany).length} ${t('companies')} · ${customers.filter(c => !isCompany(c)).length} ${t('individuals')}`}
                   {tab === 'orders' && `${orders.length} ${t('total')} · ${orders.filter(o => o.status === 'DELIVERED').length} ${t('delivered')} · ${orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length} ${t('pending')}`}
                   {tab === 'analytics' && t('businessIntelligence')}
                   {tab === 'ai' && t('aiSubtitle')}
@@ -948,13 +957,13 @@ export default function Home() {
                       const pndT = fmtTrend(pendTrend, false);
                       const adminCards = [
                         { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#6366f1', bg: '#f5f3ff', border: '#e0e7ff', trend: revT.label, up: revT.up },
-                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(c => c.customerType === 'COMPANY').length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
+                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
                         { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
                         { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
                       ];
                       const userCards = [
                         { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#6366f1', bg: '#f5f3ff', border: '#e0e7ff', trend: t('allTime'), up: true },
-                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(c => c.customerType === 'COMPANY').length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
+                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
                         { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
                         { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
                       ];
@@ -1112,8 +1121,8 @@ export default function Home() {
                     <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
                       <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('orderStatus')}</Typography>
                       {(() => {
-                        const PIE_COLORS = ['#f59e0b','#6366f1','#10b981','#ef4444'];
-                        const allPie = ORDER_STATUSES.map((s, i) => ({ name: s === 'PENDING' ? t('pending') : s === 'SHIPPED' ? t('shipped') : s === 'DELIVERED' ? t('delivered') : t('cancelled'), value: orders.filter(o => (o.status ?? 'PENDING') === s).length || 0.001, realCount: orders.filter(o => (o.status ?? 'PENDING') === s).length, color: PIE_COLORS[i] }));
+                        const PIE_COLORS = ['#f59e0b','#64748b','#6366f1','#10b981','#ef4444'];
+                        const allPie = ORDER_STATUSES.map((s, i) => ({ name: statusText(s, t), value: orders.filter(o => (o.status ?? 'PENDING') === s).length || 0.001, realCount: orders.filter(o => (o.status ?? 'PENDING') === s).length, color: PIE_COLORS[i] }));
                         return (
                           <>
                             <ResponsiveContainer width="100%" height={140}>
@@ -1131,7 +1140,7 @@ export default function Home() {
                                   <Box key={s} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: PIE_COLORS[i] }} />
-                                      <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{s === 'PENDING' ? t('pending') : s === 'SHIPPED' ? t('shipped') : s === 'DELIVERED' ? t('delivered') : t('cancelled')}</Typography>
+                                      <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{statusText(s, t)}</Typography>
                                     </Box>
                                     <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a' }}>
                                       {count} ({orders.length > 0 ? ((count / orders.length) * 100).toFixed(0) : 0}%)
@@ -1240,8 +1249,8 @@ export default function Home() {
                   <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('orderStatusDistribution')}</Typography>
                     {(() => {
-                      const PIE_COLORS = ['#f59e0b', '#6366f1', '#10b981', '#ef4444'];
-                      const statusLabel = (s: string) => s === 'PENDING' ? t('pending') : s === 'SHIPPED' ? t('shipped') : s === 'DELIVERED' ? t('delivered') : t('cancelled');
+                      const PIE_COLORS = ['#f59e0b', '#64748b', '#6366f1', '#10b981', '#ef4444'];
+                      const statusLabel = (s: string) => statusText(s, t);
                       const allPie = statusCounts.map((s) => ({ name: statusLabel(s.status), value: s.count || 0.001, realCount: s.count, color: PIE_COLORS[ORDER_STATUSES.indexOf(s.status)] }));
                       return (
                         <>
@@ -1258,7 +1267,7 @@ export default function Home() {
                               <Box key={s.status} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: PIE_COLORS[i] }} />
-                                  <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{s.status === 'PENDING' ? t('pending') : s.status === 'SHIPPED' ? t('shipped') : s.status === 'DELIVERED' ? t('delivered') : t('cancelled')}</Typography>
+                                  <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{statusText(s.status, t)}</Typography>
                                 </Box>
                                 <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a' }}>
                                   {s.count} ({orders.length > 0 ? ((s.count / orders.length) * 100).toFixed(0) : 0}%)
@@ -1277,8 +1286,8 @@ export default function Home() {
                   <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('customerTypes')}</Typography>
                     {(() => {
-                      const individual = customers.filter(c => (c.customerType ?? 'INDIVIDUAL') === 'INDIVIDUAL').length;
-                      const company = customers.filter(c => c.customerType === 'COMPANY').length;
+                      const individual = customers.filter(c => !isCompany(c)).length;
+                      const company = customers.filter(isCompany).length;
                       const pieData = [
                         { name: t('individual'), value: individual || 0.001, realCount: individual, pct: customers.length > 0 ? Math.round((individual / customers.length) * 100) : 0, color: '#6366f1' },
                         { name: t('company'), value: company || 0.001, realCount: company, pct: customers.length > 0 ? Math.round((company / customers.length) * 100) : 0, color: '#10b981' },
@@ -1529,7 +1538,7 @@ export default function Home() {
               <FormControl size="small" fullWidth>
                 <InputLabel>{t('status')}</InputLabel>
                 <Select value={editOrder.status} label={t('status')} onChange={e => setEditOrder({ ...editOrder, status: e.target.value })}>
-                  {ORDER_STATUSES.map(s => <MenuItem key={s} value={s}>{s === 'PENDING' ? t('pending') : s === 'SHIPPED' ? t('shipped') : s === 'DELIVERED' ? t('delivered') : t('cancelled')}</MenuItem>)}
+                  {ORDER_STATUSES.map(s => <MenuItem key={s} value={s}>{statusText(s, t)}</MenuItem>)}
                 </Select>
               </FormControl>
             </Box>
