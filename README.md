@@ -1,5 +1,7 @@
 # Customer Management System
 
+[![CI](https://github.com/eucardeveloper/customer-management/actions/workflows/ci.yml/badge.svg)](https://github.com/eucardeveloper/customer-management/actions/workflows/ci.yml) [![Frontend](https://github.com/eucardeveloper/customer-management/actions/workflows/frontend.yml/badge.svg)](https://github.com/eucardeveloper/customer-management/actions/workflows/frontend.yml)
+
 A microservice CRM: customers, orders and users behind an API gateway, order events over Kafka, a Next.js dashboard with an AI assistant, and Prometheus/Grafana monitoring. Everything runs locally with one `docker compose up`.
 
 ## Architecture
