@@ -41,6 +41,12 @@ class JwtAuthFilterTest {
         return Jwts.builder().subject(user).claim("role", role).signWith(key).compact();
     }
 
+    /** Same claims, signed with a different key: what an attacker without the secret can produce. */
+    private String forged(String user, String role) {
+        SecretKey other = Keys.hmacShaKeyFor("another-secret-key-minimum-256-bits-long-for-hs256-attacker".getBytes(StandardCharsets.UTF_8));
+        return Jwts.builder().subject(user).claim("role", role).signWith(other).compact();
+    }
+
     private MockServerWebExchange run(MockServerHttpRequest.BaseBuilder<?> request) {
         MockServerWebExchange exchange = MockServerWebExchange.from(request.build());
         filter.filter(exchange, ex -> { forwarded.set(ex); return Mono.empty(); }).block();
@@ -59,7 +65,7 @@ class JwtAuthFilterTest {
     @DisplayName("tampered token: 401")
     void tamperedToken() {
         MockServerWebExchange ex = run(MockServerHttpRequest.get("/api/customers")
-                .header("Authorization", "Bearer " + token("a", "ADMIN") + "x"));
+                .header("Authorization", "Bearer " + forged("a", "ADMIN")));
         assertThat(ex.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(forwarded.get()).isNull();
     }
