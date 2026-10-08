@@ -286,6 +286,10 @@ export default function Home() {
       errors.email = t('emailOrPhoneRequired');
       errors.phone = t('emailOrPhoneRequired');
     }
+    const email = editCustomer.email?.trim();
+    const phone = editCustomer.phone?.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.email = t('emailInvalid');
+    if (phone && !/^[+0-9 ()-]{5,20}$/.test(phone)) errors.phone = t('phoneInvalid');
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -297,7 +301,10 @@ export default function Home() {
       if (isEditing && editCustomer.id) { await api.put(`/api/customers/${editCustomer.id}`, payload); showSnackbar(t('saved'), 'success'); }
       else { await api.post('/api/customers', payload); showSnackbar(t('saved'), 'success'); }
       setDialogOpen(false); fetchCustomers();
-    } catch { showSnackbar(t('error'), 'error'); }
+    } catch (e) {
+      const m = e instanceof Error ? e.message : '';
+      showSnackbar(m && !m.startsWith('HTTP') ? m : t('error'), 'error');
+    }
   };
 
   const handleDelete = async () => {

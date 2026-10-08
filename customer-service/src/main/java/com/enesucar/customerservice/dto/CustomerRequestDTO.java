@@ -2,6 +2,7 @@ package com.enesucar.customerservice.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,6 +22,7 @@ public class CustomerRequestDTO {
     private String email;
 
     @Size(max = 20, message = "Phone must be at most 20 characters")
+    @Pattern(regexp = "^[+0-9 ()-]*$", message = "Phone may contain only digits, +, spaces, - and parentheses")
     private String phone;
 
     private String customerType;
