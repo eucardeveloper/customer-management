@@ -85,6 +85,9 @@ class JwtAuthFilterTest {
         run(MockServerHttpRequest.get("/api/customers").cookie(new HttpCookie("access_token", token("bob", "USER"))));
         assertThat(forwarded.get()).isNotNull();
         assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-Auth-User")).isEqualTo("bob");
+        // downstream services get a Bearer header, not the browser cookie
+        assertThat(forwarded.get().getRequest().getHeaders().getFirst("Authorization")).startsWith("Bearer ");
+        assertThat(forwarded.get().getRequest().getHeaders().getFirst("Cookie")).isNull();
     }
 
     @Test

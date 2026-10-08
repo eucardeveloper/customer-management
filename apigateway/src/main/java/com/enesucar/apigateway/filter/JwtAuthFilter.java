@@ -85,9 +85,16 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             String username = claims.getSubject();
             String role = claims.get("role", String.class);
 
+            // Downstream services (auth-service validates the JWT itself) only understand the
+            // Authorization header, so a cookie session is translated here and the cookie is not passed on.
+            final String bearer = token;
             ServerWebExchange mutatedExchange = exchange.mutate()
-                    .request(r -> r.header("X-Auth-User", username)
-                            .header("X-Auth-Role", role))
+                    .request(r -> r.headers(h -> {
+                                h.set("Authorization", "Bearer " + bearer);
+                                h.remove("Cookie");
+                                h.set("X-Auth-User", username);
+                                h.set("X-Auth-Role", role);
+                            }))
                     .build();
 
             return chain.filter(mutatedExchange);
