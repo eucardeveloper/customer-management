@@ -8,7 +8,7 @@ A microservice CRM: customers, orders and users behind an API gateway, order eve
 
 ```mermaid
 flowchart LR
-    Browser["Browser<br/>Next.js dashboard :3000"] -->|"REST + JWT"| GW["API Gateway :8080<br/>Spring Cloud Gateway<br/>JWT validation"]
+    Browser["Browser<br/>Next.js dashboard :3000"] -->|"REST + HttpOnly cookie"| GW["API Gateway :8080<br/>Spring Cloud Gateway<br/>JWT validation"]
     Browser -->|"chat messages only"| NextAPI["Next.js route handler<br/>/api/ai/chat"]
     NextAPI -->|"caller's JWT"| GW
     NextAPI -->|"server-side key"| LLM["OpenRouter (LLM)"]
@@ -81,7 +81,7 @@ These credentials are demo data. Change them before exposing the stack anywhere.
 - **Network exposure**: only gateway, frontends, n8n, Prometheus and Grafana are published. DB and Kafka ports are internal.
 - **CORS** is limited to the two frontend origins (`CORS_ALLOWED_ORIGINS` to change).
 - **Gateway timeouts**: 3 s connect, 15 s response, so a hung service cannot pile up connections.
-- **Token storage**: the JWT is kept in `localStorage`. That is simple but readable by any script on the page (XSS). A production version would use an `HttpOnly`, `SameSite` cookie; see the cookie + Origin-check design in the sibling projects.
+- **Session storage**: the JWT is set by the auth service as an `HttpOnly`, `SameSite=Strict` cookie (`customer_session`, `Secure` outside local HTTP via `AUTH_COOKIE_SECURE`), so page scripts and XSS cannot read it. The browser only keeps username and role for display. Because cookies are sent automatically, the gateway also requires an allowed `Origin` on cookie-authenticated writes (POST/PUT/PATCH/DELETE). The gateway verifies the token and passes it to the services as a `Bearer` header; API clients can still send `Authorization: Bearer <token>` themselves. `POST /api/auth/logout` clears the cookie.
 - **Money**: prices are `NUMERIC` in PostgreSQL; a Jackson serializer prevents scientific notation.
 
 ### AI assistant: data handling
@@ -115,11 +115,11 @@ The Testcontainers test runs the real Flyway chain on PostgreSQL with Hibernate 
 
 ## API summary
 
-All routes go through the gateway on `:8080`; protected routes need `Authorization: Bearer <token>`.
+All routes go through the gateway on `:8080`; protected routes need the session cookie (browser) or `Authorization: Bearer <token>` (API clients).
 
 | Area | Endpoints | Access |
 |------|-----------|--------|
-| Auth | `POST /api/auth/login`, `POST /api/auth/register` | public |
+| Auth | `POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/logout` | public |
 | Customers | `GET/POST /api/customers`, `PUT/DELETE /api/customers/{id}` | read: any user, write: ADMIN |
 | Orders | `GET/POST /api/orders`, `PUT/DELETE /api/orders/{id}` | read: any user, write: ADMIN |
 | Users | `GET /api/users`, `PATCH /api/users/{id}/role`, `DELETE /api/users/{id}` | ADMIN |
@@ -127,9 +127,8 @@ All routes go through the gateway on `:8080`; protected routes need `Authorizati
 ## Known limitations
 
 - `auth-service` still uses Spring Boot 3.3.x, which is out of open-source support; the other services use 4.0.x. Aligning it is the next upgrade step.
-- The JWT lives in `localStorage` (see Security model).
+- Tokens are not revocable before they expire (24 h); logout clears the cookie but does not blacklist the token.
 - The in-memory AI rate limiter is per process; behind several instances it would need a shared store.
-- `next build` and the Java builds are not part of any CI in this repository yet.
 - No cloud deployment is configured on purpose; the project is meant to be demonstrated from `docker compose`.
 
 ## License

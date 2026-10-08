@@ -82,7 +82,7 @@ class JwtAuthFilterTest {
     @Test
     @DisplayName("session cookie authenticates a read")
     void cookieRead() {
-        run(MockServerHttpRequest.get("/api/customers").cookie(new HttpCookie("access_token", token("bob", "USER"))));
+        run(MockServerHttpRequest.get("/api/customers").cookie(new HttpCookie("customer_session", token("bob", "USER"))));
         assertThat(forwarded.get()).isNotNull();
         assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-Auth-User")).isEqualTo("bob");
         // downstream services get a Bearer header, not the browser cookie
@@ -93,7 +93,7 @@ class JwtAuthFilterTest {
     @Test
     @DisplayName("cookie + write without an allowed Origin: 403")
     void cookieWriteNeedsOrigin() {
-        HttpCookie cookie = new HttpCookie("access_token", token("bob", "USER"));
+        HttpCookie cookie = new HttpCookie("customer_session", token("bob", "USER"));
 
         MockServerWebExchange none = run(MockServerHttpRequest.post("/api/orders").cookie(cookie));
         assertThat(none.getResponse().getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
@@ -108,7 +108,7 @@ class JwtAuthFilterTest {
     @DisplayName("cookie + write from our own origin passes")
     void cookieWriteFromOwnOrigin() {
         run(MockServerHttpRequest.post("/api/orders")
-                .cookie(new HttpCookie("access_token", token("bob", "USER"))).header("Origin", ORIGIN));
+                .cookie(new HttpCookie("customer_session", token("bob", "USER"))).header("Origin", ORIGIN));
         assertThat(forwarded.get()).isNotNull();
     }
 

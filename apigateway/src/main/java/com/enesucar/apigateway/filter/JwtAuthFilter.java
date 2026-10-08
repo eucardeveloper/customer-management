@@ -28,7 +28,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     @Value("#{'${app.allowed-origins}'.split(',')}")
     private List<String> allowedOrigins;
 
-    static final String COOKIE_NAME = "access_token";
+    static final String COOKIE_NAME = "customer_session";
 
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/auth/login",

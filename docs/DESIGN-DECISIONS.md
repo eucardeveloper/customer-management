@@ -12,6 +12,6 @@
 | Persistence | Named volumes for all databases, Kafka, Zookeeper, Prometheus; `restart: unless-stopped` on all services | Data survives reboot. |
 
 ## Known limitations
-- The browser stores the JWT in `localStorage` (XSS-exposed); an HttpOnly cookie is the planned improvement.
+- The JWT is kept in an `HttpOnly` `SameSite=Strict` cookie, not in `localStorage`; the gateway adds an Origin check for cookie-authenticated writes. Remaining limitation: no server-side revocation before expiry.
 - `auth-service` still runs on Spring Boot 3.3.5.
 - The gateway does not check that the user of a valid token still exists.

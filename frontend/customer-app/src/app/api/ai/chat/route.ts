@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
 
   // The session JWT arrives in the HttpOnly cookie (same site); a Bearer header is still accepted.
   const auth = req.headers.get('authorization') ?? '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : (req.cookies.get('access_token')?.value ?? '');
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : (req.cookies.get('customer_session')?.value ?? '');
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

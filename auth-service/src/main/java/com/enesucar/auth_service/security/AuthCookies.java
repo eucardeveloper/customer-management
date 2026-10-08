@@ -13,7 +13,7 @@ import java.time.Duration;
 @Component
 public class AuthCookies {
 
-    public static final String NAME = "access_token";
+    public static final String NAME = "customer_session";
 
     private final long maxAgeMillis;
     private final boolean secure;

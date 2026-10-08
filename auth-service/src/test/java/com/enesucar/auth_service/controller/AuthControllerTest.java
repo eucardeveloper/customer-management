@@ -61,7 +61,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").doesNotExist())
                 .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
-                        org.hamcrest.Matchers.containsString("access_token=jwt-token"),
+                        org.hamcrest.Matchers.containsString("customer_session=jwt-token"),
                         org.hamcrest.Matchers.containsString("HttpOnly"),
                         org.hamcrest.Matchers.containsString("SameSite=Strict"),
                         org.hamcrest.Matchers.containsString("Secure"))))
@@ -100,7 +100,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").doesNotExist())
                 .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
-                        org.hamcrest.Matchers.containsString("access_token=jwt-token"),
+                        org.hamcrest.Matchers.containsString("customer_session=jwt-token"),
                         org.hamcrest.Matchers.containsString("HttpOnly"),
                         org.hamcrest.Matchers.containsString("SameSite=Strict"),
                         org.hamcrest.Matchers.containsString("Secure"))))
@@ -124,7 +124,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/logout"))
                 .andExpect(status().isNoContent())
                 .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
-                        org.hamcrest.Matchers.containsString("access_token=;"),
+                        org.hamcrest.Matchers.containsString("customer_session=;"),
                         org.hamcrest.Matchers.containsString("Max-Age=0"),
                         org.hamcrest.Matchers.containsString("HttpOnly"))));
     }
