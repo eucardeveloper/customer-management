@@ -59,7 +59,12 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("access_token=jwt-token"),
+                        org.hamcrest.Matchers.containsString("HttpOnly"),
+                        org.hamcrest.Matchers.containsString("SameSite=Strict"),
+                        org.hamcrest.Matchers.containsString("Secure"))))
                 .andExpect(jsonPath("$.username").value("testuser"))
                 .andExpect(jsonPath("$.role").value("USER"));
     }
@@ -93,7 +98,12 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("access_token=jwt-token"),
+                        org.hamcrest.Matchers.containsString("HttpOnly"),
+                        org.hamcrest.Matchers.containsString("SameSite=Strict"),
+                        org.hamcrest.Matchers.containsString("Secure"))))
                 .andExpect(jsonPath("$.username").value("testuser"))
                 .andExpect(jsonPath("$.role").value("USER"));
     }
@@ -107,5 +117,15 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void logout_shouldExpireTheCookie() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("access_token=;"),
+                        org.hamcrest.Matchers.containsString("Max-Age=0"),
+                        org.hamcrest.Matchers.containsString("HttpOnly"))));
     }
 }

@@ -24,7 +24,6 @@ import { saveAuth } from '@/lib/auth';
 import { useMounted } from '@/lib/useMounted';
 
 interface AuthResponse {
-  token: string;
   username: string;
   role: string;
 }
@@ -49,6 +48,7 @@ export default function LoginPage() {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ username, password }),
       });
 
@@ -58,7 +58,7 @@ export default function LoginPage() {
       }
 
       const data: AuthResponse = await res.json();
-      saveAuth({ token: data.token, username: data.username, role: data.role });
+      saveAuth({ username: data.username, role: data.role });
       router.push('/');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');

@@ -3,7 +3,7 @@ import { useTranslation, type Lang } from './translations';
 import * as XLSX from 'xlsx';
 import { PieChart, Pie, Cell, Tooltip as ReTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { api } from '@/lib/api';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, logout } from '@/lib/auth';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useMounted } from '@/lib/useMounted';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -437,13 +437,10 @@ export default function Home() {
     setChatInput('');
     setChatLoading(true);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           messages: newMessages
             .filter(m => !(m.role === 'assistant' && m.content.startsWith('⚠️')))
@@ -570,7 +567,7 @@ export default function Home() {
                       <Typography sx={{ color: isAdmin ? '#34d399' : 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{currentUser.role}</Typography>
                     </Box>
                     <Tooltip title={t("signOut")}>
-                      <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); document.cookie = 'auth_token=; path=/; max-age=0'; window.location.href = '/login'; }}>
+                      <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { void logout().finally(() => { window.location.href = '/login'; }); }}>
                         <LogoutIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>

@@ -19,7 +19,7 @@ import {
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
-import { clearAuth } from '@/lib/auth';
+import { logout } from '@/lib/auth';
 import { useAuthUser } from '@/lib/useAuthUser';
 
 export default function AppHeader() {
@@ -27,8 +27,8 @@ export default function AppHeader() {
   const user = useAuthUser();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-  const handleLogout = () => {
-    clearAuth();
+  const handleLogout = async () => {
+    await logout();
     router.push('/login');
   };
 

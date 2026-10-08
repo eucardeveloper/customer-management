@@ -104,6 +104,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (copy .env.example)}
       JWT_EXPIRATION: 86400000
+      AUTH_COOKIE_SECURE: "false"   # local http; set true behind HTTPS
 
   customer-backend:
     build: ./customer-service

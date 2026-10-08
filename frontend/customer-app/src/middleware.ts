@@ -19,8 +19,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check token cookie (set by the client after login)
-  const token = request.cookies.get('auth_token')?.value;
+  // HttpOnly session cookie set by the auth service on login (presence check only; the gateway verifies it)
+  const token = request.cookies.get('access_token')?.value;
 
   if (!token) {
     const loginUrl = new URL('/login', request.url);

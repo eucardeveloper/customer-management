@@ -26,6 +26,25 @@ jobs:
         run: mvn test --no-transfer-progress
         working-directory: auth-service
 
+  api-gateway:
+    name: API Gateway Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('apigateway/pom.xml') }}
+      - name: Run API Gateway Tests
+        run: mvn test --no-transfer-progress
+        working-directory: apigateway
+
   customer-service:
     name: Customer Service Tests
     runs-on: ubuntu-latest

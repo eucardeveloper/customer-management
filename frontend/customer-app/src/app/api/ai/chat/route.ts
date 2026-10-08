@@ -110,11 +110,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'AI assistant is not configured on the server.' }, { status: 503 });
   }
 
+  // The session JWT arrives in the HttpOnly cookie (same site); a Bearer header is still accepted.
   const auth = req.headers.get('authorization') ?? '';
-  if (!auth.startsWith('Bearer ')) {
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : (req.cookies.get('access_token')?.value ?? '');
+  if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const token = auth.slice(7);
 
   let body: unknown;
   try {
