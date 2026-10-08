@@ -76,7 +76,7 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565c0 100%)',
+        background: 'linear-gradient(135deg, #0b1f3a 0%, #12315c 50%, #1d4ed8 100%)',
         p: 2,
       }}
     >
@@ -86,7 +86,7 @@ export default function LoginPage() {
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 4 }}>
             <Box sx={{
               width: 64, height: 64, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #1565c0, #283593)',
+              background: 'linear-gradient(135deg, #1d4ed8, #12315c)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 8px 24px rgba(21,101,192,0.4)',
             }}>
@@ -158,8 +158,8 @@ export default function LoginPage() {
                 disabled={loading || !username || !password}
                 sx={{
                   py: 1.5, borderRadius: 2, fontWeight: 600, fontSize: '1rem',
-                  background: 'linear-gradient(135deg, #1565c0, #283593)',
-                  '&:hover': { background: 'linear-gradient(135deg, #0d47a1, #1a237e)' },
+                  background: 'linear-gradient(135deg, #1d4ed8, #12315c)',
+                  '&:hover': { background: 'linear-gradient(135deg, #0d47a1, #0b1f3a)' },
                 }}
               >
                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
@@ -169,7 +169,7 @@ export default function LoginPage() {
 
           <Typography variant="body2" align="center" sx={{ mt: 3, color: 'text.secondary' }}>
             Don&apos;t have an account?{' '}
-            <Link href="/register" style={{ color: '#1565c0', fontWeight: 600, textDecoration: 'none' }}>
+            <Link href="/register" style={{ color: '#1d4ed8', fontWeight: 600, textDecoration: 'none' }}>
               Create account
             </Link>
           </Typography>

@@ -39,15 +39,15 @@ import MenuIcon from '@mui/icons-material/Menu';
 
 const DRAWER_WIDTH = 256;
 
-const SIDEBAR_BG = '#0f172a';
+const SIDEBAR_BG = '#0b1f3a';
 const SIDEBAR_HOVER = 'rgba(255,255,255,0.06)';
-const SIDEBAR_ACTIVE = 'rgba(99,102,241,0.18)';
-const HEADER_BG = '#0f172a';
+const SIDEBAR_ACTIVE = 'rgba(37,99,235,0.18)';
+const HEADER_BG = '#ffffff';
 
 const theme = createTheme({
   palette: {
     mode: 'light',
-    primary: { main: '#6366f1', dark: '#4f46e5', light: '#818cf8' },
+    primary: { main: '#2563eb', dark: '#1d4ed8', light: '#60a5fa' },
     secondary: { main: '#0ea5e9' },
     background: { default: '#f1f5f9', paper: '#ffffff' },
   },
@@ -62,8 +62,9 @@ const theme = createTheme({
         root: {
           backgroundColor: HEADER_BG,
           backgroundImage: 'none',
-          boxShadow: '0 1px 0 rgba(255,255,255,0.05)',
-          borderBottom: '1px solid rgba(255,255,255,0.04)',
+          color: '#0f172a',
+          boxShadow: 'none',
+          borderBottom: '1px solid #e2e8f0',
         },
       },
     },
@@ -111,7 +112,7 @@ const theme = createTheme({
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { borderBottom: '1px solid #eef2f7', padding: '12px 16px' },
+        root: { borderBottom: '1px solid #eef2f7', padding: '10px 16px', fontVariantNumeric: 'tabular-nums' },
       },
     },
     MuiButton: {
@@ -471,7 +472,7 @@ export default function Home() {
 
   const isAdmin = currentUser?.role === 'ADMIN';
   const sidebarItems = [
-    { key: 'dashboard', label: t('dashboard'), icon: <BarChartIcon />, count: null, color: '#6366f1' },
+    { key: 'dashboard', label: t('dashboard'), icon: <BarChartIcon />, count: null, color: '#2563eb' },
     { key: 'customers', label: t('customers'), icon: <PeopleIcon />, count: customers.length, color: '#3b82f6' },
     { key: 'orders', label: t('orders'), icon: <ShoppingCartIcon />, count: orders.length, color: '#3b82f6' },
     { key: 'analytics', label: t('analytics'), icon: <TrendingUpIcon />, count: null, color: '#3b82f6' },
@@ -484,19 +485,19 @@ export default function Home() {
   // Stat cards per tab
   const statCards = tab === 'customers'
     ? [
-        { label: t('totalCustomers2'), value: customers.length, icon: <PeopleIcon />, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-        { label: t('individual'), value: customers.filter(c => !isCompany(c)).length, icon: <PeopleIcon />, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-        { label: t('company'), value: customers.filter(isCompany).length, icon: <StorefrontIcon />, color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
-        ...(isAdmin ? [{ label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#d97706', bg: '#fffbeb', border: '#fde68a' }] : []),
+        { label: t('totalCustomers2'), value: customers.length, icon: <PeopleIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
+        { label: t('individual'), value: customers.filter(c => !isCompany(c)).length, icon: <PeopleIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
+        { label: t('company'), value: customers.filter(isCompany).length, icon: <StorefrontIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
+        ...(isAdmin ? [{ label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' }] : []),
       ]
     : tab === 'orders'
     ? [
-        { label: t('totalOrdersLabel'), value: orders.length, icon: <ReceiptIcon />, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+        { label: t('totalOrdersLabel'), value: orders.length, icon: <ReceiptIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
         ...(isAdmin ? [
-          { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
-          { label: t('avgOrderValue'), value: avgOrderValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <TrendingUpIcon />, color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+          { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
+          { label: t('avgOrderValue'), value: avgOrderValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <TrendingUpIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
         ] : []),
-        { label: t('pendingOrders2'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, icon: <ShoppingCartIcon />, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+        { label: t('pendingOrders2'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, icon: <ShoppingCartIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
       ]
     : [];
 
@@ -516,9 +517,9 @@ export default function Home() {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Box sx={{
                     width: 38, height: 38, borderRadius: 2.5,
-                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(99,102,241,0.4)',
+                    boxShadow: '0 4px 12px rgba(37,99,235,0.4)',
                   }}>
                     <StorefrontIcon sx={{ fontSize: 19, color: 'white' }} />
                   </Box>
@@ -543,7 +544,7 @@ export default function Home() {
                           borderRadius: 2,
                           color: active ? 'white' : 'rgba(255,255,255,0.45)',
                           bgcolor: active ? SIDEBAR_ACTIVE : 'transparent',
-                          borderLeft: active ? '2px solid #6366f1' : '2px solid transparent',
+                          borderLeft: active ? '2px solid #2563eb' : '2px solid transparent',
                           pl: '14px',
                           py: 1,
                           '&:hover': { bgcolor: SIDEBAR_HOVER, color: 'rgba(255,255,255,0.85)' },
@@ -551,10 +552,10 @@ export default function Home() {
                           transition: 'all 0.15s ease',
                         }}
                       >
-                        <ListItemIcon sx={{ color: active ? '#818cf8' : 'rgba(255,255,255,0.28)', minWidth: 34, transition: 'color 0.15s' }}>{item.icon}</ListItemIcon>
+                        <ListItemIcon sx={{ color: active ? '#60a5fa' : 'rgba(255,255,255,0.28)', minWidth: 34, transition: 'color 0.15s' }}>{item.icon}</ListItemIcon>
                         <ListItemText primary={item.label} slotProps={{ primary: { style: { fontSize: '0.855rem', fontWeight: active ? 600 : 400, letterSpacing: active ? '-0.01em' : 'normal' } } }} />
                         {item.count !== null && (
-                          <Chip label={item.count} size="small" sx={{ bgcolor: active ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.06)', color: active ? '#a5b4fc' : 'rgba(255,255,255,0.28)', fontSize: '0.65rem', height: 18, minWidth: 22, fontWeight: 600 }} />
+                          <Chip label={item.count} size="small" sx={{ bgcolor: active ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.06)', color: active ? '#93c5fd' : 'rgba(255,255,255,0.28)', fontSize: '0.65rem', height: 18, minWidth: 22, fontWeight: 600 }} />
                         )}
                       </ListItemButton>
                     </ListItem>
@@ -566,7 +567,7 @@ export default function Home() {
               <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                 {currentUser && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.04)', mb: 1.5 }}>
-                    <Avatar sx={{ width: 34, height: 34, bgcolor: isAdmin ? 'rgba(16,185,129,0.25)' : 'rgba(99,102,241,0.25)', border: isAdmin ? '1.5px solid rgba(16,185,129,0.5)' : '1.5px solid rgba(99,102,241,0.5)', fontSize: '0.85rem', fontWeight: 700, color: isAdmin ? '#34d399' : '#818cf8' }}>
+                    <Avatar sx={{ width: 34, height: 34, bgcolor: isAdmin ? 'rgba(16,185,129,0.25)' : 'rgba(37,99,235,0.25)', border: isAdmin ? '1.5px solid rgba(16,185,129,0.5)' : '1.5px solid rgba(37,99,235,0.5)', fontSize: '0.85rem', fontWeight: 700, color: isAdmin ? '#34d399' : '#60a5fa' }}>
                       {currentUser.username.charAt(0).toUpperCase()}
                     </Avatar>
                     <Box sx={{ flex: 1, overflow: 'hidden' }}>
@@ -605,19 +606,19 @@ export default function Home() {
         })()}
 
         {/* ── Main ── */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', bgcolor: '#f1f5f9' }}>
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', bgcolor: '#f1f5f9' }}>
 
           {/* TopBar */}
           <AppBar position="static" elevation={0}>
             <Toolbar sx={{ minHeight: '60px !important', px: { xs: 1.5, md: 2.5 } }}>
               {isMobile && (
-                <IconButton edge="start" color="inherit" onClick={() => setMobileOpen(true)} sx={{ mr: 1.5, color: 'rgba(255,255,255,0.7)' }}>
+                <IconButton edge="start" color="inherit" onClick={() => setMobileOpen(true)} sx={{ mr: 1.5, color: '#334155' }}>
                   <MenuIcon />
                 </IconButton>
               )}
               <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', lineHeight: 1.2, color: 'white' }}>{pageTitle}</Typography>
-                <Typography sx={{ fontSize: '0.67rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1, mt: 0.2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', lineHeight: 1.2, color: '#0f172a' }}>{pageTitle}</Typography>
+                <Typography sx={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.2, mt: 0.3 }}>
                   {tab === 'dashboard' && (isAdmin
                     ? `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')} · ${totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} ${t('totalRevenue').toLowerCase()}`
                     : `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')}`
@@ -632,23 +633,23 @@ export default function Home() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {isAdmin && (
                   <Chip icon={<AdminPanelSettingsIcon sx={{ fontSize: '13px !important' }} />} label="ADMIN" size="small"
-                    sx={{ bgcolor: 'rgba(99,102,241,0.2)', color: '#a5b4fc', fontSize: '0.67rem', border: '1px solid rgba(99,102,241,0.25)', height: 24, fontWeight: 700, letterSpacing: '0.05em' }} />
+                    sx={{ bgcolor: '#eff6ff', color: '#1d4ed8', fontSize: '0.68rem', border: '1px solid #bfdbfe', height: 24, fontWeight: 700, letterSpacing: '0.05em', '& .MuiChip-icon': { color: '#1d4ed8' } }} />
                 )}
-                <Box sx={{ display: 'flex', borderRadius: 2, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
+                <Box sx={{ display: 'flex', borderRadius: 2, overflow: 'hidden', border: '1px solid #cbd5e1' }}>
                   {(['en', 'tr'] as Lang[]).map(l => (
-                    <Box key={l} onClick={() => setLang(l)} sx={{ px: 1.2, py: 0.4, cursor: 'pointer', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.05em', bgcolor: lang === l ? 'rgba(99,102,241,0.4)' : 'transparent', color: lang === l ? 'white' : 'rgba(255,255,255,0.45)', transition: 'all 0.15s', '&:hover': { bgcolor: lang === l ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)' } }}>{l.toUpperCase()}</Box>
+                    <Box key={l} onClick={() => setLang(l)} sx={{ px: 1.2, py: 0.4, cursor: 'pointer', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.05em', bgcolor: lang === l ? '#2563eb' : 'transparent', color: lang === l ? 'white' : '#64748b', transition: 'all 0.15s', '&:hover': { bgcolor: lang === l ? '#1d4ed8' : '#f1f5f9' } }}>{l.toUpperCase()}</Box>
                   ))}
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, px: 1.2, py: 0.4, borderRadius: 10, bgcolor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.18)' }}>
-                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.8)' }} />
-                  <Typography sx={{ fontSize: '0.67rem', color: '#86efac', fontWeight: 600 }}>Live</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, px: 1.2, py: 0.4, borderRadius: 10, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#22c55e' }} />
+                  <Typography sx={{ fontSize: '0.68rem', color: '#15803d', fontWeight: 600 }}>Live</Typography>
                 </Box>
               </Box>
             </Toolbar>
           </AppBar>
 
           {/* Scrollable content */}
-          <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', p: { xs: 1.5, md: 3 }, gap: { xs: 1.5, md: 2.5 } }}>
+          <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflowX: 'hidden', overflowY: 'auto', display: 'flex', flexDirection: 'column', p: { xs: 1.5, md: 3 }, gap: { xs: 1.5, md: 2.5 } }}>
 
             {/* Stat Cards — only customers/orders */}
             {statCards.length > 0 && (
@@ -669,7 +670,7 @@ export default function Home() {
 
             {/* ── CUSTOMERS TAB ── */}
             {tab === 'customers' && (
-              <Paper elevation={0} sx={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid #f1f5f9', flexShrink: 0, bgcolor: 'white' }}>
                   <TextField size="small" placeholder={t('searchCustomers')} value={custSearch}
                     onChange={(e) => { setCustSearch(e.target.value); setCustPage(0); }}
@@ -680,7 +681,7 @@ export default function Home() {
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchCustomers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                   {isAdmin && (
                     <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} disableElevation size="small"
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', '&:hover': { background: 'linear-gradient(135deg,#4f46e5,#4338ca)' } }}>
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', '&:hover': { background: 'linear-gradient(135deg,#1d4ed8,#1e40af)' } }}>
                       {t('newCustomer')}
                     </Button>
                   )}
@@ -689,7 +690,7 @@ export default function Home() {
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={32} /></Box>
                 ) : (
                   <>
-                    <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
+                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
                       <Table stickyHeader size="small">
                         <TableHead>
                           <TableRow>
@@ -713,7 +714,7 @@ export default function Home() {
                           )}
                           {filteredCustomers.slice(custPage * custRowsPerPage, custPage * custRowsPerPage + custRowsPerPage).map(c => (
                             <TableRow key={c.id}>
-                              <TableCell><Chip label={`#${c.id}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                              <TableCell><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
                               <TableCell>{customerTypeChip(c, t)}</TableCell>
                               <TableCell sx={{ cursor: 'pointer' }} onClick={() => setDrawerCustomer(c)}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -747,7 +748,7 @@ export default function Home() {
 
             {/* ── ORDERS TAB ── */}
             {tab === 'orders' && (
-              <Paper elevation={0} sx={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid #f1f5f9', flexShrink: 0, bgcolor: 'white' }}>
                   <TextField size="small" placeholder={t('searchOrders')} value={ordSearch}
                     onChange={(e) => { setOrdSearch(e.target.value); setOrdPage(0); }}
@@ -758,7 +759,7 @@ export default function Home() {
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchOrders} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                   {isAdmin && (
                     <Button variant="contained" startIcon={<AddIcon />} onClick={openAddOrder} disableElevation size="small"
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', '&:hover': { background: 'linear-gradient(135deg,#4f46e5,#4338ca)' } }}>
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', '&:hover': { background: 'linear-gradient(135deg,#1d4ed8,#1e40af)' } }}>
                       {t('newOrder')}
                     </Button>
                   )}
@@ -767,7 +768,7 @@ export default function Home() {
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={32} /></Box>
                 ) : (
                   <>
-                    <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
+                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
                       <Table stickyHeader size="small">
                         <TableHead>
                           <TableRow>
@@ -809,7 +810,7 @@ export default function Home() {
                               <TableCell><Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{o.productName}</Typography></TableCell>
                               <TableCell>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Avatar sx={{ width: 22, height: 22, fontSize: '0.6rem', bgcolor: '#e0e7ff', color: '#4338ca' }}>{getCustomerName(o.customerId)[0]}</Avatar>
+                                  <Avatar sx={{ width: 22, height: 22, fontSize: '0.6rem', bgcolor: '#dbeafe', color: '#1e40af' }}>{getCustomerName(o.customerId)[0]}</Avatar>
                                   <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>{getCustomerName(o.customerId)}</Typography>
                                 </Box>
                               </TableCell>
@@ -845,7 +846,7 @@ export default function Home() {
 
             {/* ── USERS TAB ── */}
             {tab === 'users' && isAdmin && (
-              <Paper elevation={0} sx={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid #f1f5f9', flexShrink: 0, bgcolor: 'white' }}>
                   <TextField size="small" placeholder={t('searchUsers')} value={userSearch} onChange={e => setUserSearch(e.target.value)}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
@@ -854,7 +855,7 @@ export default function Home() {
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddUserDialogOpen(true)} disableElevation size="small" sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}>{ t('addUser') }</Button>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchUsers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                 </Box>
-                <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
+                <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
@@ -960,13 +961,13 @@ export default function Home() {
                       const fufT = fmtTrend(fulfillTrend);
                       const pndT = fmtTrend(pendTrend, false);
                       const adminCards = [
-                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#6366f1', bg: '#f5f3ff', border: '#e0e7ff', trend: revT.label, up: revT.up },
+                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', trend: revT.label, up: revT.up },
                         { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
                         { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
                         { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
                       ];
                       const userCards = [
-                        { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#6366f1', bg: '#f5f3ff', border: '#e0e7ff', trend: t('allTime'), up: true },
+                        { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', trend: t('allTime'), up: true },
                         { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
                         { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
                         { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
@@ -1012,7 +1013,7 @@ export default function Home() {
                   <Box sx={{ display: 'flex', gap: 1.5, flexShrink: 0, flexWrap: 'wrap' }}>
                     {isAdmin && (
                       <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} disableElevation size="small"
-                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', '&:hover': { background: 'linear-gradient(135deg,#4f46e5,#4338ca)' } }}>
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', '&:hover': { background: 'linear-gradient(135deg,#1d4ed8,#1e40af)' } }}>
                         {t('newCustomer')}
                       </Button>
                     )}
@@ -1023,11 +1024,11 @@ export default function Home() {
                       </Button>
                     )}
                     <Button variant="outlined" startIcon={<BarChartIcon />} onClick={() => setTab('analytics')} size="small"
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: '#e2e8f0', color: '#64748b', '&:hover': { borderColor: '#6366f1', color: '#6366f1', bgcolor: '#f5f3ff' } }}>
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: '#e2e8f0', color: '#64748b', '&:hover': { borderColor: '#2563eb', color: '#2563eb', bgcolor: '#eff6ff' } }}>
                       {t('analytics')}
                     </Button>
                     <Button variant="outlined" startIcon={<SmartToyIcon />} onClick={() => setTab('ai')} size="small"
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: '#e2e8f0', color: '#64748b', '&:hover': { borderColor: '#6366f1', color: '#6366f1', bgcolor: '#f5f3ff' } }}>
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: '#e2e8f0', color: '#64748b', '&:hover': { borderColor: '#2563eb', color: '#2563eb', bgcolor: '#eff6ff' } }}>
                       {t('aiAgent')}
                     </Button>
                   </Box>
@@ -1043,15 +1044,15 @@ export default function Home() {
                             <LineChart data={revenueChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                               <defs>
                                 <linearGradient id="dashGrad" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
-                                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
+                                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                                 </linearGradient>
                               </defs>
                               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                               <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
                               <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
-                              <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 4 }} activeDot={{ r: 6 }} />
+                              <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} />
                             </LineChart>
                           </ResponsiveContainer>
                         ) : (
@@ -1071,10 +1072,10 @@ export default function Home() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                           {topCustomers.map(({ customer: c, rev }, i) => (
                             <Box key={c!.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                              <Box sx={{ width: 22, height: 22, borderRadius: '50%', bgcolor: ['#6366f1','#10b981','#f59e0b','#0ea5e9','#ef4444'][i], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Box sx={{ width: 22, height: 22, borderRadius: '50%', bgcolor: ['#2563eb','#10b981','#f59e0b','#0ea5e9','#ef4444'][i], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 <Typography sx={{ fontSize: '0.6rem', fontWeight: 800, color: 'white' }}>{i+1}</Typography>
                               </Box>
-                              <Avatar sx={{ width: 28, height: 28, bgcolor: '#e0e7ff', color: '#4338ca', fontSize: '0.7rem', fontWeight: 700 }}>{(c!.firstName ?? '?')[0]}</Avatar>
+                              <Avatar sx={{ width: 28, height: 28, bgcolor: '#dbeafe', color: '#1e40af', fontSize: '0.7rem', fontWeight: 700 }}>{(c!.firstName ?? '?')[0]}</Avatar>
                               <Box sx={{ flex: 1, overflow: 'hidden' }}>
                                 <Typography sx={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c!.firstName} {c!.lastName}</Typography>
                                 <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{orders.filter(o => o.customerId === c!.id).length} {t('orders')}</Typography>
@@ -1096,14 +1097,14 @@ export default function Home() {
                     <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
                       <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{t('recentOrders')}</Typography>
-                        <Button size="small" onClick={() => setTab('orders')} sx={{ textTransform: 'none', fontSize: '0.78rem', color: '#6366f1', fontWeight: 600, p: 0 }}>{t('viewAll')} →</Button>
+                        <Button size="small" onClick={() => setTab('orders')} sx={{ textTransform: 'none', fontSize: '0.78rem', color: '#2563eb', fontWeight: 600, p: 0 }}>{t('viewAll')} →</Button>
                       </Box>
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         {recentOrders.length === 0 ? (
                           <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', py: 4 }}>{t('noOrders')}</Typography>
                         ) : recentOrders.map((o, i) => (
                           <Box key={o.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2.5, py: 1.5, borderBottom: i < recentOrders.length - 1 ? '1px solid #f8fafc' : 'none', '&:hover': { bgcolor: '#fafbfc' }, transition: 'background 0.15s' }}>
-                            <Avatar sx={{ width: 32, height: 32, bgcolor: '#e0e7ff', color: '#4338ca', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
+                            <Avatar sx={{ width: 32, height: 32, bgcolor: '#dbeafe', color: '#1e40af', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
                               {getCustomerName(o.customerId)[0]}
                             </Avatar>
                             <Box sx={{ flex: 1, overflow: 'hidden' }}>
@@ -1125,7 +1126,7 @@ export default function Home() {
                     <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
                       <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('orderStatus')}</Typography>
                       {(() => {
-                        const PIE_COLORS = ['#f59e0b','#64748b','#6366f1','#10b981','#ef4444'];
+                        const PIE_COLORS = ['#f59e0b','#64748b','#2563eb','#10b981','#ef4444'];
                         const allPie = ORDER_STATUSES.map((s, i) => ({ name: statusText(s, t), value: orders.filter(o => (o.status ?? 'PENDING') === s).length || 0.001, realCount: orders.filter(o => (o.status ?? 'PENDING') === s).length, color: PIE_COLORS[i] }));
                         return (
                           <>
@@ -1186,7 +1187,7 @@ export default function Home() {
                   const pendTrendA = calcTrend(aNowPend, aPrevPend);
                   const fmtA = (v: string | null, up?: boolean) => v === null ? { text: t('vsLast30d'), up: up ?? true } : { text: `${parseFloat(v) >= 0 ? '+' : ''}${v}% ${t('vsLast30d')}`, up: up !== undefined ? up : parseFloat(v) >= 0 };
                   const allAnalyticsCards = [
-                    { label: t('totalRevenue').toUpperCase(), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), trend: fmtA(revTrendA).text, trendUp: fmtA(revTrendA).up, color: '#6366f1', sparkColor: '#6366f1', adminOnly: true },
+                    { label: t('totalRevenue').toUpperCase(), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), trend: fmtA(revTrendA).text, trendUp: fmtA(revTrendA).up, color: '#2563eb', sparkColor: '#2563eb', adminOnly: true },
                     { label: t('totalOrders').toUpperCase(), value: orders.length.toString(), trend: fmtA(orderTrendA).text, trendUp: fmtA(orderTrendA).up, color: '#10b981', sparkColor: '#10b981', adminOnly: false },
                     { label: t('avgOrderValue').toUpperCase(), value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), trend: fmtA(avgTrendA).text, trendUp: fmtA(avgTrendA).up, color: '#f59e0b', sparkColor: '#f59e0b', adminOnly: true },
                     { label: t('pendingOrders').toUpperCase(), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length.toString(), trend: fmtA(pendTrendA, pendTrendA !== null ? parseFloat(pendTrendA) <= 0 : true).text, trendUp: fmtA(pendTrendA, pendTrendA !== null ? parseFloat(pendTrendA) <= 0 : true).up, color: '#ef4444', sparkColor: '#ef4444', adminOnly: false },
@@ -1236,15 +1237,15 @@ export default function Home() {
                       <LineChart data={chartData.map(([label, value]) => ({ label, value }))} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                         <defs>
                           <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
-                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
                         <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
-                        <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 4 }} activeDot={{ r: 6 }} />
+                        <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </Paper>}
@@ -1253,7 +1254,7 @@ export default function Home() {
                   <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('orderStatusDistribution')}</Typography>
                     {(() => {
-                      const PIE_COLORS = ['#f59e0b', '#64748b', '#6366f1', '#10b981', '#ef4444'];
+                      const PIE_COLORS = ['#f59e0b', '#64748b', '#2563eb', '#10b981', '#ef4444'];
                       const statusLabel = (s: string) => statusText(s, t);
                       const allPie = statusCounts.map((s) => ({ name: statusLabel(s.status), value: s.count || 0.001, realCount: s.count, color: PIE_COLORS[ORDER_STATUSES.indexOf(s.status)] }));
                       return (
@@ -1293,7 +1294,7 @@ export default function Home() {
                       const individual = customers.filter(c => !isCompany(c)).length;
                       const company = customers.filter(isCompany).length;
                       const pieData = [
-                        { name: t('individual'), value: individual || 0.001, realCount: individual, pct: customers.length > 0 ? Math.round((individual / customers.length) * 100) : 0, color: '#6366f1' },
+                        { name: t('individual'), value: individual || 0.001, realCount: individual, pct: customers.length > 0 ? Math.round((individual / customers.length) * 100) : 0, color: '#2563eb' },
                         { name: t('company'), value: company || 0.001, realCount: company, pct: customers.length > 0 ? Math.round((company / customers.length) * 100) : 0, color: '#10b981' },
                       ];
                       return (
@@ -1331,7 +1332,7 @@ export default function Home() {
                       orders.forEach(o => { productMap[o.productName] = (productMap[o.productName] ?? 0) + o.price * o.quantity; });
                       const top = Object.entries(productMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name: name.length > 16 ? name.slice(0, 16) + '…' : name, value }));
                       if (top.length === 0) return <Typography variant="body2" color="text.secondary">{t('noOrders')}</Typography>;
-                      const PROD_COLORS = ['#6366f1','#3b82f6','#10b981','#f59e0b','#ef4444'];
+                      const PROD_COLORS = ['#2563eb','#0ea5e9','#10b981','#f59e0b','#ef4444'];
                       return (
                         <ResponsiveContainer width="100%" height={200}>
                           <BarChart data={top} layout="vertical" margin={{ top: 0, right: 50, left: 0, bottom: 0 }}>
@@ -1360,13 +1361,13 @@ export default function Home() {
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', flexShrink: 0 }}>
                     {(isAdmin ? getQuickQuestionsAdmin(t) : getQuickQuestionsUser(t)).map(q => (
                       <Chip key={q} label={q} clickable onClick={() => sendMessage(q)}
-                        sx={{ bgcolor: '#f5f3ff', color: '#6366f1', border: '1px solid #e0e7ff', fontWeight: 500, fontSize: '0.78rem', '&:hover': { bgcolor: '#ede9fe' } }} />
+                        sx={{ bgcolor: '#eff6ff', color: '#2563eb', border: '1px solid #dbeafe', fontWeight: 500, fontSize: '0.78rem', '&:hover': { bgcolor: '#ede9fe' } }} />
                     ))}
                   </Box>
 
                   {/* Welcome banner — shown only when no messages */}
                   {chatMessages.length === 0 && (
-                    <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 3, background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                    <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 3, background: 'linear-gradient(135deg, #eff6ff 0%, #ede9fe 100%)', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                       <Box sx={{ flex: 1 }}>
                         <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e1b4b', mb: 0.5 }}>
                           {t('aiWelcome')}, {currentUser?.username ?? 'User'}! 👋
@@ -1375,7 +1376,7 @@ export default function Home() {
                           {t('aiDescription')}
                         </Typography>
                       </Box>
-                      <Box sx={{ width: 80, height: 80, borderRadius: 3, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Box sx={{ width: 80, height: 80, borderRadius: 3, background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <SmartToyIcon sx={{ fontSize: 44, color: 'white' }} />
                       </Box>
                     </Paper>
@@ -1395,7 +1396,7 @@ export default function Home() {
                         <Box sx={{
                           maxWidth: '78%', px: 2, py: 1.2,
                           borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                          background: msg.role === 'user' ? 'linear-gradient(135deg,#6366f1,#4f46e5)' : '#ffffff',
+                          background: msg.role === 'user' ? 'linear-gradient(135deg,#2563eb,#1d4ed8)' : '#ffffff',
                           color: msg.role === 'user' ? 'white' : '#1e293b',
                           border: msg.role === 'assistant' ? '1px solid #e2e8f0' : 'none',
                           boxShadow: msg.role === 'assistant' ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
@@ -1406,7 +1407,7 @@ export default function Home() {
                     ))}
                     {chatLoading && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CircularProgress size={14} sx={{ color: '#6366f1' }} />
+                        <CircularProgress size={14} sx={{ color: '#2563eb' }} />
                         <Typography sx={{ fontSize: '0.78rem', color: '#94a3b8' }}>AI is thinking…</Typography>
                       </Box>
                     )}
@@ -1420,7 +1421,7 @@ export default function Home() {
                       disabled={chatLoading}
                       sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2.5 } }} />
                     <Button variant="contained" onClick={() => sendMessage(chatInput)} disabled={chatLoading || !chatInput.trim()} disableElevation
-                      sx={{ borderRadius: 2.5, minWidth: 48, px: 2, bgcolor: '#6366f1', '&:hover': { bgcolor: '#4f46e5' } }}>
+                      sx={{ borderRadius: 2.5, minWidth: 48, px: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}>
                       <SendIcon fontSize="small" />
                     </Button>
                   </Box>
@@ -1433,7 +1434,7 @@ export default function Home() {
                     <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a', mb: 1.5 }}>{t('quickStats')}</Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
                       {[
-                        { label: t('totalOrdersLabel'), value: orders.length, color: '#6366f1', icon: '🛒' },
+                        { label: t('totalOrdersLabel'), value: orders.length, color: '#2563eb', icon: '🛒' },
                         { label: t('deliveredLabel'), value: orders.filter(o => o.status === 'DELIVERED').length, color: '#10b981', icon: '✅' },
                         { label: t('pendingLabel'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, color: '#f59e0b', icon: '⏳' },
                         { label: t('cancelledLabel'), value: orders.filter(o => o.status === 'CANCELLED').length, color: '#ef4444', icon: '❌' },
@@ -1450,7 +1451,7 @@ export default function Home() {
                   <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2, flex: 1 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a', mb: 1.5 }}>{t('recentQuestions')}</Typography>
                     {chatMessages.filter(m => m.role === 'user').slice(-5).reverse().map((m, i) => (
-                      <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5, cursor: 'pointer', '&:hover .q-text': { color: '#6366f1' } }} onClick={() => sendMessage(m.content)}>
+                      <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5, cursor: 'pointer', '&:hover .q-text': { color: '#2563eb' } }} onClick={() => sendMessage(m.content)}>
                         <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Typography sx={{ fontSize: '0.6rem' }}>🕐</Typography>
                         </Box>
@@ -1466,7 +1467,7 @@ export default function Home() {
                   </Paper>
 
                   {/* Pro Tip */}
-                  <Paper elevation={0} sx={{ border: 'none', borderRadius: 2.5, p: 2, background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>
+                  <Paper elevation={0} sx={{ border: 'none', borderRadius: 2.5, p: 2, background: 'linear-gradient(135deg,#2563eb,#1d4ed8)' }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'white', mb: 0.5 }}>💡 {t('proTip')}</Typography>
                     <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6 }}>
                       {t('proTipText')}

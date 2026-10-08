@@ -82,7 +82,7 @@ export default function RegisterPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1a237e 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0b1f3a 100%)',
         p: 2,
       }}
     >
@@ -93,7 +93,7 @@ export default function RegisterPage() {
             <Box
               sx={{
                 width: 64, height: 64, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 8px 24px rgba(99,102,241,0.4)',
               }}
@@ -224,8 +224,8 @@ export default function RegisterPage() {
                 disabled={loading || !username || !password || !confirmPassword || success}
                 sx={{
                   py: 1.5, borderRadius: 2, fontWeight: 600, fontSize: '1rem', mt: 0.5,
-                  background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-                  '&:hover': { background: 'linear-gradient(135deg, #4f46e5, #4338ca)' },
+                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                  '&:hover': { background: 'linear-gradient(135deg, #1d4ed8, #4338ca)' },
                 }}
               >
                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
@@ -235,7 +235,7 @@ export default function RegisterPage() {
 
           <Typography variant="body2" align="center" sx={{ mt: 3, color: 'text.secondary' }}>
             Already have an account?{' '}
-            <Link href="/login" style={{ color: '#6366f1', fontWeight: 600, textDecoration: 'none' }}>
+            <Link href="/login" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
               Sign in
             </Link>
           </Typography>

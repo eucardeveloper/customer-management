@@ -37,7 +37,7 @@ export default function AppHeader() {
       position="fixed"
       elevation={0}
       sx={{
-        background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565c0 100%)',
+        background: 'linear-gradient(135deg, #0b1f3a 0%, #12315c 50%, #1d4ed8 100%)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}
     >
