@@ -15,3 +15,5 @@
 - The JWT is kept in an `HttpOnly` `SameSite=Strict` cookie, not in `localStorage`; the gateway adds an Origin check for cookie-authenticated writes. Remaining limitation: no server-side revocation before expiry.
 - `auth-service` still runs on Spring Boot 3.3.5.
 - The gateway does not check that the user of a valid token still exists.
+- Kafka producer is a plain dual write (save, then send). A transactional outbox would close the gap where the order is committed but the event is not sent.
+- Deleting a customer does not cascade to orders (separate databases). The UI blocks it when orders exist; the API does not.

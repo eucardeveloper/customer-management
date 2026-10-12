@@ -108,7 +108,7 @@ cd customer-service && ./mvnw verify
 cd auth-service && ./mvnw verify
 
 # frontend
-cd frontend/customer-app && npm ci && npm run lint && npx tsc --noEmit && npm run build
+cd frontend/customer-app && npm ci && npm run lint && npx tsc --noEmit && npm test && npm run build
 ```
 
 The Testcontainers test runs the real Flyway chain on PostgreSQL with Hibernate in `validate` mode and checks that a redelivered Kafka record is recorded once. It is skipped automatically when Docker is not available. The other service tests use H2.
@@ -129,6 +129,8 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 - `auth-service` still uses Spring Boot 3.3.x, which is out of open-source support; the other services use 4.0.x. Aligning it is the next upgrade step.
 - Tokens are not revocable before they expire (24 h); logout clears the cookie but does not blacklist the token.
 - The in-memory AI rate limiter is per process; behind several instances it would need a shared store.
+- **No transactional outbox.** `order-service` saves the order and then sends the Kafka event directly. If the process dies between the two steps, the order exists but the event is lost. The consumer side is idempotent and has a dead-letter topic; the producer side would need an outbox table plus a relay as the next step.
+- **No cross-service integrity on delete.** Customers and orders live in separate databases, so deleting a customer does not touch their orders. The dashboard refuses to delete a customer that still has orders; the API itself does not check this. A `customer-deleted` event (or an order-service lookup before delete) would enforce it server-side.
 - No cloud deployment is configured on purpose; the project is meant to be demonstrated from `docker compose`.
 
 ## License

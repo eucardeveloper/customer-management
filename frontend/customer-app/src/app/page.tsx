@@ -310,6 +310,10 @@ export default function Home() {
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    // Customers and orders live in separate services, so the customer service cannot see orders:
+    // never leave orphan orders behind (they would still count towards revenue).
+    const linkedOrders = orders.filter(o => o.customerId === deleteId).length;
+    if (linkedOrders > 0) { showSnackbar(`${t('customerHasOrders')} (${linkedOrders})`, 'error'); setDeleteDialogOpen(false); return; }
     try { await api.delete(`/api/customers/${deleteId}`); showSnackbar(t('deleted'), 'success'); setDeleteDialogOpen(false); fetchCustomers(); }
     catch { showSnackbar(t('deleteFailed'), 'error'); }
   };
@@ -372,7 +376,10 @@ export default function Home() {
   };
 
   const filteredCustomers = customers.filter(c => { const q = custSearch.toLowerCase(); if (!q) return true; return `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q); });
-  const filteredOrders = orders.filter(o => { const q = ordSearch.toLowerCase(); if (!q) return true; return (o.productName ?? '').toLowerCase().includes(q) || String(o.customerId ?? '').includes(q) || (o.status ?? '').toLowerCase().includes(q); });
+  const filteredOrders = [...orders].sort((x, y) => (y.id ?? 0) - (x.id ?? 0)).filter(o => { const q = ordSearch.toLowerCase(); if (!q) return true; return (o.productName ?? '').toLowerCase().includes(q) || String(o.customerId ?? '').includes(q) || (o.status ?? '').toLowerCase().includes(q); });
+  // Keep the page index valid when rows disappear (delete / search), otherwise the table shows an empty page
+  const custPageSafe = Math.min(custPage, Math.max(0, Math.ceil(filteredCustomers.length / custRowsPerPage) - 1));
+  const ordPageSafe = Math.min(ordPage, Math.max(0, Math.ceil(filteredOrders.length / ordRowsPerPage) - 1));
   const filteredUsers = users.filter(u => { const q = userSearch.toLowerCase(); if (!q) return true; return u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q); });
   const getCustomerName = (id: number) => { const c = customers.find(c => c.id === id); return c ? `${c.firstName} ${c.lastName}` : `ID: ${id}`; };
 
@@ -414,7 +421,7 @@ export default function Home() {
       if (!o.date) return;
       const d = new Date(o.date);
       const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+      const label = `${d.toLocaleString('en-US', { month: 'short' })} '${String(d.getFullYear()).slice(-2)}`;
       if (!map[sortKey]) map[sortKey] = { label, value: 0 };
       map[sortKey].value += o.price * o.quantity;
     });
@@ -575,7 +582,7 @@ export default function Home() {
                       <Typography sx={{ color: isAdmin ? '#34d399' : 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{currentUser.role}</Typography>
                     </Box>
                     <Tooltip title={t("signOut")}>
-                      <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { void logout().finally(() => { window.location.href = '/login'; }); }}>
+                      <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { void logout().finally(() => { window.location.replace('/login'); }); }}>
                         <LogoutIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
@@ -712,7 +719,7 @@ export default function Home() {
                               <Typography variant="caption" color="text.secondary">{custSearch ? t('tryDifferentSearch') : t('addFirstCustomer')}</Typography>
                             </TableCell></TableRow>
                           )}
-                          {filteredCustomers.slice(custPage * custRowsPerPage, custPage * custRowsPerPage + custRowsPerPage).map(c => (
+                          {filteredCustomers.slice(custPageSafe * custRowsPerPage, custPageSafe * custRowsPerPage + custRowsPerPage).map(c => (
                             <TableRow key={c.id}>
                               <TableCell><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
                               <TableCell>{customerTypeChip(c, t)}</TableCell>
@@ -737,7 +744,7 @@ export default function Home() {
                         </TableBody>
                       </Table>
                     </TableContainer>
-                    <TablePagination component="div" count={filteredCustomers.length} page={custPage}
+                    <TablePagination component="div" count={filteredCustomers.length} page={custPageSafe}
                       onPageChange={(_, p) => setCustPage(p)} rowsPerPage={custRowsPerPage}
                       onRowsPerPageChange={e => { setCustRowsPerPage(parseInt(e.target.value)); setCustPage(0); }}
                       rowsPerPageOptions={[5, 10, 25, 50]} labelRowsPerPage={t('rowsPerPage')} labelDisplayedRows={({ from, to, count }) => `${from}–${to} ${t('of')} ${count}`} sx={{ borderTop: '1px solid #f1f5f9', flexShrink: 0 }} />
@@ -793,7 +800,7 @@ export default function Home() {
                               <Typography variant="caption" color="text.secondary">{ordSearch ? t('tryDifferentSearch') : t('createFirstOrder')}</Typography>
                             </TableCell></TableRow>
                           )}
-                          {filteredOrders.slice(ordPage * ordRowsPerPage, ordPage * ordRowsPerPage + ordRowsPerPage).map(o => (
+                          {filteredOrders.slice(ordPageSafe * ordRowsPerPage, ordPageSafe * ordRowsPerPage + ordRowsPerPage).map(o => (
                             <TableRow key={o.id}>
                               <TableCell><Chip label={`#${o.id}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                               <TableCell>
@@ -835,7 +842,7 @@ export default function Home() {
                         </TableBody>
                       </Table>
                     </TableContainer>
-                    <TablePagination component="div" count={filteredOrders.length} page={ordPage}
+                    <TablePagination component="div" count={filteredOrders.length} page={ordPageSafe}
                       onPageChange={(_, p) => setOrdPage(p)} rowsPerPage={ordRowsPerPage}
                       onRowsPerPageChange={e => { setOrdRowsPerPage(parseInt(e.target.value)); setOrdPage(0); }}
                       rowsPerPageOptions={[5, 10, 25, 50]} labelRowsPerPage={t('rowsPerPage')} labelDisplayedRows={({ from, to, count }) => `${from}–${to} ${t('of')} ${count}`} sx={{ borderTop: '1px solid #f1f5f9', flexShrink: 0 }} />
@@ -940,12 +947,16 @@ export default function Home() {
                   if (!o.date) return;
                   const d = new Date(o.date);
                   const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                  const label = d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+                  const label = `${d.toLocaleString('en-US', { month: 'short' })} '${String(d.getFullYear()).slice(-2)}`;
                   if (!map[sortKey]) map[sortKey] = { label, value: 0 };
                   map[sortKey].value += o.price * o.quantity;
                 });
                 return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).slice(-6).map(([, v]) => v);
               })();
+
+              // Real monthly series (last 6 calendar months) for the KPI sparklines — no placeholder data
+              const sparkMonths = Array.from({ length: 6 }, (_, k) => { const d = new Date(now); d.setDate(1); d.setMonth(d.getMonth() - (5 - k)); return `${d.getFullYear()}-${d.getMonth()}`; });
+              const monthSeries = (pick: (os: typeof orders) => number) => sparkMonths.map(key => pick(orders.filter(o => { if (!o.date) return false; const d = new Date(o.date); return `${d.getFullYear()}-${d.getMonth()}` === key; })));
 
               return (
                 <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -961,16 +972,16 @@ export default function Home() {
                       const fufT = fmtTrend(fulfillTrend);
                       const pndT = fmtTrend(pendTrend, false);
                       const adminCards = [
-                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', trend: revT.label, up: revT.up },
+                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', trend: revT.label, up: revT.up, spark: monthSeries(os => os.reduce((a, o) => a + o.price * o.quantity, 0)) },
                         { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
-                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
-                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
                       ];
                       const userCards = [
-                        { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', trend: t('allTime'), up: true },
+                        { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', trend: t('allTime'), up: true, spark: monthSeries(os => os.length) },
                         { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
-                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up },
-                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
                       ];
                       return (isAdmin ? adminCards : userCards).map(card => (
                         <Paper key={card.label} elevation={0} sx={{
@@ -997,13 +1008,15 @@ export default function Home() {
                               <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, color: card.up ? '#10b981' : '#ef4444' }}>{card.up ? '↑' : '↓'} {card.trend}</Typography>
                             </Box>
                           </Box>
+                          {card.spark && card.spark.some(v => v > 0) && (
                           <Box sx={{ mx: -0.5, mt: 0.5 }}>
                             <ResponsiveContainer width="100%" height={36}>
-                              <LineChart data={[3,5,4,7,6,9,8,11,10,13,12,15].map((v,i) => ({i,v}))}>
+                              <LineChart data={card.spark.map((v, i) => ({ i, v }))}>
                                 <Line type="monotone" dataKey="v" stroke={card.color} strokeWidth={1.8} dot={false} />
                               </LineChart>
                             </ResponsiveContainer>
                           </Box>
+                          )}
                         </Paper>
                       ));
                     })()}
@@ -1050,7 +1063,7 @@ export default function Home() {
                               </defs>
                               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                               <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
+                              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(1)}k`} />
                               <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
                               <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} />
                             </LineChart>
@@ -1243,7 +1256,7 @@ export default function Home() {
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+                        <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
                         <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
                         <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} />
                       </LineChart>

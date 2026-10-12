@@ -29,7 +29,7 @@ export default function AppHeader() {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/login');
+    router.replace('/login');
   };
 
   return (
