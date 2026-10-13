@@ -1,5 +1,8 @@
 package com.enesucar.orderservice.service;
 
+import com.enesucar.orderservice.client.CustomerClient;
+import com.enesucar.orderservice.exception.CustomerServiceUnavailableException;
+import com.enesucar.orderservice.exception.UnknownCustomerException;
 import com.enesucar.orderservice.dto.OrderRequestDTO;
 import com.enesucar.orderservice.dto.OrderResponseDTO;
 import com.enesucar.orderservice.entity.Order;
@@ -31,6 +34,9 @@ class OrderServiceTest {
 
     @Mock
     private OrderProducer orderProducer;
+
+    @Mock
+    private CustomerClient customerClient;
 
     @InjectMocks
     private OrderService orderService;
@@ -82,6 +88,7 @@ class OrderServiceTest {
 
     @Test
     void createOrder_shouldSaveAndSendKafkaEvent() {
+        when(customerClient.exists(10L)).thenReturn(true);
         when(orderRepository.save(any(Order.class))).thenReturn(order);
         doNothing().when(orderProducer).sendOrderEvent(anyString());
         OrderResponseDTO result = orderService.createOrder(requestDTO);
@@ -94,6 +101,7 @@ class OrderServiceTest {
     @Test
     void createOrder_shouldSetDefaultStatus_whenStatusIsNull() {
         requestDTO.setStatus(null);
+        when(customerClient.exists(10L)).thenReturn(true);
         when(orderRepository.save(any(Order.class))).thenReturn(order);
         doNothing().when(orderProducer).sendOrderEvent(anyString());
         OrderResponseDTO result = orderService.createOrder(requestDTO);
@@ -150,5 +158,29 @@ class OrderServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Order not found with ID: 99");
         verify(orderRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void createOrder_shouldRefuse_whenCustomerDoesNotExist() {
+        when(customerClient.exists(10L)).thenReturn(false);
+        assertThatThrownBy(() -> orderService.createOrder(requestDTO)).isInstanceOf(UnknownCustomerException.class);
+        verify(orderRepository, never()).save(any());
+        verify(orderProducer, never()).sendOrderEvent(anyString());
+    }
+
+    @Test
+    void createOrder_shouldFailClosed_whenCustomerServiceCannotBeAsked() {
+        when(customerClient.exists(10L)).thenThrow(new CustomerServiceUnavailableException(new RuntimeException("down")));
+        assertThatThrownBy(() -> orderService.createOrder(requestDTO)).isInstanceOf(CustomerServiceUnavailableException.class);
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void updateOrder_shouldRefuse_whenMovedToUnknownCustomer() {
+        requestDTO.setCustomerId(77L);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(customerClient.exists(77L)).thenReturn(false);
+        assertThatThrownBy(() -> orderService.updateOrder(1L, requestDTO)).isInstanceOf(UnknownCustomerException.class);
+        verify(orderRepository, never()).save(any());
     }
 }

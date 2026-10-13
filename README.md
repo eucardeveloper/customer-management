@@ -135,7 +135,7 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 - Frontend tests are limited (3 unit tests, no end-to-end suite); the backend has unit and controller tests per service.
 - The in-memory AI rate limiter is per process; behind several instances it would need a shared store.
 - **No transactional outbox.** `order-service` saves the order and then sends the Kafka event directly. If the process dies between the two steps, the order exists but the event is lost. The consumer side is idempotent and has a dead-letter topic; the producer side would need an outbox table plus a relay as the next step.
-- **No cross-service integrity on delete.** Customers and orders live in separate databases, so deleting a customer does not touch their orders. The dashboard refuses to delete a customer that still has orders; the API itself does not check this. A `customer-deleted` event (or an order-service lookup before delete) would enforce it server-side.
+- **Cross-service integrity is enforced by service calls, not by a database.** Deleting a customer is refused with `409` while the order-service still lists orders for them; creating or re-assigning an order is refused with `400` if the customer does not exist. If the other service cannot be reached the change is refused with `503` (fail closed). Two services with separate databases cannot share a transaction, so an order created in the instant between the check and the delete can still slip through; closing that fully needs events plus a saga or a shared database.
 - The reference setup is `docker compose`. No cloud deployment is configured in this repository; any hosted demo is a separate deployment of the same images and is not covered by this README.
 
 ## License

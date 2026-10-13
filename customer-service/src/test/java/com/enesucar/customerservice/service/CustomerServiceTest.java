@@ -1,5 +1,8 @@
 package com.enesucar.customerservice.service;
 
+import com.enesucar.customerservice.client.OrderClient;
+import com.enesucar.customerservice.exception.CustomerHasOrdersException;
+import com.enesucar.customerservice.exception.OrderServiceUnavailableException;
 import com.enesucar.customerservice.dto.CustomerRequestDTO;
 import com.enesucar.customerservice.dto.CustomerResponseDTO;
 import com.enesucar.customerservice.entity.Customer;
@@ -24,6 +27,9 @@ class CustomerServiceTest {
 
     @Mock
     private CustomerRepository customerRepository;
+
+    @Mock
+    private OrderClient orderClient;
 
     @InjectMocks
     private CustomerService customerService;
@@ -110,6 +116,7 @@ class CustomerServiceTest {
     @Test
     void deleteCustomer_shouldDelete_whenExists() {
         when(customerRepository.existsById(1L)).thenReturn(true);
+        when(orderClient.hasOrders(1L)).thenReturn(false);
         doNothing().when(customerRepository).deleteById(1L);
         customerService.deleteCustomer(1L);
         verify(customerRepository).deleteById(1L);
@@ -121,6 +128,24 @@ class CustomerServiceTest {
         assertThatThrownBy(() -> customerService.deleteCustomer(99L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Customer not found with ID: 99");
+        verify(customerRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteCustomer_shouldRefuse_whenCustomerStillHasOrders() {
+        when(customerRepository.existsById(1L)).thenReturn(true);
+        when(orderClient.hasOrders(1L)).thenReturn(true);
+        assertThatThrownBy(() -> customerService.deleteCustomer(1L))
+                .isInstanceOf(CustomerHasOrdersException.class);
+        verify(customerRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteCustomer_shouldFailClosed_whenOrderServiceCannotBeAsked() {
+        when(customerRepository.existsById(1L)).thenReturn(true);
+        when(orderClient.hasOrders(1L)).thenThrow(new OrderServiceUnavailableException(new RuntimeException("down")));
+        assertThatThrownBy(() -> customerService.deleteCustomer(1L))
+                .isInstanceOf(OrderServiceUnavailableException.class);
         verify(customerRepository, never()).deleteById(any());
     }
 }

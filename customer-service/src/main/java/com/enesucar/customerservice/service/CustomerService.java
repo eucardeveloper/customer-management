@@ -1,8 +1,10 @@
 package com.enesucar.customerservice.service;
 
+import com.enesucar.customerservice.client.OrderClient;
 import com.enesucar.customerservice.dto.CustomerRequestDTO;
 import com.enesucar.customerservice.dto.CustomerResponseDTO;
 import com.enesucar.customerservice.entity.Customer;
+import com.enesucar.customerservice.exception.CustomerHasOrdersException;
 import com.enesucar.customerservice.exception.ResourceNotFoundException;
 import com.enesucar.customerservice.repository.CustomerRepository;
 import org.springframework.stereotype.Service;
@@ -14,9 +16,11 @@ import java.util.stream.Collectors;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final OrderClient orderClient;
 
-    public CustomerService(CustomerRepository customerRepository) {
+    public CustomerService(CustomerRepository customerRepository, OrderClient orderClient) {
         this.customerRepository = customerRepository;
+        this.orderClient = orderClient;
     }
 
     public List<CustomerResponseDTO> getAllCustomers() {
@@ -58,6 +62,11 @@ public class CustomerService {
     public void deleteCustomer(Long id) {
         if (!customerRepository.existsById(id)) {
             throw new ResourceNotFoundException("Customer not found with ID: " + id);
+        }
+        // Separate databases: the order-service has to be asked. A race (an order created between the
+        // check and the delete) is possible and is the known limit of not sharing a transaction.
+        if (orderClient.hasOrders(id)) {
+            throw new CustomerHasOrdersException(id);
         }
         customerRepository.deleteById(id);
     }

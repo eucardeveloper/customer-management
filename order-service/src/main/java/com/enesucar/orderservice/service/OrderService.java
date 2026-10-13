@@ -1,8 +1,10 @@
 package com.enesucar.orderservice.service;
+import com.enesucar.orderservice.client.CustomerClient;
 import com.enesucar.orderservice.dto.OrderRequestDTO;
 import com.enesucar.orderservice.dto.OrderResponseDTO;
 import com.enesucar.orderservice.entity.Order;
 import com.enesucar.orderservice.exception.ResourceNotFoundException;
+import com.enesucar.orderservice.exception.UnknownCustomerException;
 import com.enesucar.orderservice.kafka.OrderProducer;
 import com.enesucar.orderservice.repository.OrderRepository;
 import org.springframework.stereotype.Service;
@@ -13,9 +15,17 @@ import java.util.stream.Collectors;
 public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderProducer orderProducer;
-    public OrderService(OrderRepository orderRepository, OrderProducer orderProducer) {
+    private final CustomerClient customerClient;
+    public OrderService(OrderRepository orderRepository, OrderProducer orderProducer, CustomerClient customerClient) {
         this.orderRepository = orderRepository;
         this.orderProducer = orderProducer;
+        this.customerClient = customerClient;
+    }
+    /** Separate databases, so a service call instead of a foreign key. */
+    private void requireCustomer(Long customerId) {
+        if (!customerClient.exists(customerId)) {
+            throw new UnknownCustomerException(customerId);
+        }
     }
     public List<OrderResponseDTO> getAllOrders() {
         return orderRepository.findAll()
@@ -30,6 +40,7 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
     public OrderResponseDTO createOrder(OrderRequestDTO request) {
+        requireCustomer(request.getCustomerId());
         Order order = new Order();
         order.setCustomerId(request.getCustomerId());
         order.setProductName(request.getProductName());
@@ -48,6 +59,9 @@ public class OrderService {
     public OrderResponseDTO updateOrder(Long id, OrderRequestDTO request) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + id));
+        if (!java.util.Objects.equals(order.getCustomerId(), request.getCustomerId())) {
+            requireCustomer(request.getCustomerId());
+        }
         order.setCustomerId(request.getCustomerId());
         order.setProductName(request.getProductName());
         order.setPrice(request.getPrice());
