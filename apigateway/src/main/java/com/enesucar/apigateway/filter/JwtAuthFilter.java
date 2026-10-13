@@ -47,6 +47,13 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
 
         if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
+            if (path.startsWith("/api/auth/logout")) {
+                // The auth-service revokes the token; forget the cached "still valid" answer so it stops now.
+                HttpCookie session = exchange.getRequest().getCookies().getFirst(COOKIE_NAME);
+                if (session != null && !session.getValue().isBlank()) {
+                    sessionValidator.forget(session.getValue());
+                }
+            }
             return chain.filter(exchange);
         }
 

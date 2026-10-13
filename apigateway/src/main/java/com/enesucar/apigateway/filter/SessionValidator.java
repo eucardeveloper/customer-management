@@ -8,4 +8,8 @@ import reactor.core.publisher.Mono;
  */
 public interface SessionValidator {
     Mono<SessionInfo> validate(String token);
+
+    /** Drops any remembered answer for this token (called on logout so it stops working at once). */
+    default void forget(String token) {
+    }
 }

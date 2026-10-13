@@ -64,4 +64,14 @@ class AuthServiceSessionValidatorTest {
         revoked.validate("tok").block();
         assertThat(calls.get()).isEqualTo(2);
     }
+
+    @Test
+    @DisplayName("forget() drops the cached answer so the next call asks again")
+    void forget() {
+        var v = validatorAnswering(HttpStatus.OK, "{\"username\":\"alice\",\"role\":\"USER\"}", 30);
+        v.validate("tok").block();
+        v.forget("tok");
+        v.validate("tok").block();
+        assertThat(calls.get()).isEqualTo(2);
+    }
 }

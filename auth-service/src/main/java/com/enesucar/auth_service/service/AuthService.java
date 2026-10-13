@@ -6,6 +6,8 @@ import com.enesucar.auth_service.dto.LoginRequest;
 import com.enesucar.auth_service.dto.RegisterRequest;
 import com.enesucar.auth_service.entity.Role;
 import com.enesucar.auth_service.entity.User;
+import com.enesucar.auth_service.entity.RevokedToken;
+import com.enesucar.auth_service.repository.RevokedTokenRepository;
 import com.enesucar.auth_service.repository.UserRepository;
 import com.enesucar.auth_service.security.JwtUtil;
 import com.enesucar.auth_service.security.LoginAttemptLimiter;
@@ -28,6 +30,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    private final RevokedTokenRepository revokedTokens;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -92,5 +95,21 @@ public class AuthService {
         user.setTokenVersion(user.getTokenVersion() + 1); // signs out every session, including this one
         userRepository.save(user);
         loginAttemptLimiter.reset(throttleKey);
+    }
+
+    /**
+     * Ends a session on the server: the token's id goes on a revocation list until the token would have
+     * expired anyway. A missing, malformed or already expired token is ignored (logout never fails).
+     */
+    public void logout(String token) {
+        if (token == null || token.isBlank() || !jwtUtil.isTokenValid(token)) {
+            return;
+        }
+        String jti = jwtUtil.extractTokenId(token);
+        if (jti == null) {
+            return; // issued before token ids existed; it expires on its own
+        }
+        var expiry = jwtUtil.extractExpiration(token).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+        revokedTokens.save(new RevokedToken(jti, expiry));
     }
 }

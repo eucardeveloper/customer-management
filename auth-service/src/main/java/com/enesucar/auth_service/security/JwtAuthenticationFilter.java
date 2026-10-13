@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.enesucar.auth_service.repository.RevokedTokenRepository;
 import com.enesucar.auth_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,6 +22,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final RevokedTokenRepository revokedTokens;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -37,6 +39,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 int tokenVersion = jwtUtil.extractTokenVersion(token);
                 var account = userRepository.findByUsername(username);
                 if (account.isEmpty() || account.get().getTokenVersion() != tokenVersion) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                String tokenId = jwtUtil.extractTokenId(token);
+                if (tokenId != null && revokedTokens.existsById(tokenId)) { // ended by logout
                     filterChain.doFilter(request, response);
                     return;
                 }

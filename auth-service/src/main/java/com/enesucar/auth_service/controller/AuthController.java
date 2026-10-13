@@ -32,9 +32,13 @@ public class AuthController {
         return session(authService.login(request));
     }
 
-    /** Ends the browser session by expiring the cookie. Safe to call without being signed in. */
+    /** Ends the session: the cookie is expired and the token is revoked. Safe to call without being signed in. */
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = AuthCookies.NAME, required = false) String cookieToken,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        String token = (authorization != null && authorization.startsWith("Bearer ")) ? authorization.substring(7) : cookieToken;
+        authService.logout(token); // ends the token on the server too, not just in this browser
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, authCookies.clear().toString())
                 .build();

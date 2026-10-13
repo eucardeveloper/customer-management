@@ -2,6 +2,7 @@ package com.enesucar.auth_service.security;
 
 import com.enesucar.auth_service.entity.Role;
 import com.enesucar.auth_service.entity.User;
+import com.enesucar.auth_service.repository.RevokedTokenRepository;
 import com.enesucar.auth_service.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +23,7 @@ class JwtAuthenticationFilterTest {
 
     private JwtUtil jwtUtil;
     private UserRepository userRepository;
+    private RevokedTokenRepository revokedTokens;
     private JwtAuthenticationFilter filter;
     private FilterChain chain;
 
@@ -31,7 +33,8 @@ class JwtAuthenticationFilterTest {
         ReflectionTestUtils.setField(jwtUtil, "secret", "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970");
         ReflectionTestUtils.setField(jwtUtil, "expiration", 3_600_000L);
         userRepository = mock(UserRepository.class);
-        filter = new JwtAuthenticationFilter(jwtUtil, userRepository);
+        revokedTokens = mock(RevokedTokenRepository.class);
+        filter = new JwtAuthenticationFilter(jwtUtil, userRepository, revokedTokens);
         chain = mock(FilterChain.class);
         SecurityContextHolder.clearContext();
     }
@@ -87,5 +90,23 @@ class JwtAuthenticationFilterTest {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(account(0, Role.USER)));
         filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER")), new MockHttpServletResponse(), chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
+
+    @Test
+    void rejectsToken_whenItWasRevokedByLogout() throws Exception {
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(account(0, Role.USER)));
+        String token = jwtUtil.generateToken("alice", "USER", 0);
+        when(revokedTokens.existsById(jwtUtil.extractTokenId(token))).thenReturn(true);
+
+        filter.doFilter(bearer(token), new MockHttpServletResponse(), chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void everyIssuedTokenHasItsOwnId() {
+        String a = jwtUtil.generateToken("alice", "USER", 0);
+        String b = jwtUtil.generateToken("alice", "USER", 0);
+        assertThat(jwtUtil.extractTokenId(a)).isNotBlank().isNotEqualTo(jwtUtil.extractTokenId(b));
     }
 }

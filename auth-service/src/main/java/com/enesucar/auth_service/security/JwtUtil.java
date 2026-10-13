@@ -29,6 +29,7 @@ public class JwtUtil {
 
     public String generateToken(String username, String role, int tokenVersion) {
         return Jwts.builder()
+                .id(java.util.UUID.randomUUID().toString())
                 .subject(username)
                 .claim("role", role)
                 .claim("ver", tokenVersion)
@@ -50,6 +51,15 @@ public class JwtUtil {
     public int extractTokenVersion(String token) {
         Integer v = getClaims(token).get("ver", Integer.class);
         return v == null ? 0 : v;
+    }
+
+    /** Unique id of this token (null for tokens issued before ids existed). */
+    public String extractTokenId(String token) {
+        return getClaims(token).getId();
+    }
+
+    public Date extractExpiration(String token) {
+        return getClaims(token).getExpiration();
     }
 
     public boolean isTokenValid(String token) {

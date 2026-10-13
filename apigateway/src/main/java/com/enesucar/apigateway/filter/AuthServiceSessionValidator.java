@@ -66,6 +66,11 @@ public class AuthServiceSessionValidator implements SessionValidator {
                 .doOnNext(info -> remember(key, info));
     }
 
+    @Override
+    public void forget(String token) {
+        cache.remove(fingerprint(token));
+    }
+
     private void remember(String key, SessionInfo info) {
         if (ttlMillis <= 0) return;
         if (cache.size() >= MAX_CACHE_ENTRIES) cache.clear();

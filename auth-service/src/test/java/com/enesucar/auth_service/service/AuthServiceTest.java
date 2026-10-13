@@ -46,6 +46,9 @@ class AuthServiceTest {
     @Mock
     private LoginAttemptLimiter loginAttemptLimiter;
 
+    @Mock
+    private com.enesucar.auth_service.repository.RevokedTokenRepository revokedTokens;
+
     @InjectMocks
     private AuthService authService;
 
@@ -260,5 +263,38 @@ class AuthServiceTest {
                 .isInstanceOf(TooManyLoginAttemptsException.class);
 
         verify(userRepository, never()).findByUsername(any());
+    }
+
+    // ---- logout ----
+
+    @Test
+    void logout_shouldRevokeTheTokenUntilItExpires() {
+        when(jwtUtil.isTokenValid("tok")).thenReturn(true);
+        when(jwtUtil.extractTokenId("tok")).thenReturn("jti-1");
+        when(jwtUtil.extractExpiration("tok")).thenReturn(new java.util.Date(System.currentTimeMillis() + 3_600_000));
+
+        authService.logout("tok");
+
+        var captor = ArgumentCaptor.forClass(com.enesucar.auth_service.entity.RevokedToken.class);
+        verify(revokedTokens).save(captor.capture());
+        assertThat(captor.getValue().getJti()).isEqualTo("jti-1");
+        assertThat(captor.getValue().getExpiresAt()).isAfter(java.time.LocalDateTime.now());
+    }
+
+    @Test
+    void logout_shouldIgnoreMissingOrInvalidTokens() {
+        authService.logout(null);
+        authService.logout("");
+        when(jwtUtil.isTokenValid("garbage")).thenReturn(false);
+        authService.logout("garbage");
+        verifyNoInteractions(revokedTokens);
+    }
+
+    @Test
+    void logout_shouldIgnoreTokensWithoutAnId() {
+        when(jwtUtil.isTokenValid("old")).thenReturn(true);
+        when(jwtUtil.extractTokenId("old")).thenReturn(null);
+        authService.logout("old");
+        verifyNoInteractions(revokedTokens);
     }
 }
