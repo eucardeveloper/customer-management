@@ -51,12 +51,13 @@ class OrderConsumerIdempotencyTest {
 
     @Test
     void redeliveredRecordIsRecordedOnlyOnce() {
+        long before = processedEvents.count(); // the tests share one database, so compare against it
         ConsumerRecord<String, String> record = new ConsumerRecord<>("order-events", 0, 42L, null, "Order created: 7");
 
         consumer.consume(record);
         consumer.consume(record); // at-least-once redelivery
 
-        assertThat(processedEvents.count()).isEqualTo(1);
+        assertThat(processedEvents.count()).isEqualTo(before + 1);
         assertThat(processedEvents.existsById("order-group:order-events:0:42")).isTrue();
     }
 
