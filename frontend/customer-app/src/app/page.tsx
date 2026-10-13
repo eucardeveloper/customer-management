@@ -8,11 +8,12 @@ import { useAuthUser } from '@/lib/useAuthUser';
 import { useMounted } from '@/lib/useMounted';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import type { ThemeOptions } from '@mui/material/styles';
 import {
   Box, AppBar, Toolbar, Typography, Drawer, List, ListItem, ListItemButton,
   ListItemIcon, ListItemText, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TablePagination, Button, IconButton, Dialog, DialogTitle,
-  DialogContent, DialogActions, TextField, Chip, Avatar, ThemeProvider, createTheme,
+  DialogContent, DialogActions, TextField, Chip, Avatar, ThemeProvider, createTheme, GlobalStyles,
   CssBaseline, Alert, Snackbar, CircularProgress, InputAdornment, Tooltip, Divider,
   Select, MenuItem, FormControl, InputLabel, Card, CardContent, ToggleButton, ToggleButtonGroup, SwipeableDrawer,
 } from '@mui/material';
@@ -36,20 +37,39 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 
 const DRAWER_WIDTH = 256;
 
 const SIDEBAR_BG = '#0b1f3a';
 const SIDEBAR_HOVER = 'rgba(255,255,255,0.06)';
 const SIDEBAR_ACTIVE = 'rgba(37,99,235,0.18)';
-const HEADER_BG = '#ffffff';
+const HEADER_BG = 'var(--surface)';
 
-const theme = createTheme({
+const LIGHT_VARS = {
+  '--page': '#f1f5f9', '--surface': '#ffffff', '--surface-2': '#f1f5f9', '--text': '#0f172a', '--text2': '#475569', '--border': '#e2e8f0',
+  '--blue-bg': '#eff6ff', '--blue-bd': '#bfdbfe', '--blue-tx': '#1d4ed8',
+  '--green-bg': '#f0fdf4', '--green-bd': '#bbf7d0', '--green-tx': '#15803d',
+  '--amber-bg': '#fffbeb', '--amber-bd': '#fde68a', '--amber-tx': '#b45309',
+  '--red-bg': '#fef2f2', '--red-bd': '#fecaca', '--red-tx': '#dc2626',
+  '--sky-bg': '#f0f9ff', '--sky-bd': '#bae6fd', '--violet-bg': '#faf5ff', '--violet-bd': '#e9d5ff',
+};
+const DARK_VARS = {
+  '--page': '#0b1220', '--surface': '#111c2e', '--surface-2': '#17243a', '--text': '#e5edf8', '--text2': '#cbd5e1', '--border': '#263449',
+  '--blue-bg': 'rgba(59,130,246,0.16)', '--blue-bd': 'rgba(59,130,246,0.40)', '--blue-tx': '#93c5fd',
+  '--green-bg': 'rgba(16,185,129,0.16)', '--green-bd': 'rgba(16,185,129,0.40)', '--green-tx': '#6ee7b7',
+  '--amber-bg': 'rgba(245,158,11,0.16)', '--amber-bd': 'rgba(245,158,11,0.40)', '--amber-tx': '#fcd34d',
+  '--red-bg': 'rgba(239,68,68,0.16)', '--red-bd': 'rgba(239,68,68,0.40)', '--red-tx': '#fca5a5',
+  '--sky-bg': 'rgba(14,165,233,0.16)', '--sky-bd': 'rgba(14,165,233,0.40)', '--violet-bg': 'rgba(139,92,246,0.16)', '--violet-bd': 'rgba(139,92,246,0.40)',
+};
+
+const baseThemeOptions: ThemeOptions = {
   palette: {
     mode: 'light',
     primary: { main: '#2563eb', dark: '#1d4ed8', light: '#60a5fa' },
     secondary: { main: '#0ea5e9' },
-    background: { default: '#f1f5f9', paper: '#ffffff' },
+    background: { default: 'var(--surface-2)', paper: '#ffffff' },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", sans-serif',
@@ -62,9 +82,9 @@ const theme = createTheme({
         root: {
           backgroundColor: HEADER_BG,
           backgroundImage: 'none',
-          color: '#0f172a',
+          color: 'var(--text)',
           boxShadow: 'none',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: '1px solid var(--border)',
         },
       },
     },
@@ -89,13 +109,15 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiTableCell-head': {
-            backgroundColor: '#f8fafc',
+            backgroundColor: 'var(--surface-2)',
             fontWeight: 700,
             color: '#94a3b8',
             fontSize: '0.67rem',
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            borderBottom: '1px solid #e2e8f0',
+            borderBottom: '1px solid var(--border)',
+            borderRight: '1px solid var(--border)',
+            '&:last-child': { borderRight: 'none' },
             borderTop: 'none',
           },
         },
@@ -104,7 +126,7 @@ const theme = createTheme({
     MuiTableRow: {
       styleOverrides: {
         root: {
-          '&:hover': { backgroundColor: '#f8fafc' },
+          '&:hover': { backgroundColor: 'var(--surface-2)' },
           '&:last-child td': { borderBottom: 'none' },
           transition: 'background-color 0.12s',
         },
@@ -112,7 +134,7 @@ const theme = createTheme({
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { borderBottom: '1px solid #eef2f7', padding: '10px 16px', fontVariantNumeric: 'tabular-nums' },
+        root: { borderBottom: '1px solid var(--surface-2)', borderRight: '1px solid var(--border)', padding: '10px 16px', fontVariantNumeric: 'tabular-nums', '&:last-child': { borderRight: 'none' } },
       },
     },
     MuiButton: {
@@ -131,6 +153,16 @@ const theme = createTheme({
         },
       },
     },
+  },
+};
+
+const theme = createTheme(baseThemeOptions);
+const darkTheme = createTheme({
+  ...baseThemeOptions,
+  palette: {
+    ...baseThemeOptions.palette,
+    mode: 'dark',
+    background: { default: '#0b1220', paper: '#111c2e' },
   },
 });
 
@@ -156,13 +188,13 @@ const isCompany = (c: { customerType?: string }) => c.customerType === 'COMPANY'
 const statusChip = (status?: string, tFn?: (k: string) => string) => {
   const s = status ?? 'PENDING';
   const map: Record<string, { bg: string; color: string; border: string }> = {
-    PENDING:   { bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
-    PROCESSING: { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
-    SHIPPED:   { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-    DELIVERED: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-    CANCELLED: { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+    PENDING:   { bg: 'var(--amber-bg)', color: 'var(--amber-tx)', border: 'var(--amber-bd)' },
+    PROCESSING: { bg: 'var(--surface-2)', color: 'var(--text2)', border: '#cbd5e1' },
+    SHIPPED:   { bg: 'var(--blue-bg)', color: 'var(--blue-tx)', border: 'var(--blue-bd)' },
+    DELIVERED: { bg: 'var(--green-bg)', color: 'var(--green-tx)', border: 'var(--green-bd)' },
+    CANCELLED: { bg: 'var(--red-bg)', color: 'var(--red-tx)', border: 'var(--red-bd)' },
   };
-  const style = map[s] ?? { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0' };
+  const style = map[s] ?? { bg: 'var(--surface-2)', color: '#64748b', border: 'var(--border)' };
   const labelMap: Record<string, string> = {
     PENDING: tFn ? tFn('pending') : 'Pending',
     PROCESSING: tFn ? tFn('processing') : 'Processing',
@@ -178,8 +210,8 @@ const customerTypeChip = (c: Customer, tFn?: (k: string) => string) => {
   const type = c.customerType ?? (c.lastName?.trim() ? 'INDIVIDUAL' : 'COMPANY');
   const indLabel = tFn ? tFn('individual') : 'Individual';
   const comLabel = tFn ? tFn('company') : 'Company';
-  if (type === 'INDIVIDUAL') return <Chip label={indLabel} size="small" sx={{ bgcolor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontSize: '0.7rem', fontWeight: 600 }} />;
-  return <Chip label={comLabel} size="small" sx={{ bgcolor: '#faf5ff', color: '#7c3aed', border: '1px solid #e9d5ff', fontSize: '0.7rem', fontWeight: 600 }} />;
+  if (type === 'INDIVIDUAL') return <Chip label={indLabel} size="small" sx={{ bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', border: '1px solid var(--blue-bd)', fontSize: '0.7rem', fontWeight: 600 }} />;
+  return <Chip label={comLabel} size="small" sx={{ bgcolor: 'var(--violet-bg)', color: '#7c3aed', border: '1px solid var(--violet-bd)', fontSize: '0.7rem', fontWeight: 600 }} />;
 };
 
 const formatDate = (dateStr: string) => {
@@ -234,6 +266,33 @@ export default function Home() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [chartMode, setChartMode] = useState<'daily' | 'monthly'>('monthly');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
+  useEffect(() => {
+    try { if (localStorage.getItem('colorMode') === 'dark') setColorMode('dark'); } catch { /* storage unavailable */ }
+  }, []);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-mode', colorMode);
+  }, [colorMode]);
+  const toggleColorMode = () => {
+    setColorMode(m => {
+      const next = m === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem('colorMode', next); } catch { /* storage unavailable */ }
+      return next;
+    });
+  };
+  const gridC = colorMode === 'dark' ? '#263449' : '#f1f5f9';
+  const tick2C = colorMode === 'dark' ? '#cbd5e1' : '#475569';
+  useEffect(() => {
+    try { if (localStorage.getItem('sidebarOpen') === '0') setSidebarOpen(false); } catch { /* storage unavailable */ }
+  }, []);
+  const toggleSidebar = () => {
+    if (isMobile) { setMobileOpen(true); return; }
+    setSidebarOpen(v => {
+      try { localStorage.setItem('sidebarOpen', v ? '0' : '1'); } catch { /* storage unavailable */ }
+      return !v;
+    });
+  };
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => setSnackbar({ open: true, message, severity }), []);
@@ -492,27 +551,28 @@ export default function Home() {
   // Stat cards per tab
   const statCards = tab === 'customers'
     ? [
-        { label: t('totalCustomers2'), value: customers.length, icon: <PeopleIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
-        { label: t('individual'), value: customers.filter(c => !isCompany(c)).length, icon: <PeopleIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
-        { label: t('company'), value: customers.filter(isCompany).length, icon: <StorefrontIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
-        ...(isAdmin ? [{ label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' }] : []),
+        { label: t('totalCustomers2'), value: customers.length, icon: <PeopleIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
+        { label: t('individual'), value: customers.filter(c => !isCompany(c)).length, icon: <PeopleIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
+        { label: t('company'), value: customers.filter(isCompany).length, icon: <StorefrontIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
+        ...(isAdmin ? [{ label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' }] : []),
       ]
     : tab === 'orders'
     ? [
-        { label: t('totalOrdersLabel'), value: orders.length, icon: <ReceiptIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
+        { label: t('totalOrdersLabel'), value: orders.length, icon: <ReceiptIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
         ...(isAdmin ? [
-          { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
-          { label: t('avgOrderValue'), value: avgOrderValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <TrendingUpIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
+          { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
+          { label: t('avgOrderValue'), value: avgOrderValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <TrendingUpIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
         ] : []),
-        { label: t('pendingOrders2'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, icon: <ShoppingCartIcon />, color: '#2563eb', bg: '#eff6ff', border: '#e2e8f0' },
+        { label: t('pendingOrders2'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, icon: <ShoppingCartIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
       ]
     : [];
 
   if (!mounted) return null;
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={colorMode === 'dark' ? darkTheme : theme}>
       <CssBaseline />
+      <GlobalStyles styles={{ ':root': LIGHT_VARS, ':root[data-mode="dark"]': DARK_VARS, body: { backgroundColor: 'var(--page)' } }} />
       <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
 
         {/* ── Sidebar content (shared between permanent + swipeable) ── */}
@@ -606,25 +666,25 @@ export default function Home() {
             );
           }
           return (
-            <Drawer variant="permanent" sx={{ width: DRAWER_WIDTH, flexShrink: 0, '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box', border: 'none' } }}>
+            <Drawer variant="persistent" open={sidebarOpen} sx={{ width: sidebarOpen ? DRAWER_WIDTH : 0, flexShrink: 0, transition: 'width 0.2s ease', '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box', border: 'none' } }}>
               {sidebarContent}
             </Drawer>
           );
         })()}
 
         {/* ── Main ── */}
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', bgcolor: '#f1f5f9' }}>
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', bgcolor: 'var(--page)' }}>
 
           {/* TopBar */}
           <AppBar position="static" elevation={0}>
             <Toolbar sx={{ minHeight: '60px !important', px: { xs: 1.5, md: 2.5 } }}>
-              {isMobile && (
-                <IconButton edge="start" color="inherit" onClick={() => setMobileOpen(true)} sx={{ mr: 1.5, color: '#334155' }}>
+              <Tooltip title={isMobile ? t('menu') : (sidebarOpen ? t('hideMenu') : t('showMenu'))}>
+                <IconButton edge="start" color="inherit" aria-label="toggle navigation" onClick={toggleSidebar} sx={{ mr: 1.5, color: 'var(--text2)' }}>
                   <MenuIcon />
                 </IconButton>
-              )}
+              </Tooltip>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', lineHeight: 1.2, color: '#0f172a' }}>{pageTitle}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--text)' }}>{pageTitle}</Typography>
                 <Typography sx={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.2, mt: 0.3 }}>
                   {tab === 'dashboard' && (isAdmin
                     ? `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')} · ${totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} ${t('totalRevenue').toLowerCase()}`
@@ -640,16 +700,21 @@ export default function Home() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {isAdmin && (
                   <Chip icon={<AdminPanelSettingsIcon sx={{ fontSize: '13px !important' }} />} label="ADMIN" size="small"
-                    sx={{ bgcolor: '#eff6ff', color: '#1d4ed8', fontSize: '0.68rem', border: '1px solid #bfdbfe', height: 24, fontWeight: 700, letterSpacing: '0.05em', '& .MuiChip-icon': { color: '#1d4ed8' } }} />
+                    sx={{ bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.68rem', border: '1px solid var(--blue-bd)', height: 24, fontWeight: 700, letterSpacing: '0.05em', '& .MuiChip-icon': { color: 'var(--blue-tx)' } }} />
                 )}
                 <Box sx={{ display: 'flex', borderRadius: 2, overflow: 'hidden', border: '1px solid #cbd5e1' }}>
                   {(['en', 'tr'] as Lang[]).map(l => (
-                    <Box key={l} onClick={() => setLang(l)} sx={{ px: 1.2, py: 0.4, cursor: 'pointer', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.05em', bgcolor: lang === l ? '#2563eb' : 'transparent', color: lang === l ? 'white' : '#64748b', transition: 'all 0.15s', '&:hover': { bgcolor: lang === l ? '#1d4ed8' : '#f1f5f9' } }}>{l.toUpperCase()}</Box>
+                    <Box key={l} onClick={() => setLang(l)} sx={{ px: 1.2, py: 0.4, cursor: 'pointer', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.05em', bgcolor: lang === l ? '#2563eb' : 'transparent', color: lang === l ? 'white' : '#64748b', transition: 'all 0.15s', '&:hover': { bgcolor: lang === l ? '#1d4ed8' : 'var(--surface-2)' } }}>{l.toUpperCase()}</Box>
                   ))}
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, px: 1.2, py: 0.4, borderRadius: 10, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                <Tooltip title={colorMode === 'dark' ? t('lightMode') : t('darkMode')}>
+                  <IconButton size="small" aria-label="toggle color mode" onClick={toggleColorMode} sx={{ color: 'var(--text2)', border: '1px solid var(--border)' }}>
+                    {colorMode === 'dark' ? <LightModeIcon sx={{ fontSize: 17 }} /> : <DarkModeIcon sx={{ fontSize: 17 }} />}
+                  </IconButton>
+                </Tooltip>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, px: 1.2, py: 0.4, borderRadius: 10, bgcolor: 'var(--green-bg)', border: '1px solid var(--green-bd)' }}>
                   <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#22c55e' }} />
-                  <Typography sx={{ fontSize: '0.68rem', color: '#15803d', fontWeight: 600 }}>Live</Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: 'var(--green-tx)', fontWeight: 600 }}>Live</Typography>
                 </Box>
               </Box>
             </Toolbar>
@@ -662,12 +727,12 @@ export default function Home() {
             {statCards.length > 0 && (
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,1fr)', sm: 'repeat(2,1fr)', md: `repeat(${Math.min(statCards.length, 4)},1fr)` }, gap: { xs: 1, md: 2 }, flexShrink: 0 }}>
                 {statCards.map((s) => (
-                  <Card key={s.label} elevation={0} sx={{ border: `1px solid ${s.border}`, borderRadius: 3, transition: 'all 0.2s ease', cursor: 'default', bgcolor: 'white', '&:hover': { boxShadow: '0 8px 28px rgba(0,0,0,0.08)', transform: 'translateY(-2px)', borderColor: s.color + '60' } }}>
+                  <Card key={s.label} elevation={0} sx={{ border: `1px solid ${s.border}`, borderRadius: 3, transition: 'all 0.2s ease', cursor: 'default', bgcolor: 'var(--surface)', '&:hover': { boxShadow: '0 8px 28px rgba(0,0,0,0.08)', transform: 'translateY(-2px)', borderColor: s.color + '60' } }}>
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: '16px !important', px: '18px !important' }}>
                       <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, flexShrink: 0 }}>{s.icon}</Box>
                       <Box>
                         <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', mb: 0.2 }}>{s.label}</Typography>
-                        <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', lineHeight: 1.2, color: '#0f172a', letterSpacing: '-0.02em' }}>{s.value}</Typography>
+                        <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', lineHeight: 1.2, color: 'var(--text)', letterSpacing: '-0.02em' }}>{s.value}</Typography>
                       </Box>
                     </CardContent>
                   </Card>
@@ -677,12 +742,12 @@ export default function Home() {
 
             {/* ── CUSTOMERS TAB ── */}
             {tab === 'customers' && (
-              <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid #f1f5f9', flexShrink: 0, bgcolor: 'white' }}>
+              <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid var(--border)', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0, bgcolor: 'var(--surface)' }}>
                   <TextField size="small" placeholder={t('searchCustomers')} value={custSearch}
                     onChange={(e) => { setCustSearch(e.target.value); setCustPage(0); }}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
-                    sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
+                    sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
                   <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('customers')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchCustomers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
@@ -697,7 +762,7 @@ export default function Home() {
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={32} /></Box>
                 ) : (
                   <>
-                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
+                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 260 }}>
                       <Table stickyHeader size="small">
                         <TableHead>
                           <TableRow>
@@ -712,10 +777,10 @@ export default function Home() {
                         <TableBody>
                           {filteredCustomers.length === 0 && (
                             <TableRow><TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                              <Box sx={{ width: 56, height: 56, borderRadius: 3, bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5 }}>
+                              <Box sx={{ width: 56, height: 56, borderRadius: 3, bgcolor: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5 }}>
                                 <PeopleIcon sx={{ fontSize: 28, color: '#94a3b8' }} />
                               </Box>
-                              <Typography sx={{ fontWeight: 700, color: '#475569', fontSize: '0.95rem', mb: 0.5 }}>{t('noCustomers')}</Typography>
+                              <Typography sx={{ fontWeight: 700, color: 'var(--text2)', fontSize: '0.95rem', mb: 0.5 }}>{t('noCustomers')}</Typography>
                               <Typography variant="caption" color="text.secondary">{custSearch ? t('tryDifferentSearch') : t('addFirstCustomer')}</Typography>
                             </TableCell></TableRow>
                           )}
@@ -725,7 +790,7 @@ export default function Home() {
                               <TableCell>{customerTypeChip(c, t)}</TableCell>
                               <TableCell sx={{ cursor: 'pointer' }} onClick={() => setDrawerCustomer(c)}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                  <Avatar sx={{ width: 30, height: 30, bgcolor: '#dbeafe', color: '#1d4ed8', fontSize: '0.72rem', fontWeight: 700 }}>
+                                  <Avatar sx={{ width: 30, height: 30, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.72rem', fontWeight: 700 }}>
                                     {(c.firstName ?? '?')[0]}{(c.lastName ?? '')[0]}
                                   </Avatar>
                                   <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', '&:hover': { color: '#2563eb' } }}>{c.firstName} {c.lastName}</Typography>
@@ -747,7 +812,7 @@ export default function Home() {
                     <TablePagination component="div" count={filteredCustomers.length} page={custPageSafe}
                       onPageChange={(_, p) => setCustPage(p)} rowsPerPage={custRowsPerPage}
                       onRowsPerPageChange={e => { setCustRowsPerPage(parseInt(e.target.value)); setCustPage(0); }}
-                      rowsPerPageOptions={[5, 10, 25, 50]} labelRowsPerPage={t('rowsPerPage')} labelDisplayedRows={({ from, to, count }) => `${from}–${to} ${t('of')} ${count}`} sx={{ borderTop: '1px solid #f1f5f9', flexShrink: 0 }} />
+                      rowsPerPageOptions={[5, 10, 25, 50]} labelRowsPerPage={t('rowsPerPage')} labelDisplayedRows={({ from, to, count }) => `${from}–${to} ${t('of')} ${count}`} sx={{ borderTop: '1px solid var(--surface-2)', flexShrink: 0 }} />
                   </>
                 )}
               </Paper>
@@ -755,12 +820,12 @@ export default function Home() {
 
             {/* ── ORDERS TAB ── */}
             {tab === 'orders' && (
-              <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid #f1f5f9', flexShrink: 0, bgcolor: 'white' }}>
+              <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid var(--border)', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0, bgcolor: 'var(--surface)' }}>
                   <TextField size="small" placeholder={t('searchOrders')} value={ordSearch}
                     onChange={(e) => { setOrdSearch(e.target.value); setOrdPage(0); }}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
-                    sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
+                    sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
                   <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('orders')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchOrders} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
@@ -775,7 +840,7 @@ export default function Home() {
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={32} /></Box>
                 ) : (
                   <>
-                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
+                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 260 }}>
                       <Table stickyHeader size="small">
                         <TableHead>
                           <TableRow>
@@ -793,16 +858,16 @@ export default function Home() {
                         <TableBody>
                           {filteredOrders.length === 0 && (
                             <TableRow><TableCell colSpan={isAdmin ? 9 : 6} align="center" sx={{ py: 8 }}>
-                              <Box sx={{ width: 56, height: 56, borderRadius: 3, bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5 }}>
+                              <Box sx={{ width: 56, height: 56, borderRadius: 3, bgcolor: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5 }}>
                                 <ShoppingCartIcon sx={{ fontSize: 28, color: '#94a3b8' }} />
                               </Box>
-                              <Typography sx={{ fontWeight: 700, color: '#475569', fontSize: '0.95rem', mb: 0.5 }}>{t('noOrders')}</Typography>
+                              <Typography sx={{ fontWeight: 700, color: 'var(--text2)', fontSize: '0.95rem', mb: 0.5 }}>{t('noOrders')}</Typography>
                               <Typography variant="caption" color="text.secondary">{ordSearch ? t('tryDifferentSearch') : t('createFirstOrder')}</Typography>
                             </TableCell></TableRow>
                           )}
                           {filteredOrders.slice(ordPageSafe * ordRowsPerPage, ordPageSafe * ordRowsPerPage + ordRowsPerPage).map(o => (
                             <TableRow key={o.id}>
-                              <TableCell><Chip label={`#${o.id}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                              <TableCell><Chip label={`#${o.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                               <TableCell>
                                 {isAdmin ? (
                                   <FormControl size="small">
@@ -817,12 +882,12 @@ export default function Home() {
                               <TableCell><Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{o.productName}</Typography></TableCell>
                               <TableCell>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Avatar sx={{ width: 22, height: 22, fontSize: '0.6rem', bgcolor: '#dbeafe', color: '#1e40af' }}>{getCustomerName(o.customerId)[0]}</Avatar>
+                                  <Avatar sx={{ width: 22, height: 22, fontSize: '0.6rem', bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)' }}>{getCustomerName(o.customerId)[0]}</Avatar>
                                   <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>{getCustomerName(o.customerId)}</Typography>
                                 </Box>
                               </TableCell>
                               {isAdmin && <TableCell><Typography sx={{ fontSize: '0.85rem' }}>{o.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography></TableCell>}
-                              <TableCell><Chip label={`${o.quantity}x`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                              <TableCell><Chip label={`${o.quantity}x`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: 'var(--text2)', fontSize: '0.68rem', height: 20 }} /></TableCell>
                               {isAdmin && (
                                 <TableCell>
                                   <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#16a34a' }}>
@@ -845,7 +910,7 @@ export default function Home() {
                     <TablePagination component="div" count={filteredOrders.length} page={ordPageSafe}
                       onPageChange={(_, p) => setOrdPage(p)} rowsPerPage={ordRowsPerPage}
                       onRowsPerPageChange={e => { setOrdRowsPerPage(parseInt(e.target.value)); setOrdPage(0); }}
-                      rowsPerPageOptions={[5, 10, 25, 50]} labelRowsPerPage={t('rowsPerPage')} labelDisplayedRows={({ from, to, count }) => `${from}–${to} ${t('of')} ${count}`} sx={{ borderTop: '1px solid #f1f5f9', flexShrink: 0 }} />
+                      rowsPerPageOptions={[5, 10, 25, 50]} labelRowsPerPage={t('rowsPerPage')} labelDisplayedRows={({ from, to, count }) => `${from}–${to} ${t('of')} ${count}`} sx={{ borderTop: '1px solid var(--surface-2)', flexShrink: 0 }} />
                   </>
                 )}
               </Paper>
@@ -853,16 +918,16 @@ export default function Home() {
 
             {/* ── USERS TAB ── */}
             {tab === 'users' && isAdmin && (
-              <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid #e2e8f0', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid #f1f5f9', flexShrink: 0, bgcolor: 'white' }}>
+              <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid var(--border)', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0, bgcolor: 'var(--surface)' }}>
                   <TextField size="small" placeholder={t('searchUsers')} value={userSearch} onChange={e => setUserSearch(e.target.value)}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
-                    sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
+                    sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddUserDialogOpen(true)} disableElevation size="small" sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}>{ t('addUser') }</Button>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchUsers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                 </Box>
-                <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
+                <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 260 }}>
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
@@ -882,7 +947,7 @@ export default function Home() {
                       )}
                       {filteredUsers.map(u => (
                         <TableRow key={u.id}>
-                          <TableCell><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                          <TableCell><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                               <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#059669' : '#2563eb', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
@@ -891,7 +956,7 @@ export default function Home() {
                           </TableCell>
                           <TableCell><Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></TableCell>
                           <TableCell>
-                            <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? '#f0fdf4' : '#eff6ff', color: u.role === 'ADMIN' ? '#059669' : '#2563eb', border: `1px solid ${u.role === 'ADMIN' ? '#bbf7d0' : '#bfdbfe'}`, fontWeight: 700, fontSize: '0.68rem' }} />
+                            <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'var(--green-bg)' : 'var(--blue-bg)', color: u.role === 'ADMIN' ? '#059669' : '#2563eb', border: `1px solid ${u.role === 'ADMIN' ? 'var(--green-bd)' : 'var(--blue-bd)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>
                           <TableCell align="right">
                             <Tooltip title={t('changeRole')}>
@@ -972,16 +1037,16 @@ export default function Home() {
                       const fufT = fmtTrend(fulfillTrend);
                       const pndT = fmtTrend(pendTrend, false);
                       const adminCards = [
-                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', trend: revT.label, up: revT.up, spark: monthSeries(os => os.reduce((a, o) => a + o.price * o.quantity, 0)) },
-                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
-                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
-                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
+                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--blue-bg)', trend: revT.label, up: revT.up, spark: monthSeries(os => os.reduce((a, o) => a + o.price * o.quantity, 0)) },
+                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: 'var(--sky-bg)', border: 'var(--sky-bd)', trend: t('allTime'), up: true },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
                       ];
                       const userCards = [
-                        { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', trend: t('allTime'), up: true, spark: monthSeries(os => os.length) },
-                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', trend: t('allTime'), up: true },
-                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', trend: fufT.label, up: fufT.up, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
-                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', trend: pndT.label, up: pndT.up, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
+                        { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--blue-bg)', trend: t('allTime'), up: true, spark: monthSeries(os => os.length) },
+                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: 'var(--sky-bg)', border: 'var(--sky-bd)', trend: t('allTime'), up: true },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
                       ];
                       return (isAdmin ? adminCards : userCards).map(card => (
                         <Paper key={card.label} elevation={0} sx={{
@@ -991,14 +1056,14 @@ export default function Home() {
                           display: 'flex',
                           flexDirection: 'column',
                           gap: 1,
-                          background: 'white',
+                          background: 'var(--surface)',
                           transition: 'all 0.2s ease',
                           '&:hover': { boxShadow: `0 8px 32px rgba(0,0,0,0.08)`, transform: 'translateY(-2px)', borderColor: card.color + '50' },
                         }}>
                           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                             <Box>
                               <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.1em', textTransform: 'uppercase', mb: 0.3 }}>{card.label}</Typography>
-                              <Typography sx={{ fontWeight: 800, fontSize: '1.55rem', color: '#0f172a', lineHeight: 1.1, letterSpacing: '-0.03em' }}>{card.value}</Typography>
+                              <Typography sx={{ fontWeight: 800, fontSize: '1.55rem', color: 'var(--text)', lineHeight: 1.1, letterSpacing: '-0.03em' }}>{card.value}</Typography>
                             </Box>
                             <Box sx={{ width: 40, height: 40, borderRadius: 2.5, bgcolor: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color, flexShrink: 0 }}>{card.icon}</Box>
                           </Box>
@@ -1037,11 +1102,11 @@ export default function Home() {
                       </Button>
                     )}
                     <Button variant="outlined" startIcon={<BarChartIcon />} onClick={() => setTab('analytics')} size="small"
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: '#e2e8f0', color: '#64748b', '&:hover': { borderColor: '#2563eb', color: '#2563eb', bgcolor: '#eff6ff' } }}>
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: 'var(--border)', color: '#64748b', '&:hover': { borderColor: '#2563eb', color: '#2563eb', bgcolor: 'var(--blue-bg)' } }}>
                       {t('analytics')}
                     </Button>
                     <Button variant="outlined" startIcon={<SmartToyIcon />} onClick={() => setTab('ai')} size="small"
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: '#e2e8f0', color: '#64748b', '&:hover': { borderColor: '#2563eb', color: '#2563eb', bgcolor: '#eff6ff' } }}>
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderColor: 'var(--border)', color: '#64748b', '&:hover': { borderColor: '#2563eb', color: '#2563eb', bgcolor: 'var(--blue-bg)' } }}>
                       {t('aiAgent')}
                     </Button>
                   </Box>
@@ -1049,8 +1114,8 @@ export default function Home() {
                   {/* Revenue Chart + Top Customers */}
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: isAdmin ? '3fr 2fr' : '1fr' }, gap: 2 }}>
                     {isAdmin && (
-                      <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 0.5 }}>{t('revenueTrend')}</Typography>
+                      <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', mb: 0.5 }}>{t('revenueTrend')}</Typography>
                         <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8', mb: 2 }}>{t('monthlyRevenueOverview')}</Typography>
                         {revenueChartData.length > 0 ? (
                           <ResponsiveContainer width="100%" height={200}>
@@ -1061,10 +1126,10 @@ export default function Home() {
                                   <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                                 </linearGradient>
                               </defs>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                              <CartesianGrid strokeDasharray="3 3" stroke={gridC} />
                               <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(1)}k`} />
-                              <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                              <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                               <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} />
                             </LineChart>
                           </ResponsiveContainer>
@@ -1077,8 +1142,8 @@ export default function Home() {
                     )}
 
                     {/* Top Customers */}
-                    <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('topCustomers')}</Typography>
+                    <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', mb: 2 }}>{t('topCustomers')}</Typography>
                       {topCustomers.length === 0 ? (
                         <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', py: 4 }}>{t('noDataYet')}</Typography>
                       ) : (
@@ -1088,7 +1153,7 @@ export default function Home() {
                               <Box sx={{ width: 22, height: 22, borderRadius: '50%', bgcolor: ['#2563eb','#10b981','#f59e0b','#0ea5e9','#ef4444'][i], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 <Typography sx={{ fontSize: '0.6rem', fontWeight: 800, color: 'white' }}>{i+1}</Typography>
                               </Box>
-                              <Avatar sx={{ width: 28, height: 28, bgcolor: '#dbeafe', color: '#1e40af', fontSize: '0.7rem', fontWeight: 700 }}>{(c!.firstName ?? '?')[0]}</Avatar>
+                              <Avatar sx={{ width: 28, height: 28, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.7rem', fontWeight: 700 }}>{(c!.firstName ?? '?')[0]}</Avatar>
                               <Box sx={{ flex: 1, overflow: 'hidden' }}>
                                 <Typography sx={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c!.firstName} {c!.lastName}</Typography>
                                 <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{orders.filter(o => o.customerId === c!.id).length} {t('orders')}</Typography>
@@ -1107,17 +1172,17 @@ export default function Home() {
 
                   {/* Recent Orders + Order Status */}
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
-                    <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
-                      <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{t('recentOrders')}</Typography>
+                    <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+                      <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{t('recentOrders')}</Typography>
                         <Button size="small" onClick={() => setTab('orders')} sx={{ textTransform: 'none', fontSize: '0.78rem', color: '#2563eb', fontWeight: 600, p: 0 }}>{t('viewAll')} →</Button>
                       </Box>
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         {recentOrders.length === 0 ? (
                           <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', py: 4 }}>{t('noOrders')}</Typography>
                         ) : recentOrders.map((o, i) => (
-                          <Box key={o.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2.5, py: 1.5, borderBottom: i < recentOrders.length - 1 ? '1px solid #f8fafc' : 'none', '&:hover': { bgcolor: '#fafbfc' }, transition: 'background 0.15s' }}>
-                            <Avatar sx={{ width: 32, height: 32, bgcolor: '#dbeafe', color: '#1e40af', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
+                          <Box key={o.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2.5, py: 1.5, borderBottom: i < recentOrders.length - 1 ? '1px solid var(--surface-2)' : 'none', '&:hover': { bgcolor: 'var(--surface-2)' }, transition: 'background 0.15s' }}>
+                            <Avatar sx={{ width: 32, height: 32, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
                               {getCustomerName(o.customerId)[0]}
                             </Avatar>
                             <Box sx={{ flex: 1, overflow: 'hidden' }}>
@@ -1126,7 +1191,7 @@ export default function Home() {
                             </Box>
                             <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
                               {isAdmin && (
-                                <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#15803d' }}>{(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
+                                <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--green-tx)' }}>{(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
                               )}
                               <Box sx={{ mt: 0.3 }}>{statusChip(o.status, t)}</Box>
                             </Box>
@@ -1136,8 +1201,8 @@ export default function Home() {
                     </Paper>
 
                     {/* Order Status Summary */}
-                    <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('orderStatus')}</Typography>
+                    <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', mb: 2 }}>{t('orderStatus')}</Typography>
                       {(() => {
                         const PIE_COLORS = ['#f59e0b','#64748b','#2563eb','#10b981','#ef4444'];
                         const allPie = ORDER_STATUSES.map((s, i) => ({ name: statusText(s, t), value: orders.filter(o => (o.status ?? 'PENDING') === s).length || 0.001, realCount: orders.filter(o => (o.status ?? 'PENDING') === s).length, color: PIE_COLORS[i] }));
@@ -1148,7 +1213,7 @@ export default function Home() {
                                 <Pie data={allPie} cx="50%" cy="50%" innerRadius={38} outerRadius={60} paddingAngle={2} dataKey="value">
                                   {allPie.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" opacity={entry.realCount === 0 ? 0.2 : 1} />)}
                                 </Pie>
-                                <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                                <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                               </PieChart>
                             </ResponsiveContainer>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, mt: 1 }}>
@@ -1160,7 +1225,7 @@ export default function Home() {
                                       <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: PIE_COLORS[i] }} />
                                       <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{statusText(s, t)}</Typography>
                                     </Box>
-                                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a' }}>
+                                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>
                                       {count} ({orders.length > 0 ? ((count / orders.length) * 100).toFixed(0) : 0}%)
                                     </Typography>
                                   </Box>
@@ -1213,9 +1278,9 @@ export default function Home() {
                   return (
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,1fr)', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
                       {analyticsCards.map((card) => (
-                        <Paper key={card.label} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5, overflow: 'hidden' }}>
+                        <Paper key={card.label} elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5, overflow: 'hidden' }}>
                           <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', mb: 0.5 }}>{card.label}</Typography>
-                          <Typography sx={{ fontWeight: 800, fontSize: '1.3rem', color: '#0f172a', mb: 0.5 }}>{card.value}</Typography>
+                          <Typography sx={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--text)', mb: 0.5 }}>{card.value}</Typography>
                           <Typography sx={{ fontSize: '0.72rem', color: card.trendUp ? '#10b981' : '#ef4444', fontWeight: 600 }}>
                             {card.trendUp ? '↑' : '↓'} {card.trend}
                           </Typography>
@@ -1234,12 +1299,12 @@ export default function Home() {
 
                 {/* Revenue Line Chart + Order Status Pie */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: isAdmin ? '3fr 2fr' : '1fr' }, gap: 2 }}>
-                  {isAdmin && <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
+                  {isAdmin && <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
                       <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{t('revenueOverview')}</Typography>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{t('revenueOverview')}</Typography>
                         <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('totalRevenue')}</Typography>
-                        <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: '#0f172a', mt: 0.5 }}>{totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
+                        <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--text)', mt: 0.5 }}>{totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
                       </Box>
                       <ToggleButtonGroup value={chartMode} exclusive onChange={(_, v) => v && setChartMode(v)} size="small">
                         <ToggleButton value="daily" sx={{ fontSize: '0.72rem', px: 1.5, py: 0.4, textTransform: 'none' }}>{t('daily')}</ToggleButton>
@@ -1254,18 +1319,18 @@ export default function Home() {
                             <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridC} />
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
-                        <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                        <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                         <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </Paper>}
 
                   {/* Order Status Donut */}
-                  <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('orderStatusDistribution')}</Typography>
+                  <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', mb: 2 }}>{t('orderStatusDistribution')}</Typography>
                     {(() => {
                       const PIE_COLORS = ['#f59e0b', '#64748b', '#2563eb', '#10b981', '#ef4444'];
                       const statusLabel = (s: string) => statusText(s, t);
@@ -1277,7 +1342,7 @@ export default function Home() {
                               <Pie data={allPie} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={2} dataKey="value">
                                 {allPie.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" opacity={entry.realCount === 0 ? 0.25 : 1} />)}
                               </Pie>
-                              <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                              <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                             </PieChart>
                           </ResponsiveContainer>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, mt: 1 }}>
@@ -1287,7 +1352,7 @@ export default function Home() {
                                   <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: PIE_COLORS[i] }} />
                                   <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{statusText(s.status, t)}</Typography>
                                 </Box>
-                                <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a' }}>
+                                <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>
                                   {s.count} ({orders.length > 0 ? ((s.count / orders.length) * 100).toFixed(0) : 0}%)
                                 </Typography>
                               </Box>
@@ -1301,8 +1366,8 @@ export default function Home() {
 
                 {/* Customer Types Pie + Top Products */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: isAdmin ? '1fr 2fr' : '1fr' }, gap: 2 }}>
-                  <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', mb: 2 }}>{t('customerTypes')}</Typography>
+                  <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', mb: 2 }}>{t('customerTypes')}</Typography>
                     {(() => {
                       const individual = customers.filter(c => !isCompany(c)).length;
                       const company = customers.filter(isCompany).length;
@@ -1317,7 +1382,7 @@ export default function Home() {
                               <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={3} dataKey="value">
                                 {pieData.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" />)}
                               </Pie>
-                              <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                              <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                             </PieChart>
                           </ResponsiveContainer>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
@@ -1327,7 +1392,7 @@ export default function Home() {
                                   <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: d.color }} />
                                   <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{d.name} ({d.realCount})</Typography>
                                 </Box>
-                                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>{d.pct}%</Typography>
+                                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)' }}>{d.pct}%</Typography>
                               </Box>
                             ))}
                           </Box>
@@ -1336,9 +1401,9 @@ export default function Home() {
                     })()}
                   </Paper>
 
-                  {isAdmin && <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2.5 }}>
+                  {isAdmin && <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', flex: 1 }}>{t('topProductsByRevenue')}</Typography>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', flex: 1 }}>{t('topProductsByRevenue')}</Typography>
                     </Box>
                     {(() => {
                       const productMap: Record<string, number> = {};
@@ -1349,10 +1414,10 @@ export default function Home() {
                       return (
                         <ResponsiveContainer width="100%" height={200}>
                           <BarChart data={top} layout="vertical" margin={{ top: 0, right: 50, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke={gridC} horizontal={false} />
                             <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
-                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} width={105} />
-                            <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid #eef2f7', fontSize: 12 }} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: tick2C }} axisLine={false} tickLine={false} width={105} />
+                            <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                             <Bar dataKey="value" radius={[0, 4, 4, 0]} label={{ position: 'right', formatter: (v: unknown) => `$${(Number(v)/1000).toFixed(1)}k`, fontSize: 11, fill: '#64748b' }}>
                               {top.map((_, i) => <Cell key={i} fill={PROD_COLORS[i % PROD_COLORS.length]} />)}
                             </Bar>
@@ -1374,18 +1439,18 @@ export default function Home() {
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', flexShrink: 0 }}>
                     {(isAdmin ? getQuickQuestionsAdmin(t) : getQuickQuestionsUser(t)).map(q => (
                       <Chip key={q} label={q} clickable onClick={() => sendMessage(q)}
-                        sx={{ bgcolor: '#eff6ff', color: '#2563eb', border: '1px solid #dbeafe', fontWeight: 500, fontSize: '0.78rem', '&:hover': { bgcolor: '#ede9fe' } }} />
+                        sx={{ bgcolor: 'var(--blue-bg)', color: '#2563eb', border: '1px solid var(--blue-bg)', fontWeight: 500, fontSize: '0.78rem', '&:hover': { bgcolor: 'var(--violet-bg)' } }} />
                     ))}
                   </Box>
 
                   {/* Welcome banner — shown only when no messages */}
                   {chatMessages.length === 0 && (
-                    <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 3, background: 'linear-gradient(135deg, #eff6ff 0%, #ede9fe 100%)', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                    <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 3, background: 'linear-gradient(135deg, var(--blue-bg) 0%, var(--violet-bg) 100%)', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                       <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e1b4b', mb: 0.5 }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text)', mb: 0.5 }}>
                           {t('aiWelcome')}, {currentUser?.username ?? 'User'}! 👋
                         </Typography>
-                        <Typography sx={{ color: '#4c1d95', fontSize: '0.85rem', lineHeight: 1.6 }}>
+                        <Typography sx={{ color: 'var(--text2)', fontSize: '0.85rem', lineHeight: 1.6 }}>
                           {t('aiDescription')}
                         </Typography>
                       </Box>
@@ -1396,10 +1461,10 @@ export default function Home() {
                   )}
 
                   {/* Chat messages */}
-                  <Paper elevation={0} sx={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 3, p: 2, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 1.5, bgcolor: '#fafbfc', minHeight: 0 }}>
+                  <Paper elevation={0} sx={{ flex: 1, border: '1px solid var(--border)', borderRadius: 3, p: 2, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 1.5, bgcolor: 'var(--surface-2)', minHeight: 0 }}>
                     {chatMessages.length === 0 && (
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 1.5, py: 4 }}>
-                        <SmartToyIcon sx={{ fontSize: 48, color: '#c7d2fe' }} />
+                        <SmartToyIcon sx={{ fontSize: 48, color: 'var(--blue-bd)' }} />
                         <Typography sx={{ fontWeight: 600, color: '#64748b', fontSize: '0.95rem' }}>{t('aiEmptyTitle')}</Typography>
                         <Typography sx={{ color: '#94a3b8', fontSize: '0.82rem' }}>{isAdmin ? t('aiEmptyExample') : t('aiEmptyExample')}</Typography>
                       </Box>
@@ -1409,9 +1474,9 @@ export default function Home() {
                         <Box sx={{
                           maxWidth: '78%', px: 2, py: 1.2,
                           borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                          background: msg.role === 'user' ? 'linear-gradient(135deg,#2563eb,#1d4ed8)' : '#ffffff',
-                          color: msg.role === 'user' ? 'white' : '#1e293b',
-                          border: msg.role === 'assistant' ? '1px solid #e2e8f0' : 'none',
+                          background: msg.role === 'user' ? 'linear-gradient(135deg,#2563eb,#1d4ed8)' : 'var(--surface)',
+                          color: msg.role === 'user' ? 'white' : 'var(--text)',
+                          border: msg.role === 'assistant' ? '1px solid var(--border)' : 'none',
                           boxShadow: msg.role === 'assistant' ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
                         }}>
                           <Typography sx={{ fontSize: '0.875rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{msg.content}</Typography>
@@ -1432,7 +1497,7 @@ export default function Home() {
                       onChange={e => setChatInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(chatInput); } }}
                       disabled={chatLoading}
-                      sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2.5 } }} />
+                      sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2.5 } }} />
                     <Button variant="contained" onClick={() => sendMessage(chatInput)} disabled={chatLoading || !chatInput.trim()} disableElevation
                       sx={{ borderRadius: 2.5, minWidth: 48, px: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}>
                       <SendIcon fontSize="small" />
@@ -1443,8 +1508,8 @@ export default function Home() {
                 {/* Right: Stats + History panel */}
                 <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', gap: 2, overflow: 'auto' }}>
                   {/* Quick Stats panel */}
-                  <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a', mb: 1.5 }}>{t('quickStats')}</Typography>
+                  <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text)', mb: 1.5 }}>{t('quickStats')}</Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
                       {[
                         { label: t('totalOrdersLabel'), value: orders.length, color: '#2563eb', icon: '🛒' },
@@ -1452,7 +1517,7 @@ export default function Home() {
                         { label: t('pendingLabel'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, color: '#f59e0b', icon: '⏳' },
                         { label: t('cancelledLabel'), value: orders.filter(o => o.status === 'CANCELLED').length, color: '#ef4444', icon: '❌' },
                       ].map(s => (
-                        <Box key={s.label} sx={{ bgcolor: '#f8fafc', borderRadius: 2, p: 1.5, border: '1px solid #f1f5f9' }}>
+                        <Box key={s.label} sx={{ bgcolor: 'var(--surface-2)', borderRadius: 2, p: 1.5, border: '1px solid var(--surface-2)' }}>
                           <Typography sx={{ fontSize: '0.65rem', color: '#94a3b8', mb: 0.3 }}>{s.label}</Typography>
                           <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: s.color }}>{s.value}</Typography>
                         </Box>
@@ -1461,15 +1526,15 @@ export default function Home() {
                   </Paper>
 
                   {/* Recent Questions */}
-                  <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, p: 2, flex: 1 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a', mb: 1.5 }}>{t('recentQuestions')}</Typography>
+                  <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2, flex: 1 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text)', mb: 1.5 }}>{t('recentQuestions')}</Typography>
                     {chatMessages.filter(m => m.role === 'user').slice(-5).reverse().map((m, i) => (
                       <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5, cursor: 'pointer', '&:hover .q-text': { color: '#2563eb' } }} onClick={() => sendMessage(m.content)}>
-                        <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Typography sx={{ fontSize: '0.6rem' }}>🕐</Typography>
                         </Box>
                         <Box>
-                          <Typography className="q-text" sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', transition: 'color 0.15s' }}>{m.content}</Typography>
+                          <Typography className="q-text" sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text2)', transition: 'color 0.15s' }}>{m.content}</Typography>
                           <Typography sx={{ fontSize: '0.65rem', color: '#94a3b8' }}>{t('justNow')}</Typography>
                         </Box>
                       </Box>
@@ -1634,7 +1699,7 @@ export default function Home() {
                 </DialogTitle>
                 <Divider />
                 <DialogContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, p: 2, bgcolor: '#f8fafc', borderRadius: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, p: 2, bgcolor: 'var(--surface-2)', borderRadius: 2 }}>
                     <Avatar sx={{ width: 52, height: 52, bgcolor: '#2563eb', fontSize: '1.1rem', fontWeight: 700 }}>
                       {(drawerCustomer.firstName ?? '?')[0]}{(drawerCustomer.lastName ?? '')[0]}
                     </Avatar>
@@ -1649,13 +1714,13 @@ export default function Home() {
                     <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>{t('id')}</Typography><Typography sx={{ fontSize: '0.875rem' }}>#{drawerCustomer.id}</Typography></Box>
                   </Box>
                   <Box sx={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr' : '1fr', gap: 1.5, mb: 2.5 }}>
-                    <Box sx={{ p: 2, bgcolor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 2, textAlign: 'center' }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: '#1d4ed8' }}>{custOrders.length}</Typography>
+                    <Box sx={{ p: 2, bgcolor: 'var(--blue-bg)', border: '1px solid var(--blue-bd)', borderRadius: 2, textAlign: 'center' }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--blue-tx)' }}>{custOrders.length}</Typography>
                       <Typography sx={{ fontSize: '0.72rem', color: '#64748b' }}>{t('totalOrdersLabel')}</Typography>
                     </Box>
                     {isAdmin && (
-                      <Box sx={{ p: 2, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 2, textAlign: 'center' }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#15803d' }}>{custRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
+                      <Box sx={{ p: 2, bgcolor: 'var(--green-bg)', border: '1px solid var(--green-bd)', borderRadius: 2, textAlign: 'center' }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--green-tx)' }}>{custRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
                         <Typography sx={{ fontSize: '0.72rem', color: '#64748b' }}>{t('totalSpent')}</Typography>
                       </Box>
                     )}
@@ -1667,14 +1732,14 @@ export default function Home() {
                   ) : (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {custOrders.map(o => (
-                        <Box key={o.id} sx={{ p: 1.5, border: '1px solid #eef2f7', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box key={o.id} sx={{ p: 1.5, border: '1px solid var(--surface-2)', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <Box sx={{ flex: 1 }}>
                             <Typography sx={{ fontWeight: 600, fontSize: '0.85rem' }}>{o.productName}</Typography>
                             <Typography sx={{ fontSize: '0.72rem', color: '#94a3b8' }}>{formatDate(o.date)} · {o.quantity} pcs</Typography>
                           </Box>
                           <Box sx={{ textAlign: 'right' }}>
                             {isAdmin && (
-                              <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#15803d' }}>{(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
+                              <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--green-tx)' }}>{(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
                             )}
                             {statusChip(o.status, t)}
                           </Box>
