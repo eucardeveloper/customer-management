@@ -2,7 +2,7 @@
  * The JWT lives only in an HttpOnly cookie set by the server, so scripts (and XSS) can never read it.
  * Here we keep just the display data (username, role) for the UI.
  */
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 export interface AuthUser {
   username: string;

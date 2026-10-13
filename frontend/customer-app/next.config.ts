@@ -2,6 +2,17 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Optional same-origin mode for hosting (build with NEXT_PUBLIC_API_URL="" and API_PROXY_TARGET=<gateway URL>):
+  // the browser then talks only to this app, which forwards /api/* to the gateway. That keeps the SameSite=Strict
+  // session cookie first-party when the frontend and the gateway live on different hostnames.
+  async rewrites() {
+    const target = process.env.API_PROXY_TARGET?.replace(/\/$/, "");
+    if (!target) return [];
+    return ["auth", "customers", "orders", "users"].map((area) => ({
+      source: `/api/${area}/:path*`,
+      destination: `${target}/api/${area}/:path*`,
+    }));
+  },
   // Never let the browser keep protected pages in its (back/forward) cache: after logout, Back must ask the server again.
   async headers() {
     return [

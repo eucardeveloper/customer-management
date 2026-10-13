@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 function buildHeaders(extra?: HeadersInit): HeadersInit {
   return { 'Content-Type': 'application/json', ...extra };
