@@ -1,13 +1,13 @@
 'use client';
 import { useTranslation, type Lang } from './translations';
-import { PieChart, Pie, Cell, Tooltip as ReTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip as ReTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { api } from '@/lib/api';
 import { usePersistedPref } from '@/lib/usePersistedPref';
 import { downloadXlsx } from '@/lib/exportXlsx';
 import { getAuthUser, logout } from '@/lib/auth';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useMounted } from '@/lib/useMounted';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ThemeOptions } from '@mui/material/styles';
 import {
@@ -271,7 +271,6 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  const [sessionId] = useState(() => `session-${Date.now()}`);
   const [now, setNow] = useState(() => Date.now());
   const mounted = useMounted();
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
