@@ -122,14 +122,13 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 | Auth | `POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/logout` | public |
 | Customers | `GET/POST /api/customers`, `PUT/DELETE /api/customers/{id}` | read: any user, write: ADMIN |
 | Orders | `GET/POST /api/orders`, `PUT/DELETE /api/orders/{id}` | read: any user, write: ADMIN |
-| Auth (signed in) | `POST /api/auth/password` (change own password; needs the current one, throttled) | any signed-in user |
+| Auth (signed in) | `GET /api/auth/session` (is this token still valid; who am I), `POST /api/auth/password` (change own password; needs the current one, throttled; ends all sessions) | any signed-in user |
 | Users | `GET /api/users`, `PATCH /api/users/{id}/role`, `PUT /api/users/{id}/password` (admin reset), `DELETE /api/users/{id}` | ADMIN |
 
 ## Known limitations
 
 - `auth-service` still uses Spring Boot 3.3.x, which is out of open-source support; the other services use 4.0.x. Aligning it is the next upgrade step.
-- Tokens are not revocable before they expire (24 h); logout clears the cookie but does not blacklist the token.
-- **Changing a password does not sign out other sessions.** JWTs are stateless, so a token issued before the change stays valid until it expires. Fixing this needs a token version / `passwordChangedAt` claim checked by the gateway.
+- **Sessions.** Each account has a `token_version`; a password change, admin reset or role change bumps it and every older JWT stops working. The gateway confirms tokens with the auth-service (`GET /api/auth/session`) and caches a positive answer for 10 s, so a revoked session can live at most that long; if the auth-service is down the gateway answers `503` instead of guessing. Plain logout only clears the cookie: a token someone already copied stays valid until it expires (24 h) or the account's version is bumped.
 - **Login throttling is in-memory and per instance** (5 failures per username in 15 minutes, then `429` with `Retry-After`). It resets on restart and is not shared between instances; it also lets someone lock a known username out for a short time. A shared store (Redis) and per-IP limits would be the next step.
 - **Demo defaults are for local use only.** The compose file uses development database passwords, seeded demo accounts, and publishes n8n, Prometheus and Grafana ports on the host. Change all of them and drop the extra ports before exposing the stack anywhere.
 - **`npm audit --omit=dev` reports 2 moderate findings** (`uuid` < 11.1.1, pulled in by `exceljs`; advisory GHSA-w5hq-g745-h8pq: missing bounds check in uuid v3/v5/v6 when a caller supplies its own output buffer). ExcelJS does not call it that way and runs only in the browser on the user's own export data, so it is not exploitable here. The suggested `npm audit fix --force` would downgrade `exceljs` to 3.4.0 and break the export, so it is accepted until `exceljs` ships a release with a patched `uuid`.

@@ -29,9 +29,19 @@ class JwtAuthFilterTest {
     private JwtAuthFilter filter;
     private final AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
 
+    /** What the (stubbed) auth-service answers; null means "honour the token as signed". */
+    private final AtomicReference<Mono<SessionInfo>> authAnswer = new AtomicReference<>();
+
+    private Mono<SessionInfo> stubAuthService(String token) {
+        if (authAnswer.get() != null) return authAnswer.get();
+        var claims = Jwts.parser().verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                .build().parseSignedClaims(token).getPayload();
+        return Mono.just(new SessionInfo(claims.getSubject(), claims.get("role", String.class)));
+    }
+
     @BeforeEach
     void setUp() {
-        filter = new JwtAuthFilter();
+        filter = new JwtAuthFilter(this::stubAuthService);
         ReflectionTestUtils.setField(filter, "secret", SECRET);
         ReflectionTestUtils.setField(filter, "allowedOrigins", List.of(ORIGIN));
     }
@@ -130,5 +140,33 @@ class JwtAuthFilterTest {
         forwarded.set(null);
         run(MockServerHttpRequest.post("/api/auth/logout"));
         assertThat(forwarded.get()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("token revoked by the auth-service (password/role change): 401, nothing forwarded")
+    void revokedToken() {
+        authAnswer.set(Mono.empty());
+        MockServerWebExchange ex = run(MockServerHttpRequest.get("/api/customers")
+                .header("Authorization", "Bearer " + token("alice", "ADMIN")));
+        assertThat(ex.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(forwarded.get()).isNull();
+    }
+
+    @Test
+    @DisplayName("auth-service unreachable: fail closed with 503")
+    void authServiceDown() {
+        authAnswer.set(Mono.error(new IllegalStateException("connection refused")));
+        MockServerWebExchange ex = run(MockServerHttpRequest.get("/api/customers")
+                .header("Authorization", "Bearer " + token("alice", "ADMIN")));
+        assertThat(ex.getResponse().getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(forwarded.get()).isNull();
+    }
+
+    @Test
+    @DisplayName("role forwarded downstream is the auth-service's current one, not the token's")
+    void roleComesFromAuthService() {
+        authAnswer.set(Mono.just(new SessionInfo("alice", "USER")));
+        run(MockServerHttpRequest.get("/api/customers").header("Authorization", "Bearer " + token("alice", "ADMIN")));
+        assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-Auth-Role")).isEqualTo("USER");
     }
 }

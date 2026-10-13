@@ -197,4 +197,21 @@ class AuthControllerTest {
                 .andExpect(status().isForbidden());
         org.mockito.Mockito.verifyNoInteractions(authService);
     }
+
+    // ---- session check (used by the gateway to detect revoked tokens) ----
+
+    @org.junit.jupiter.api.Test
+    @org.springframework.security.test.context.support.WithMockUser(username = "testuser", roles = "ADMIN")
+    void session_shouldReturnUserAndRole_whenSignedIn() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/session"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("testuser"))
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @org.junit.jupiter.api.Test
+    void session_shouldBeRejected_whenNotSignedIn() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/session"))
+                .andExpect(status().isForbidden());
+    }
 }

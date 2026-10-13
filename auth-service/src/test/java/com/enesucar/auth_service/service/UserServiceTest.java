@@ -113,4 +113,23 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.resetPassword(99L, "brandNew123"))
                 .isInstanceOf(com.enesucar.auth_service.exception.UserNotFoundException.class);
     }
+
+    @Test
+    void resetPassword_shouldInvalidateExistingSessions() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("brandNew123")).thenReturn("hash");
+
+        userService.resetPassword(1L, "brandNew123");
+
+        assertThat(user.getTokenVersion()).isEqualTo(1);
+    }
+
+    @Test
+    void updateRole_shouldInvalidateExistingSessions() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        userService.updateRole(1L, "ADMIN");
+
+        assertThat(user.getTokenVersion()).isEqualTo(1);
+    }
 }

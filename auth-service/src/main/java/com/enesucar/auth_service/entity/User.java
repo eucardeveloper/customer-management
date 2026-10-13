@@ -32,4 +32,9 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    /** Incremented when credentials or role change; JWTs issued with an older value are rejected. */
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private int tokenVersion = 0;
 }

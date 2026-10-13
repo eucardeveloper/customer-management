@@ -46,7 +46,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getTokenVersion());
         return new AuthResponse(token, user.getUsername(), user.getRole().name());
     }
 
@@ -65,7 +65,7 @@ public class AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getTokenVersion());
         return new AuthResponse(token, user.getUsername(), user.getRole().name());
     }
 
@@ -89,6 +89,7 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setTokenVersion(user.getTokenVersion() + 1); // signs out every session, including this one
         userRepository.save(user);
         loginAttemptLimiter.reset(throttleKey);
     }

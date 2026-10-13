@@ -32,6 +32,7 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         user.setRole(Role.valueOf(role));
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
         return new UserResponse(user.getId(), user.getUsername(), user.getEmail(), user.getRole());
     }
@@ -41,6 +42,7 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         user.setPassword(passwordEncoder.encode(newPassword));
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
     }
 }

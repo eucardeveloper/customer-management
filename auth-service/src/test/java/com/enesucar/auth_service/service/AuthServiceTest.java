@@ -79,7 +79,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("test@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(user);
-        when(jwtUtil.generateToken("testuser", "USER")).thenReturn("jwt-token");
+        when(jwtUtil.generateToken("testuser", "USER", 0)).thenReturn("jwt-token");
 
         AuthResponse response = authService.register(registerRequest);
 
@@ -107,7 +107,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("test@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(user);
-        when(jwtUtil.generateToken("testuser", "USER")).thenReturn("jwt-token");
+        when(jwtUtil.generateToken("testuser", "USER", 0)).thenReturn("jwt-token");
 
         authService.register(registerRequest);
 
@@ -118,8 +118,8 @@ class AuthServiceTest {
                 .isEqualTo(Role.USER);
 
         // The token must also be minted with USER, not an elevated claim.
-        verify(jwtUtil).generateToken("testuser", "USER");
-        verify(jwtUtil, never()).generateToken(anyString(), eq("ADMIN"));
+        verify(jwtUtil).generateToken("testuser", "USER", 0);
+        verify(jwtUtil, never()).generateToken(anyString(), eq("ADMIN"), anyInt());
     }
 
     @Test
@@ -150,7 +150,7 @@ class AuthServiceTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(null);
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-        when(jwtUtil.generateToken("testuser", "USER")).thenReturn("jwt-token");
+        when(jwtUtil.generateToken("testuser", "USER", 0)).thenReturn("jwt-token");
 
         AuthResponse response = authService.login(loginRequest);
 
@@ -187,7 +187,7 @@ class AuthServiceTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(null);
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-        when(jwtUtil.generateToken("testuser", "USER")).thenReturn("jwt-token");
+        when(jwtUtil.generateToken("testuser", "USER", 0)).thenReturn("jwt-token");
 
         authService.login(loginRequest);
 
@@ -224,6 +224,7 @@ class AuthServiceTest {
         authService.changePassword("testuser", pwRequest("oldPass123", "newPass456"));
 
         assertThat(user.getPassword()).isEqualTo("newHash");
+        assertThat(user.getTokenVersion()).isEqualTo(1); // older sessions are invalidated
         verify(userRepository).save(user);
         verify(loginAttemptLimiter).reset("pwchange:testuser");
     }

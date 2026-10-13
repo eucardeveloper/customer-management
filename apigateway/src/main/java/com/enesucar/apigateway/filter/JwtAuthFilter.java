@@ -1,6 +1,5 @@
 package com.enesucar.apigateway.filter;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +16,7 @@ import reactor.core.publisher.Mono;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class JwtAuthFilter implements GlobalFilter, Ordered {
@@ -29,6 +29,12 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private List<String> allowedOrigins;
 
     static final String COOKIE_NAME = "customer_session";
+
+    private final SessionValidator sessionValidator;
+
+    public JwtAuthFilter(SessionValidator sessionValidator) {
+        this.sessionValidator = sessionValidator;
+    }
 
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/auth/login",
@@ -76,32 +82,46 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         try {
             SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-            Claims claims = Jwts.parser()
+            Jwts.parser()
                     .verifyWith(key)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-
-            String username = claims.getSubject();
-            String role = claims.get("role", String.class);
-
-            // Downstream services (auth-service validates the JWT itself) only understand the
-            // Authorization header, so a cookie session is translated here and the cookie is not passed on.
-            final String bearer = token;
-            ServerWebExchange mutatedExchange = exchange.mutate()
-                    .request(r -> r.headers(h -> {
-                                h.set("Authorization", "Bearer " + bearer);
-                                h.remove("Cookie");
-                                h.set("X-Auth-User", username);
-                                h.set("X-Auth-Role", role);
-                            }))
-                    .build();
-
-            return chain.filter(mutatedExchange);
         } catch (Exception e) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
+
+        // The signature is fine, but the session may have been ended since (password or role change).
+        // Only the auth-service knows, so ask it. If it cannot answer, refuse rather than guess.
+        final String bearer = token;
+        return sessionValidator.validate(bearer)
+                .map(Optional::of)
+                .defaultIfEmpty(Optional.empty())
+                .onErrorReturn(Optional.of(new SessionInfo(null, null)))
+                .flatMap(result -> {
+                    if (result.isEmpty()) {
+                        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                        return exchange.getResponse().setComplete();
+                    }
+                    SessionInfo info = result.get();
+                    if (info.username() == null) {
+                        exchange.getResponse().setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
+                        return exchange.getResponse().setComplete();
+                    }
+                    // Downstream services (auth-service validates the JWT itself) only understand the
+                    // Authorization header, so a cookie session is translated here and the cookie is not
+                    // passed on. Identity and role come from the auth-service's answer, not from the token.
+                    ServerWebExchange mutatedExchange = exchange.mutate()
+                            .request(r -> r.headers(h -> {
+                                h.set("Authorization", "Bearer " + bearer);
+                                h.remove("Cookie");
+                                h.set("X-Auth-User", info.username());
+                                h.set("X-Auth-Role", info.role());
+                            }))
+                            .build();
+                    return chain.filter(mutatedExchange);
+                });
     }
 
     private static boolean isStateChanging(HttpMethod method) {

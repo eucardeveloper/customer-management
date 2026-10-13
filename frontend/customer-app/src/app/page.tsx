@@ -411,6 +411,10 @@ export default function Home() {
       else await api.put(`/api/users/${pwDialog.userId}/password`, { newPassword: pwForm.next });
       showSnackbar(t(pwDialog.mode === 'self' ? 'passwordChanged' : 'passwordReset'), 'success');
       setPwDialog(null);
+      // A password change ends every session of that account on the server, including this one.
+      if (pwDialog.mode === 'self' || pwDialog.username === currentUser?.username) {
+        setTimeout(() => { void logout().finally(() => { window.location.replace('/login'); }); }, 1500);
+      }
     } catch (e) {
       // The server's own message ("Current password is incorrect", throttle notice) is safe to show.
       setPwError(e instanceof Error && e.message && !e.message.startsWith('HTTP ') ? e.message : t('passwordFailed'));

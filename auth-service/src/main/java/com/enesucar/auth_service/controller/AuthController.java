@@ -40,6 +40,16 @@ public class AuthController {
                 .build();
     }
 
+    /**
+     * Who am I. The gateway calls this to confirm a token is still valid (not revoked by a password
+     * or role change); the browser may use it to restore its session.
+     */
+    @GetMapping("/session")
+    public ResponseEntity<SessionResponse> currentSession(Authentication authentication) {
+        String role = authentication.getAuthorities().iterator().next().getAuthority().replaceFirst("^ROLE_", "");
+        return ResponseEntity.ok(new SessionResponse(authentication.getName(), role));
+    }
+
     /** Change the signed-in user's own password. */
     @PostMapping("/password")
     public ResponseEntity<Void> changePassword(Authentication authentication,

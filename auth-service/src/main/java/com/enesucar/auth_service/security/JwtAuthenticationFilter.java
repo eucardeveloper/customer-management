@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.enesucar.auth_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,6 +20,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -30,7 +32,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             if (jwtUtil.isTokenValid(token)) {
                 String username = jwtUtil.extractUsername(token);
-                String role = jwtUtil.extractRole(token);
+                // A token only counts while its version matches the account: a password change or
+                // role change bumps the version and ends every older session.
+                int tokenVersion = jwtUtil.extractTokenVersion(token);
+                var account = userRepository.findByUsername(username);
+                if (account.isEmpty() || account.get().getTokenVersion() != tokenVersion) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                // The role comes from the database, not from the token, so a demotion applies at once.
+                String role = account.get().getRole().name();
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
                                 username, null,
