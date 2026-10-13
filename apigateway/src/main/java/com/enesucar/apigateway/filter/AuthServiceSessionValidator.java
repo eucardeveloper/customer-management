@@ -30,10 +30,11 @@ public class AuthServiceSessionValidator implements SessionValidator {
     private final ConcurrentHashMap<String, Cached> cache = new ConcurrentHashMap<>();
 
     @Autowired
-    public AuthServiceSessionValidator(WebClient.Builder builder,
-                                       @Value("${auth.service.url}") String authServiceUrl,
+    public AuthServiceSessionValidator(@Value("${auth.service.url}") String authServiceUrl,
                                        @Value("${app.session-cache-seconds:10}") long cacheSeconds) {
-        this(builder.baseUrl(authServiceUrl).build(), cacheSeconds);
+        // Built directly: Spring Boot 4 no longer provides a WebClient.Builder bean unless the
+        // webclient starter is added, and this is the only place the gateway needs one.
+        this(WebClient.builder().baseUrl(authServiceUrl).build(), cacheSeconds);
     }
 
     AuthServiceSessionValidator(WebClient client, long cacheSeconds) {
