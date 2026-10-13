@@ -5,7 +5,9 @@ import com.enesucar.orderservice.dto.OrderResponseDTO;
 import com.enesucar.orderservice.entity.Order;
 import com.enesucar.orderservice.exception.ResourceNotFoundException;
 import com.enesucar.orderservice.exception.UnknownCustomerException;
-import com.enesucar.orderservice.kafka.OrderProducer;
+import com.enesucar.orderservice.entity.OutboxEvent;
+import com.enesucar.orderservice.repository.OutboxEventRepository;
+import org.springframework.transaction.annotation.Transactional;
 import com.enesucar.orderservice.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -14,11 +16,11 @@ import java.util.stream.Collectors;
 @Service
 public class OrderService {
     private final OrderRepository orderRepository;
-    private final OrderProducer orderProducer;
+    private final OutboxEventRepository outbox;
     private final CustomerClient customerClient;
-    public OrderService(OrderRepository orderRepository, OrderProducer orderProducer, CustomerClient customerClient) {
+    public OrderService(OrderRepository orderRepository, OutboxEventRepository outbox, CustomerClient customerClient) {
         this.orderRepository = orderRepository;
-        this.orderProducer = orderProducer;
+        this.outbox = outbox;
         this.customerClient = customerClient;
     }
     /** Separate databases, so a service call instead of a foreign key. */
@@ -39,6 +41,7 @@ public class OrderService {
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
+    @Transactional
     public OrderResponseDTO createOrder(OrderRequestDTO request) {
         requireCustomer(request.getCustomerId());
         Order order = new Order();
@@ -48,7 +51,8 @@ public class OrderService {
         order.setQuantity(request.getQuantity());
         order.setDate(request.getDate() != null ? request.getDate() : LocalDateTime.now());		order.setStatus(request.getStatus() != null ? request.getStatus() : "PENDING");
         Order saved = orderRepository.save(order);
-        orderProducer.sendOrderEvent("Order created: " + saved.getId());
+        // Written in the same transaction as the order: either both exist or neither does.
+        outbox.save(new OutboxEvent("order-events", "Order created: " + saved.getId()));
         return toResponse(saved);
     }
     public OrderResponseDTO getOrderById(Long id) {

@@ -10,12 +10,14 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@EnableScheduling
 // Active by default (also under docker compose, where the broker is kafka:29092).
 // Tests that run without a broker set app.kafka.enabled=false.
 @ConditionalOnProperty(name = "app.kafka.enabled", havingValue = "true", matchIfMissing = true)

@@ -7,7 +7,8 @@ import com.enesucar.orderservice.dto.OrderRequestDTO;
 import com.enesucar.orderservice.dto.OrderResponseDTO;
 import com.enesucar.orderservice.entity.Order;
 import com.enesucar.orderservice.exception.ResourceNotFoundException;
-import com.enesucar.orderservice.kafka.OrderProducer;
+import com.enesucar.orderservice.entity.OutboxEvent;
+import com.enesucar.orderservice.repository.OutboxEventRepository;
 import com.enesucar.orderservice.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ class OrderServiceTest {
     private OrderRepository orderRepository;
 
     @Mock
-    private OrderProducer orderProducer;
+    private OutboxEventRepository outbox;
 
     @Mock
     private CustomerClient customerClient;
@@ -87,15 +88,18 @@ class OrderServiceTest {
     }
 
     @Test
-    void createOrder_shouldSaveAndSendKafkaEvent() {
+    void createOrder_shouldSaveOrderAndOutboxEvent() {
         when(customerClient.exists(10L)).thenReturn(true);
         when(orderRepository.save(any(Order.class))).thenReturn(order);
-        doNothing().when(orderProducer).sendOrderEvent(anyString());
         OrderResponseDTO result = orderService.createOrder(requestDTO);
         assertThat(result.getProductName()).isEqualTo("Laptop");
         assertThat(result.getStatus()).isEqualTo("PENDING");
         verify(orderRepository).save(any(Order.class));
-        verify(orderProducer).sendOrderEvent(anyString());
+        var captor = org.mockito.ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outbox).save(captor.capture());
+        assertThat(captor.getValue().getTopic()).isEqualTo("order-events");
+        assertThat(captor.getValue().getPayload()).isEqualTo("Order created: 1");
+        assertThat(captor.getValue().getPublishedAt()).isNull();
     }
 
     @Test
@@ -103,7 +107,6 @@ class OrderServiceTest {
         requestDTO.setStatus(null);
         when(customerClient.exists(10L)).thenReturn(true);
         when(orderRepository.save(any(Order.class))).thenReturn(order);
-        doNothing().when(orderProducer).sendOrderEvent(anyString());
         OrderResponseDTO result = orderService.createOrder(requestDTO);
         assertThat(result).isNotNull();
         verify(orderRepository).save(any(Order.class));
@@ -165,7 +168,7 @@ class OrderServiceTest {
         when(customerClient.exists(10L)).thenReturn(false);
         assertThatThrownBy(() -> orderService.createOrder(requestDTO)).isInstanceOf(UnknownCustomerException.class);
         verify(orderRepository, never()).save(any());
-        verify(orderProducer, never()).sendOrderEvent(anyString());
+        verify(outbox, never()).save(any());
     }
 
     @Test
