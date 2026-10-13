@@ -8,6 +8,9 @@ import com.enesucar.auth_service.entity.User;
 import com.enesucar.auth_service.exception.UserAlreadyExistsException;
 import com.enesucar.auth_service.repository.UserRepository;
 import com.enesucar.auth_service.security.JwtUtil;
+import com.enesucar.auth_service.security.LoginAttemptLimiter;
+import com.enesucar.auth_service.exception.TooManyLoginAttemptsException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +42,9 @@ class AuthServiceTest {
 
     @Mock
     private AuthenticationManager authenticationManager;
+
+    @Mock
+    private LoginAttemptLimiter loginAttemptLimiter;
 
     @InjectMocks
     private AuthService authService;
@@ -162,5 +168,96 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(loginRequest))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("User not found");
+    }
+
+    @Test
+    void login_shouldRecordFailureAndRethrow_whenCredentialsAreWrong() {
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new BadCredentialsException("Bad credentials"));
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(BadCredentialsException.class);
+
+        verify(loginAttemptLimiter).recordFailure("testuser");
+        verify(loginAttemptLimiter, never()).reset(any());
+    }
+
+    @Test
+    void login_shouldResetCounter_whenCredentialsAreValid() {
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(null);
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        when(jwtUtil.generateToken("testuser", "USER")).thenReturn("jwt-token");
+
+        authService.login(loginRequest);
+
+        verify(loginAttemptLimiter).reset("testuser");
+        verify(loginAttemptLimiter, never()).recordFailure(any());
+    }
+
+    @Test
+    void login_shouldNotTouchAuthentication_whenAccountIsLockedOut() {
+        doThrow(new TooManyLoginAttemptsException(120)).when(loginAttemptLimiter).checkAllowed("testuser");
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(TooManyLoginAttemptsException.class);
+
+        verifyNoInteractions(authenticationManager);
+    }
+
+    // ---- changePassword ----
+
+    private com.enesucar.auth_service.dto.ChangePasswordRequest pwRequest(String current, String next) {
+        var r = new com.enesucar.auth_service.dto.ChangePasswordRequest();
+        r.setCurrentPassword(current);
+        r.setNewPassword(next);
+        return r;
+    }
+
+    @Test
+    void changePassword_shouldStoreNewHash_whenCurrentPasswordMatches() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("oldPass123", user.getPassword())).thenReturn(true);
+        when(passwordEncoder.matches("newPass456", user.getPassword())).thenReturn(false);
+        when(passwordEncoder.encode("newPass456")).thenReturn("newHash");
+
+        authService.changePassword("testuser", pwRequest("oldPass123", "newPass456"));
+
+        assertThat(user.getPassword()).isEqualTo("newHash");
+        verify(userRepository).save(user);
+        verify(loginAttemptLimiter).reset("pwchange:testuser");
+    }
+
+    @Test
+    void changePassword_shouldReject_whenCurrentPasswordWrong() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", user.getPassword())).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.changePassword("testuser", pwRequest("wrong", "newPass456")))
+                .isInstanceOf(com.enesucar.auth_service.exception.InvalidPasswordException.class);
+
+        verify(loginAttemptLimiter).recordFailure("pwchange:testuser");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void changePassword_shouldReject_whenNewPasswordEqualsCurrent() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("samePass123", user.getPassword())).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.changePassword("testuser", pwRequest("samePass123", "samePass123")))
+                .isInstanceOf(com.enesucar.auth_service.exception.InvalidPasswordException.class);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void changePassword_shouldBeBlocked_whenThrottled() {
+        doThrow(new TooManyLoginAttemptsException(600)).when(loginAttemptLimiter).checkAllowed("pwchange:testuser");
+
+        assertThatThrownBy(() -> authService.changePassword("testuser", pwRequest("a", "newPass456")))
+                .isInstanceOf(TooManyLoginAttemptsException.class);
+
+        verify(userRepository, never()).findByUsername(any());
     }
 }

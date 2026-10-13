@@ -119,4 +119,33 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(Map.of("role", "ADMIN"))))
                 .andExpect(status().isInternalServerError());
     }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void resetPassword_shouldReturn204_whenAdmin() throws Exception {
+        mockMvc.perform(put("/api/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newPassword\":\"brandNew123\"}"))
+                .andExpect(status().isNoContent());
+        verify(userService).resetPassword(1L, "brandNew123");
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void resetPassword_shouldReturn400_whenTooShort() throws Exception {
+        mockMvc.perform(put("/api/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newPassword\":\"short\"}"))
+                .andExpect(status().isBadRequest());
+        verify(userService, never()).resetPassword(anyLong(), anyString());
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void resetPassword_shouldReturn403_whenNotAdmin() throws Exception {
+        mockMvc.perform(put("/api/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newPassword\":\"brandNew123\"}"))
+                .andExpect(status().isForbidden());
+    }
 }

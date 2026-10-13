@@ -1,7 +1,9 @@
 package com.enesucar.auth_service.controller;
 
+import com.enesucar.auth_service.dto.ResetPasswordRequest;
 import com.enesucar.auth_service.dto.UserResponse;
 import com.enesucar.auth_service.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,5 +36,12 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> updateRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(userService.updateRole(id, body.get("role")));
+    }
+
+    @PutMapping("/{id}/password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> resetPassword(@PathVariable Long id, @RequestBody @Valid ResetPasswordRequest request) {
+        userService.resetPassword(id, request.getNewPassword());
+        return ResponseEntity.noContent().build();
     }
 }

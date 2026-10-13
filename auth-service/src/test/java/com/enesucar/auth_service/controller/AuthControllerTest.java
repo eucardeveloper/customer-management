@@ -109,14 +109,39 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_shouldReturn500_whenBadCredentials() throws Exception {
+    void login_shouldReturn401WithGenericMessage_whenBadCredentials() throws Exception {
         when(authService.login(any(LoginRequest.class)))
-                .thenThrow(new RuntimeException("Bad credentials"));
+                .thenThrow(new org.springframework.security.authentication.BadCredentialsException("Bad credentials"));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Invalid username or password"));
+    }
+
+    @Test
+    void login_shouldReturn429WithRetryAfter_whenAccountIsLockedOut() throws Exception {
+        when(authService.login(any(LoginRequest.class)))
+                .thenThrow(new com.enesucar.auth_service.exception.TooManyLoginAttemptsException(600));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "600"));
+    }
+
+    @Test
+    void login_shouldReturn500WithoutLeakingDetails_whenUnexpectedErrorOccurs() throws Exception {
+        when(authService.login(any(LoginRequest.class)))
+                .thenThrow(new RuntimeException("jdbc:postgresql://secret-host connection refused"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("Unexpected error"));
     }
 
     @Test
@@ -127,5 +152,49 @@ class AuthControllerTest {
                         org.hamcrest.Matchers.containsString("customer_session=;"),
                         org.hamcrest.Matchers.containsString("Max-Age=0"),
                         org.hamcrest.Matchers.containsString("HttpOnly"))));
+    }
+
+    // ---- change password ----
+
+    @org.junit.jupiter.api.Test
+    @org.springframework.security.test.context.support.WithMockUser(username = "testuser")
+    void changePassword_shouldReturn204_whenValid() throws Exception {
+        mockMvc.perform(post("/api/auth/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"password123\",\"newPassword\":\"newPassword456\"}"))
+                .andExpect(status().isNoContent());
+        org.mockito.Mockito.verify(authService).changePassword(org.mockito.ArgumentMatchers.eq("testuser"), any());
+    }
+
+    @org.junit.jupiter.api.Test
+    @org.springframework.security.test.context.support.WithMockUser(username = "testuser")
+    void changePassword_shouldReturn400_whenCurrentPasswordWrong() throws Exception {
+        org.mockito.Mockito.doThrow(new com.enesucar.auth_service.exception.InvalidPasswordException("Current password is incorrect"))
+                .when(authService).changePassword(org.mockito.ArgumentMatchers.eq("testuser"), any());
+
+        mockMvc.perform(post("/api/auth/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"nope\",\"newPassword\":\"newPassword456\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Current password is incorrect"));
+    }
+
+    @org.junit.jupiter.api.Test
+    @org.springframework.security.test.context.support.WithMockUser(username = "testuser")
+    void changePassword_shouldReturn400_whenNewPasswordTooShort() throws Exception {
+        mockMvc.perform(post("/api/auth/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"password123\",\"newPassword\":\"short\"}"))
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(authService);
+    }
+
+    @org.junit.jupiter.api.Test
+    void changePassword_shouldBeRejected_whenNotSignedIn() throws Exception {
+        mockMvc.perform(post("/api/auth/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"password123\",\"newPassword\":\"newPassword456\"}"))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(authService);
     }
 }

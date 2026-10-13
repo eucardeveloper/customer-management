@@ -23,6 +23,9 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private UserService userService;
 
@@ -90,5 +93,24 @@ class UserServiceTest {
                 .hasMessageContaining("User not found");
 
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void resetPassword_shouldStoreEncodedPassword() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("brandNew123")).thenReturn("hashed");
+
+        userService.resetPassword(1L, "brandNew123");
+
+        assertThat(user.getPassword()).isEqualTo("hashed");
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void resetPassword_shouldThrowNotFound_whenUserMissing() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.resetPassword(99L, "brandNew123"))
+                .isInstanceOf(com.enesucar.auth_service.exception.UserNotFoundException.class);
     }
 }

@@ -41,6 +41,12 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Read the real field values: browser autofill fills the inputs without always firing onChange,
+    // so React state can still be empty even though the fields look filled.
+    const form = new FormData(e.currentTarget as HTMLFormElement);
+    const user = String(form.get('username') ?? username).trim();
+    const pass = String(form.get('password') ?? password);
+    if (!user || !pass) { setError('Enter your username and password.'); return; }
     setError('');
     setLoading(true);
 
@@ -49,7 +55,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: user, password: pass }),
       });
 
       if (!res.ok) {
@@ -123,6 +129,7 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 required fullWidth autoFocus autoComplete="username" variant="outlined"
                 slotProps={{
+                  htmlInput: { name: 'username', 'aria-label': 'Username' },
                   input: {
                     startAdornment: (
                       <InputAdornment position="start"><PersonOutlineIcon color="action" /></InputAdornment>
@@ -138,6 +145,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required fullWidth autoComplete="current-password" variant="outlined"
                 slotProps={{
+                  htmlInput: { name: 'password', 'aria-label': 'Password' },
                   input: {
                     startAdornment: (
                       <InputAdornment position="start"><LockOutlinedIcon color="action" /></InputAdornment>
@@ -155,7 +163,7 @@ export default function LoginPage() {
               />
               <Button
                 type="submit" variant="contained" size="large" fullWidth
-                disabled={loading || !username || !password}
+                disabled={loading}
                 sx={{
                   py: 1.5, borderRadius: 2, fontWeight: 600, fontSize: '1rem',
                   background: 'linear-gradient(135deg, #1d4ed8, #12315c)',

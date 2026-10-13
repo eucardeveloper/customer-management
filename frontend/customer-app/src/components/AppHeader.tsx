@@ -17,7 +17,6 @@ import {
   Divider,
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import { logout } from '@/lib/auth';
 import { useAuthUser } from '@/lib/useAuthUser';

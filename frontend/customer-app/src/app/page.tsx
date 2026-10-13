@@ -1,8 +1,9 @@
 'use client';
 import { useTranslation, type Lang } from './translations';
-import * as XLSX from 'xlsx';
 import { PieChart, Pie, Cell, Tooltip as ReTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { api } from '@/lib/api';
+import { usePersistedPref } from '@/lib/usePersistedPref';
+import { downloadXlsx } from '@/lib/exportXlsx';
 import { getAuthUser, logout } from '@/lib/auth';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useMounted } from '@/lib/useMounted';
@@ -36,6 +37,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LogoutIcon from '@mui/icons-material/Logout';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import LockResetIcon from '@mui/icons-material/LockReset';
 import MenuIcon from '@mui/icons-material/Menu';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
@@ -48,7 +51,7 @@ const SIDEBAR_ACTIVE = 'rgba(37,99,235,0.18)';
 const HEADER_BG = 'var(--surface)';
 
 const LIGHT_VARS = {
-  '--page': '#f1f5f9', '--surface': '#ffffff', '--surface-2': '#f1f5f9', '--text': '#0f172a', '--text2': '#475569', '--border': '#e2e8f0',
+  '--page': '#f1f5f9', '--surface': '#ffffff', '--surface-2': '#f1f5f9', '--text': '#0f172a', '--text2': '#475569', '--border': '#e2e8f0', '--grid': '#e9eef5', '--icon': '#94a3b8', '--head-tx': '#475569',
   '--blue-bg': '#eff6ff', '--blue-bd': '#bfdbfe', '--blue-tx': '#1d4ed8',
   '--green-bg': '#f0fdf4', '--green-bd': '#bbf7d0', '--green-tx': '#15803d',
   '--amber-bg': '#fffbeb', '--amber-bd': '#fde68a', '--amber-tx': '#b45309',
@@ -56,7 +59,7 @@ const LIGHT_VARS = {
   '--sky-bg': '#f0f9ff', '--sky-bd': '#bae6fd', '--violet-bg': '#faf5ff', '--violet-bd': '#e9d5ff',
 };
 const DARK_VARS = {
-  '--page': '#0b1220', '--surface': '#111c2e', '--surface-2': '#17243a', '--text': '#e5edf8', '--text2': '#cbd5e1', '--border': '#263449',
+  '--page': '#0b1220', '--surface': '#111c2e', '--surface-2': '#17243a', '--text': '#e5edf8', '--text2': '#cbd5e1', '--border': '#263449', '--grid': '#1e2c43', '--icon': '#7c8ca5', '--head-tx': '#a8b8d0',
   '--blue-bg': 'rgba(59,130,246,0.16)', '--blue-bd': 'rgba(59,130,246,0.40)', '--blue-tx': '#93c5fd',
   '--green-bg': 'rgba(16,185,129,0.16)', '--green-bd': 'rgba(16,185,129,0.40)', '--green-tx': '#6ee7b7',
   '--amber-bg': 'rgba(245,158,11,0.16)', '--amber-bd': 'rgba(245,158,11,0.40)', '--amber-tx': '#fcd34d',
@@ -111,13 +114,13 @@ const baseThemeOptions: ThemeOptions = {
           '& .MuiTableCell-head': {
             backgroundColor: 'var(--surface-2)',
             fontWeight: 700,
-            color: '#94a3b8',
-            fontSize: '0.67rem',
-            letterSpacing: '0.1em',
+            color: 'var(--head-tx)',
+            fontSize: '0.72rem',
+            letterSpacing: '0.08em',
             textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            padding: '14px 20px',
             borderBottom: '1px solid var(--border)',
-            borderRight: '1px solid var(--border)',
-            '&:last-child': { borderRight: 'none' },
             borderTop: 'none',
           },
         },
@@ -127,14 +130,14 @@ const baseThemeOptions: ThemeOptions = {
       styleOverrides: {
         root: {
           '&:hover': { backgroundColor: 'var(--surface-2)' },
-          '&:last-child td': { borderBottom: 'none' },
+          '& .MuiTableCell-body': { height: 54 },
           transition: 'background-color 0.12s',
         },
       },
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { borderBottom: '1px solid var(--surface-2)', borderRight: '1px solid var(--border)', padding: '10px 16px', fontVariantNumeric: 'tabular-nums', '&:last-child': { borderRight: 'none' } },
+        root: { borderBottom: '1px solid var(--grid)', padding: '10px 20px', fontVariantNumeric: 'tabular-nums' },
       },
     },
     MuiButton: {
@@ -214,9 +217,9 @@ const customerTypeChip = (c: Customer, tFn?: (k: string) => string) => {
   return <Chip label={comLabel} size="small" sx={{ bgcolor: 'var(--violet-bg)', color: '#7c3aed', border: '1px solid var(--violet-bd)', fontSize: '0.7rem', fontWeight: 600 }} />;
 };
 
-const formatDate = (dateStr: string) => {
+const formatDate = (dateStr: string, lang: Lang = 'en') => {
   if (!dateStr) return '—';
-  try { return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  try { return new Date(dateStr).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
   catch { return dateStr; }
 };
 
@@ -255,6 +258,14 @@ export default function Home() {
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'USER' });
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  // One dialog serves both flows: 'self' (change my own password) and 'reset' (admin sets someone else's).
+  const [pwDialog, setPwDialog] = useState<{ mode: 'self' | 'reset'; userId?: number; username?: string } | null>(null);
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwError, setPwError] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
+  const openPwDialog = (d: { mode: 'self' | 'reset'; userId?: number; username?: string }) => {
+    setPwForm({ current: '', next: '', confirm: '' }); setPwError(''); setPwDialog(d);
+  };
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState('USER');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -266,32 +277,19 @@ export default function Home() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [chartMode, setChartMode] = useState<'daily' | 'monthly'>('monthly');
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
-  useEffect(() => {
-    try { if (localStorage.getItem('colorMode') === 'dark') setColorMode('dark'); } catch { /* storage unavailable */ }
-  }, []);
+  const [sidebarPref, setSidebarPref] = usePersistedPref('sidebarOpen', '1');
+  const sidebarOpen = sidebarPref !== '0';
+  const [colorPref, setColorPref] = usePersistedPref('colorMode', 'light');
+  const colorMode: 'light' | 'dark' = colorPref === 'dark' ? 'dark' : 'light';
   useEffect(() => {
     document.documentElement.setAttribute('data-mode', colorMode);
   }, [colorMode]);
-  const toggleColorMode = () => {
-    setColorMode(m => {
-      const next = m === 'dark' ? 'light' : 'dark';
-      try { localStorage.setItem('colorMode', next); } catch { /* storage unavailable */ }
-      return next;
-    });
-  };
+  const toggleColorMode = () => setColorPref(colorMode === 'dark' ? 'light' : 'dark');
   const gridC = colorMode === 'dark' ? '#263449' : '#f1f5f9';
   const tick2C = colorMode === 'dark' ? '#cbd5e1' : '#475569';
-  useEffect(() => {
-    try { if (localStorage.getItem('sidebarOpen') === '0') setSidebarOpen(false); } catch { /* storage unavailable */ }
-  }, []);
   const toggleSidebar = () => {
     if (isMobile) { setMobileOpen(true); return; }
-    setSidebarOpen(v => {
-      try { localStorage.setItem('sidebarOpen', v ? '0' : '1'); } catch { /* storage unavailable */ }
-      return !v;
-    });
+    setSidebarPref(sidebarOpen ? '0' : '1');
   };
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
 
@@ -402,6 +400,24 @@ export default function Home() {
     catch { showSnackbar(t('deleteFailed'), 'error'); }
   };
 
+  const submitPassword = async () => {
+    if (!pwDialog) return;
+    if (pwDialog.mode === 'self' && !pwForm.current) { setPwError(t('allFieldsRequired')); return; }
+    if (pwForm.next.length < 8) { setPwError(t('passwordMin8')); return; }
+    if (pwForm.next.length > 72) { setPwError(t('passwordMax72')); return; }
+    if (pwForm.next !== pwForm.confirm) { setPwError(t('passwordsDontMatch')); return; }
+    setPwBusy(true); setPwError('');
+    try {
+      if (pwDialog.mode === 'self') await api.post('/api/auth/password', { currentPassword: pwForm.current, newPassword: pwForm.next });
+      else await api.put(`/api/users/${pwDialog.userId}/password`, { newPassword: pwForm.next });
+      showSnackbar(t(pwDialog.mode === 'self' ? 'passwordChanged' : 'passwordReset'), 'success');
+      setPwDialog(null);
+    } catch (e) {
+      // The server's own message ("Current password is incorrect", throttle notice) is safe to show.
+      setPwError(e instanceof Error && e.message && !e.message.startsWith('HTTP ') ? e.message : t('passwordFailed'));
+    } finally { setPwBusy(false); }
+  };
+
   const handleDeleteUser = async () => {
     if (!deleteUserId) return;
     try { await api.delete(`/api/users/${deleteUserId}`); showSnackbar(t('userDeleted'), 'success'); setDeleteUserDialogOpen(false); fetchUsers(); }
@@ -442,34 +458,55 @@ export default function Home() {
   const filteredUsers = users.filter(u => { const q = userSearch.toLowerCase(); if (!q) return true; return u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q); });
   const getCustomerName = (id: number) => { const c = customers.find(c => c.id === id); return c ? `${c.firstName} ${c.lastName}` : `ID: ${id}`; };
 
-  const exportExcel = (type: 'customers' | 'orders') => {
-    const wb = XLSX.utils.book_new();
-    if (type === 'customers') {
-      const rows = customers.map(c => ({
-        ID: c.id, 'First Name': c.firstName, 'Last Name': c.lastName ?? '',
-        Email: c.email, Phone: c.phone, Type: c.customerType ?? '',
-      }));
-      const ws = XLSX.utils.json_to_sheet(rows);
-      ws['!cols'] = [{ wch: 6 }, { wch: 14 }, { wch: 14 }, { wch: 28 }, { wch: 16 }, { wch: 12 }];
-      XLSX.utils.book_append_sheet(wb, ws, 'Customers');
-      XLSX.writeFile(wb, 'customers.xlsx');
-    } else {
-      const rows = orders.map(o => ({
-        ID: o.id,
-        Customer: getCustomerName(o.customerId),
-        Product: o.productName,
-        'Unit Price': o.price,
-        Qty: o.quantity,
-        Total: Math.round((o.price * o.quantity) * 10000) / 10000,
-        Date: o.date ? new Date(o.date).toLocaleDateString('en-US') : '',
-        Status: o.status ?? '',
-      }));
-      const ws = XLSX.utils.json_to_sheet(rows);
-      // Keep numbers as-is — Excel General format shows exactly what was entered
-      // No forced decimal format: 5.2 shows as 5.2, 5.999932 shows as 5.999932
-      ws['!cols'] = [{ wch: 6 }, { wch: 18 }, { wch: 24 }, { wch: 12 }, { wch: 6 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
-      XLSX.utils.book_append_sheet(wb, ws, 'Orders');
-      XLSX.writeFile(wb, 'orders.xlsx');
+  const exportExcel = async (type: 'customers' | 'orders') => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const dateFormat = lang === 'tr' ? 'dd.mm.yyyy' : 'mm/dd/yyyy';
+    const statusBadge: Record<string, { bg: string; fg: string }> = {
+      PENDING: { bg: 'FEF3C7', fg: '92400E' },
+      PROCESSING: { bg: 'E2E8F0', fg: '334155' },
+      SHIPPED: { bg: 'DBEAFE', fg: '1E40AF' },
+      DELIVERED: { bg: 'DCFCE7', fg: '166534' },
+      CANCELLED: { bg: 'FEE2E2', fg: '991B1B' },
+    };
+    try {
+      if (type === 'customers') {
+        await downloadXlsx({
+          fileName: `customers-${stamp}.xlsx`,
+          sheetName: t('customers'),
+          dateFormat,
+          totalLabel: t('totalCol'),
+          rows: customers,
+          columns: [
+            { header: t('id'), width: 7, format: 'integer', align: 'center', value: c => c.id },
+            { header: t('firstName'), width: 16, value: c => c.firstName },
+            { header: t('lastName'), width: 16, value: c => c.lastName ?? '' },
+            { header: t('email'), width: 30, value: c => c.email },
+            { header: t('phone'), width: 18, format: 'text', value: c => c.phone },
+            { header: t('type'), width: 14, align: 'center', value: c => (isCompany(c) ? t('company') : t('individual')) },
+          ],
+        });
+      } else {
+        // Money columns are only exported for ADMIN, the same rule the screen and the API apply.
+        await downloadXlsx({
+          fileName: `orders-${stamp}.xlsx`,
+          sheetName: t('orders'),
+          dateFormat,
+          totalLabel: t('totalCol'),
+          rows: orders,
+          columns: [
+            { header: t('id'), width: 7, format: 'integer', align: 'center', value: o => o.id },
+            { header: t('customer'), width: 22, value: o => getCustomerName(o.customerId) },
+            { header: t('product'), width: 28, value: o => o.productName },
+            ...(isAdmin ? [{ header: t('unitPrice'), width: 14, format: 'money' as const, value: (o: Order) => o.price }] : []),
+            { header: t('qty'), width: 8, format: 'integer' as const, align: 'center' as const, value: (o: Order) => o.quantity },
+            ...(isAdmin ? [{ header: t('totalCol'), width: 14, format: 'money' as const, total: true, value: (o: Order) => Math.round(o.price * o.quantity * 10000) / 10000 }] : []),
+            { header: t('date'), width: 14, format: 'date' as const, align: 'center' as const, value: (o: Order) => (o.date ? new Date(o.date) : '') },
+            { header: t('status'), width: 16, value: (o: Order) => statusText(o.status ?? 'PENDING', t), badge: (o: Order) => statusBadge[o.status ?? 'PENDING'] },
+          ],
+        });
+      }
+    } catch {
+      showSnackbar(t('exportFailed'), 'error');
     }
   };
 
@@ -501,7 +538,6 @@ export default function Home() {
   })();
 
   const chartData = chartMode === 'monthly' ? revenueByMonth : revenueByDay;
-  const maxChartVal = Math.max(...chartData.map(([, v]) => v), 1);
   const statusCounts = ORDER_STATUSES.map(s => ({ status: s, count: orders.filter(o => (o.status ?? 'PENDING') === s).length }));
 
   const sendMessage = async (text: string) => {
@@ -572,7 +608,7 @@ export default function Home() {
   return (
     <ThemeProvider theme={colorMode === 'dark' ? darkTheme : theme}>
       <CssBaseline />
-      <GlobalStyles styles={{ ':root': LIGHT_VARS, ':root[data-mode="dark"]': DARK_VARS, body: { backgroundColor: 'var(--page)' } }} />
+      <GlobalStyles styles={{ ':root': LIGHT_VARS, ':root[data-mode="dark"]': DARK_VARS, html: { colorScheme: 'light' }, 'html[data-mode="dark"]': { colorScheme: 'dark' }, '*': { scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }, body: { backgroundColor: 'var(--page)' } }} />
       <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
 
         {/* ── Sidebar content (shared between permanent + swipeable) ── */}
@@ -599,7 +635,7 @@ export default function Home() {
 
               {/* Nav */}
               <List sx={{ px: 1.5, pt: 2, flex: 1 }}>
-                <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.12em', textTransform: 'uppercase', px: 1.5, mb: 1 }}>Navigation</Typography>
+                <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.12em', textTransform: 'uppercase', px: 1.5, mb: 1 }}>{t('navigation')}</Typography>
                 {sidebarItems.map((item) => {
                   const active = tab === item.key;
                   return (
@@ -641,12 +677,18 @@ export default function Home() {
                       <Typography sx={{ color: 'white', fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentUser.username}</Typography>
                       <Typography sx={{ color: isAdmin ? '#34d399' : 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{currentUser.role}</Typography>
                     </Box>
-                    <Tooltip title={t("signOut")}>
+                                        <Tooltip title={t("signOut")}>
                       <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { void logout().finally(() => { window.location.replace('/login'); }); }}>
                         <LogoutIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
                   </Box>
+                )}
+                {currentUser && (
+                  <Button fullWidth size="small" startIcon={<VpnKeyIcon sx={{ fontSize: 15 }} />} onClick={() => openPwDialog({ mode: 'self' })}
+                    sx={{ textTransform: 'none', justifyContent: 'flex-start', color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem', fontWeight: 600, borderRadius: 2, px: 1.5, mb: 0.5, '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' } }}>
+                    {t('changePassword')}
+                  </Button>
                 )}
                 <Typography sx={{ color: 'rgba(255,255,255,0.12)', fontSize: '0.58rem', letterSpacing: '0.04em' }}>{t('springBootKafkaPostgres')}</Typography>
               </Box>
@@ -721,18 +763,18 @@ export default function Home() {
           </AppBar>
 
           {/* Scrollable content */}
-          <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflowX: 'hidden', overflowY: 'auto', display: 'flex', flexDirection: 'column', p: { xs: 1.5, md: 3 }, gap: { xs: 1.5, md: 2.5 } }}>
+          <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflowX: 'hidden', overflowY: 'auto', display: 'flex', flexDirection: 'column', p: { xs: 1.5, md: 3 }, gap: { xs: 1.5, md: 2.5 }, '& > *': { width: '100%', maxWidth: 1440, alignSelf: 'center' } }}>
 
             {/* Stat Cards — only customers/orders */}
             {statCards.length > 0 && (
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,1fr)', sm: 'repeat(2,1fr)', md: `repeat(${Math.min(statCards.length, 4)},1fr)` }, gap: { xs: 1, md: 2 }, flexShrink: 0 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: { xs: 1, md: 2 }, flexShrink: 0 }}>
                 {statCards.map((s) => (
                   <Card key={s.label} elevation={0} sx={{ border: `1px solid ${s.border}`, borderRadius: 3, transition: 'all 0.2s ease', cursor: 'default', bgcolor: 'var(--surface)', '&:hover': { boxShadow: '0 8px 28px rgba(0,0,0,0.08)', transform: 'translateY(-2px)', borderColor: s.color + '60' } }}>
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: '16px !important', px: '18px !important' }}>
                       <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, flexShrink: 0 }}>{s.icon}</Box>
-                      <Box>
-                        <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', mb: 0.2 }}>{s.label}</Typography>
-                        <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', lineHeight: 1.2, color: 'var(--text)', letterSpacing: '-0.02em' }}>{s.value}</Typography>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography noWrap sx={{ fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', mb: 0.2 }}>{s.label}</Typography>
+                        <Typography noWrap sx={{ fontWeight: 800, fontSize: '1.25rem', lineHeight: 1.2, color: 'var(--text)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{s.value}</Typography>
                       </Box>
                     </CardContent>
                   </Card>
@@ -747,7 +789,7 @@ export default function Home() {
                   <TextField size="small" placeholder={t('searchCustomers')} value={custSearch}
                     onChange={(e) => { setCustSearch(e.target.value); setCustPage(0); }}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
-                    sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
+                    sx={{ width: 380, maxWidth: '100%', '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
                   <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('customers')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchCustomers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
@@ -762,16 +804,16 @@ export default function Home() {
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={32} /></Box>
                 ) : (
                   <>
-                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 260 }}>
-                      <Table stickyHeader size="small">
+                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 0 }}>
+                      <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: 900 }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ width: 60 }}>{t('id')}</TableCell>
-                            <TableCell sx={{ width: 110 }}>{t('type')}</TableCell>
+                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
                             <TableCell>{t('customer')}</TableCell>
                             <TableCell>{t('email')}</TableCell>
-                            <TableCell>{t('phone')}</TableCell>
-                            {isAdmin && <TableCell align="right" sx={{ width: 90 }}>{t('actions')}</TableCell>}
+                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('phone')}</TableCell>
+                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -789,19 +831,19 @@ export default function Home() {
                               <TableCell><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
                               <TableCell>{customerTypeChip(c, t)}</TableCell>
                               <TableCell sx={{ cursor: 'pointer' }} onClick={() => setDrawerCustomer(c)}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, maxWidth: '100%' }}>
                                   <Avatar sx={{ width: 30, height: 30, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.72rem', fontWeight: 700 }}>
                                     {(c.firstName ?? '?')[0]}{(c.lastName ?? '')[0]}
                                   </Avatar>
-                                  <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', '&:hover': { color: '#2563eb' } }}>{c.firstName} {c.lastName}</Typography>
+                                  <Typography noWrap sx={{ fontWeight: 600, fontSize: '0.875rem', '&:hover': { color: '#2563eb' } }}>{c.firstName} {c.lastName}</Typography>
                                 </Box>
                               </TableCell>
-                              <TableCell><Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>{c.email}</Typography></TableCell>
-                              <TableCell><Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>{c.phone}</Typography></TableCell>
+                              <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={c.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{c.email}</Typography></Box></TableCell>
+                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Box sx={{ maxWidth: '100%' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{c.phone}</Typography></Box></TableCell>
                               {isAdmin && (
-                                <TableCell align="right" onClick={e => e.stopPropagation()}>
-                                  <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(c)} sx={{ color: '#2563eb', mr: 0.5 }}><EditIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
-                                  <Tooltip title="Delete"><IconButton size="small" onClick={() => openDelete(c.id)} sx={{ color: '#ef4444' }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                                  <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEdit(c)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                                  <Tooltip title={t('delete')}><IconButton size="small" onClick={() => openDelete(c.id)} sx={{ color: 'var(--icon)', '&:hover': { color: '#ef4444' } }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
                                 </TableCell>
                               )}
                             </TableRow>
@@ -825,7 +867,7 @@ export default function Home() {
                   <TextField size="small" placeholder={t('searchOrders')} value={ordSearch}
                     onChange={(e) => { setOrdSearch(e.target.value); setOrdPage(0); }}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
-                    sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
+                    sx={{ width: 380, maxWidth: '100%', '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
                   <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('orders')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchOrders} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
@@ -840,19 +882,19 @@ export default function Home() {
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={32} /></Box>
                 ) : (
                   <>
-                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 260 }}>
-                      <Table stickyHeader size="small">
+                    <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 0 }}>
+                      <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: isAdmin ? 1100 : 800 }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ width: 55 }}>{t('id')}</TableCell>
-                            <TableCell sx={{ width: 140 }}>{t('status')}</TableCell>
+                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('status')}</TableCell>
                             <TableCell>{t('product')}</TableCell>
                             <TableCell>{t('customer')}</TableCell>
-                            {isAdmin && <TableCell sx={{ width: 110 }}>{t('unitPrice')}</TableCell>}
-                            <TableCell sx={{ width: 70 }}>{t('qty')}</TableCell>
-                            {isAdmin && <TableCell sx={{ width: 110 }}>{t('total')}</TableCell>}
-                            <TableCell sx={{ width: 110 }}>{t('date')}</TableCell>
-                            {isAdmin && <TableCell align="right" sx={{ width: 80 }}>{t('actions')}</TableCell>}
+                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('unitPrice')}</TableCell>}
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('qty')}</TableCell>
+                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('totalCol')}</TableCell>}
+                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('date')}</TableCell>
+                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -873,33 +915,33 @@ export default function Home() {
                                   <FormControl size="small">
                                     <Select value={o.status ?? 'PENDING'} onChange={e => { e.stopPropagation(); updateOrderStatus(o.id, e.target.value); }}
                                       renderValue={v => statusChip(v, t)}
-                                      sx={{ '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, '& .MuiSelect-select': { p: 0 }, minWidth: 110 }}>
+                                      sx={{ width: 150, '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, '& .MuiSelect-select': { p: '0 28px 0 0 !important', display: 'flex', justifyContent: 'flex-start' }, '& .MuiSelect-icon': { right: 6 } }}>
                                       {ORDER_STATUSES.map(s => <MenuItem key={s} value={s}>{statusChip(s, t)}</MenuItem>)}
                                     </Select>
                                   </FormControl>
                                 ) : statusChip(o.status ?? 'PENDING', t)}
                               </TableCell>
-                              <TableCell><Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{o.productName}</Typography></TableCell>
+                              <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={o.productName} sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{o.productName}</Typography></Box></TableCell>
                               <TableCell>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: '100%' }}>
                                   <Avatar sx={{ width: 22, height: 22, fontSize: '0.6rem', bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)' }}>{getCustomerName(o.customerId)[0]}</Avatar>
-                                  <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>{getCustomerName(o.customerId)}</Typography>
+                                  <Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem' }}>{getCustomerName(o.customerId)}</Typography>
                                 </Box>
                               </TableCell>
-                              {isAdmin && <TableCell><Typography sx={{ fontSize: '0.85rem' }}>{o.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography></TableCell>}
-                              <TableCell><Chip label={`${o.quantity}x`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: 'var(--text2)', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                              {isAdmin && <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}><Typography sx={{ fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{o.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography></TableCell>}
+                              <TableCell align="center"><Chip label={`${o.quantity}x`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: 'var(--text2)', fontSize: '0.68rem', height: 20 }} /></TableCell>
                               {isAdmin && (
-                                <TableCell>
-                                  <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#16a34a' }}>
+                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                                  <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
                                     {(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                                   </Typography>
                                 </TableCell>
                               )}
-                              <TableCell><Typography sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date)}</Typography></TableCell>
+                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></TableCell>
                               {isAdmin && (
-                                <TableCell align="right">
-                                  <Tooltip title="Edit"><IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: '#2563eb', mr: 0.5 }}><EditIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
-                                  <Tooltip title="Delete"><IconButton size="small" onClick={() => openDeleteOrder(o.id)} sx={{ color: '#ef4444' }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                                  <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                                  <Tooltip title={t('delete')}><IconButton size="small" onClick={() => openDeleteOrder(o.id)} sx={{ color: 'var(--icon)', '&:hover': { color: '#ef4444' } }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
                                 </TableCell>
                               )}
                             </TableRow>
@@ -922,20 +964,20 @@ export default function Home() {
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0, bgcolor: 'var(--surface)' }}>
                   <TextField size="small" placeholder={t('searchUsers')} value={userSearch} onChange={e => setUserSearch(e.target.value)}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
-                    sx={{ width: 300, '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
+                    sx={{ width: 380, maxWidth: '100%', '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddUserDialogOpen(true)} disableElevation size="small" sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}>{ t('addUser') }</Button>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchUsers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                 </Box>
-                <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 260 }}>
-                  <Table stickyHeader size="small">
+                <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 0 }}>
+                  <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: 760 }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ width: 60 }}>{t('id')}</TableCell>
+                        <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
                         <TableCell>{t('username')}</TableCell>
                         <TableCell>{t('email')}</TableCell>
-                        <TableCell sx={{ width: 100 }}>{t('role')}</TableCell>
-                        <TableCell align="right" sx={{ width: 100 }}>{t('actions')}</TableCell>
+                        <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('role')}</TableCell>
+                        <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -949,23 +991,28 @@ export default function Home() {
                         <TableRow key={u.id}>
                           <TableCell><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                           <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, maxWidth: '100%' }}>
                               <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#059669' : '#2563eb', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
                               <Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{u.username}</Typography>
                             </Box>
                           </TableCell>
-                          <TableCell><Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></TableCell>
+                          <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
                           <TableCell>
                             <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'var(--green-bg)' : 'var(--blue-bg)', color: u.role === 'ADMIN' ? '#059669' : '#2563eb', border: `1px solid ${u.role === 'ADMIN' ? 'var(--green-bd)' : 'var(--blue-bd)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>
-                          <TableCell align="right">
+                          <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                             <Tooltip title={t('changeRole')}>
-                              <IconButton size="small" sx={{ color: '#059669', mr: 0.5 }} onClick={() => { setSelectedUserId(u.id); setSelectedRole(u.role); setRoleDialogOpen(true); }}>
+                              <IconButton size="small" sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#059669' } }} onClick={() => { setSelectedUserId(u.id); setSelectedRole(u.role); setRoleDialogOpen(true); }}>
                                 <AdminPanelSettingsIcon sx={{ fontSize: 16 }} />
                               </IconButton>
                             </Tooltip>
+                            <Tooltip title={t('resetPassword')}>
+                              <IconButton size="small" aria-label={t('resetPassword')} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#d97706' } }} onClick={() => openPwDialog({ mode: 'reset', userId: u.id, username: u.username })}>
+                                <LockResetIcon sx={{ fontSize: 17 }} />
+                              </IconButton>
+                            </Tooltip>
                             <Tooltip title={t('deleteUser')}>
-                              <IconButton size="small" sx={{ color: '#ef4444' }} disabled={u.username === currentUser?.username} onClick={() => { setDeleteUserId(u.id); setDeleteUserDialogOpen(true); }}>
+                              <IconButton size="small" sx={{ color: 'var(--icon)', '&:hover': { color: '#ef4444' } }} disabled={u.username === currentUser?.username} onClick={() => { setDeleteUserId(u.id); setDeleteUserDialogOpen(true); }}>
                                 <DeleteIcon sx={{ fontSize: 16 }} />
                               </IconButton>
                             </Tooltip>
@@ -991,7 +1038,6 @@ export default function Home() {
               const recentRev = recentOrders30.reduce((s, o) => s + o.price * o.quantity, 0);
               const prevRev = prevOrders30.reduce((s, o) => s + o.price * o.quantity, 0);
               const revTrend = prevRev > 0 ? (((recentRev - prevRev) / prevRev) * 100).toFixed(1) : null;
-              const custTrend = null; // no creation date on customer — omit
               const prevDelivered = prevOrders30.filter(o => o.status === 'DELIVERED').length;
               const prevFulfillRate = prevOrders30.length > 0 ? (prevDelivered / prevOrders30.length) * 100 : null;
               const currFulfillNum = recentOrders30.length > 0 ? (recentOrders30.filter(o => o.status === 'DELIVERED').length / recentOrders30.length) * 100 : null;
@@ -1029,24 +1075,24 @@ export default function Home() {
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,1fr)', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
                     {(() => {
                       const fmtTrend = (val: string | null, higherIsBetter = true) => {
-                        if (val === null) return { label: t('vsLast30d'), up: true };
+                        if (val === null) return { label: t('vsLast30d'), up: true, dir: true };
                         const n = parseFloat(val);
-                        return { label: `${n >= 0 ? '+' : ''}${val}% ${t('vsLast30d')}`, up: higherIsBetter ? n >= 0 : n <= 0 };
+                        return { label: `${n >= 0 ? '+' : ''}${val}% ${t('vsLast30d')}`, up: higherIsBetter ? n >= 0 : n <= 0, dir: n >= 0 };
                       };
                       const revT = fmtTrend(revTrend);
                       const fufT = fmtTrend(fulfillTrend);
                       const pndT = fmtTrend(pendTrend, false);
                       const adminCards = [
-                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--blue-bg)', trend: revT.label, up: revT.up, spark: monthSeries(os => os.reduce((a, o) => a + o.price * o.quantity, 0)) },
+                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--blue-bg)', trend: revT.label, up: revT.up, dir: revT.dir, spark: monthSeries(os => os.reduce((a, o) => a + o.price * o.quantity, 0)) },
                         { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: 'var(--sky-bg)', border: 'var(--sky-bd)', trend: t('allTime'), up: true },
-                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
-                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, dir: fufT.dir, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, dir: pndT.dir, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
                       ];
                       const userCards = [
                         { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--blue-bg)', trend: t('allTime'), up: true, spark: monthSeries(os => os.length) },
                         { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: 'var(--sky-bg)', border: 'var(--sky-bd)', trend: t('allTime'), up: true },
-                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
-                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, dir: fufT.dir, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, dir: pndT.dir, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
                       ];
                       return (isAdmin ? adminCards : userCards).map(card => (
                         <Paper key={card.label} elevation={0} sx={{
@@ -1070,14 +1116,14 @@ export default function Home() {
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
                             <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>{card.sub}</Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, px: 0.8, py: 0.2, borderRadius: 5, bgcolor: card.up ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)' }}>
-                              <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, color: card.up ? '#10b981' : '#ef4444' }}>{card.up ? '↑' : '↓'} {card.trend}</Typography>
+                              <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, color: card.up ? '#10b981' : '#ef4444' }}>{(('dir' in card ? card.dir : card.up) ? '↑' : '↓')} {card.trend}</Typography>
                             </Box>
                           </Box>
                           {card.spark && card.spark.some(v => v > 0) && (
                           <Box sx={{ mx: -0.5, mt: 0.5 }}>
                             <ResponsiveContainer width="100%" height={36}>
                               <LineChart data={card.spark.map((v, i) => ({ i, v }))}>
-                                <Line type="monotone" dataKey="v" stroke={card.color} strokeWidth={1.8} dot={false} />
+                                <Line type="monotone" dataKey="v" stroke={card.color} strokeWidth={1.8} dot={false} isAnimationActive={false} />
                               </LineChart>
                             </ResponsiveContainer>
                           </Box>
@@ -1130,7 +1176,7 @@ export default function Home() {
                               <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(1)}k`} />
                               <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
-                              <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} />
+                              <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} animationDuration={600} />
                             </LineChart>
                           </ResponsiveContainer>
                         ) : (
@@ -1156,7 +1202,7 @@ export default function Home() {
                               <Avatar sx={{ width: 28, height: 28, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.7rem', fontWeight: 700 }}>{(c!.firstName ?? '?')[0]}</Avatar>
                               <Box sx={{ flex: 1, overflow: 'hidden' }}>
                                 <Typography sx={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c!.firstName} {c!.lastName}</Typography>
-                                <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{orders.filter(o => o.customerId === c!.id).length} {t('orders')}</Typography>
+                                <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{(() => { const n = orders.filter(o => o.customerId === c!.id).length; return `${n} ${n === 1 && lang === 'en' ? 'Order' : t('orders')}`; })()}</Typography>
                               </Box>
                               {isAdmin && (
                                 <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#10b981', flexShrink: 0 }}>
@@ -1187,11 +1233,11 @@ export default function Home() {
                             </Avatar>
                             <Box sx={{ flex: 1, overflow: 'hidden' }}>
                               <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.productName}</Typography>
-                              <Typography sx={{ fontSize: '0.72rem', color: '#94a3b8' }}>{getCustomerName(o.customerId)} · {formatDate(o.date)}</Typography>
+                              <Typography sx={{ fontSize: '0.72rem', color: '#94a3b8' }}>{getCustomerName(o.customerId)} · {formatDate(o.date, lang)}</Typography>
                             </Box>
-                            <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                            <Box sx={{ width: 124, display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
                               {isAdmin && (
-                                <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--green-tx)' }}>{(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
+                                <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--green-tx)', fontVariantNumeric: 'tabular-nums' }}>{(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>
                               )}
                               <Box sx={{ mt: 0.3 }}>{statusChip(o.status, t)}</Box>
                             </Box>
@@ -1210,7 +1256,7 @@ export default function Home() {
                           <>
                             <ResponsiveContainer width="100%" height={140}>
                               <PieChart>
-                                <Pie data={allPie} cx="50%" cy="50%" innerRadius={38} outerRadius={60} paddingAngle={2} dataKey="value">
+                                <Pie data={allPie} cx="50%" cy="50%" innerRadius={38} outerRadius={60} paddingAngle={2} dataKey="value" animationDuration={600}>
                                   {allPie.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" opacity={entry.realCount === 0 ? 0.2 : 1} />)}
                                 </Pie>
                                 <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
@@ -1263,31 +1309,38 @@ export default function Home() {
                   const aNowPend = aNow.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
                   const aPrevPend = aPrev.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
                   const pendTrendA = calcTrend(aNowPend, aPrevPend);
-                  const fmtA = (v: string | null, up?: boolean) => v === null ? { text: t('vsLast30d'), up: up ?? true } : { text: `${parseFloat(v) >= 0 ? '+' : ''}${v}% ${t('vsLast30d')}`, up: up !== undefined ? up : parseFloat(v) >= 0 };
+                  const monthKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}`;
+                  const last6 = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (5 - i)); return monthKey(d); });
+                  const seriesOf = (fn: (os: Order[]) => number) => last6.map((k, i) => ({ i, v: fn(orders.filter(o => o.date && monthKey(new Date(o.date)) === k)) }));
+                  const sumRev = (os: Order[]) => os.reduce((a, o) => a + o.price * o.quantity, 0);
+                  const isPend = (o: Order) => (o.status ?? 'PENDING') === 'PENDING';
+                  // delta: direction of the change; goodUp: whether an increase is good news (pending orders: no).
+                  const fmtA = (v: string | null, goodUp: boolean) => {
+                    if (v === null) return { text: t('vsLast30d'), delta: null as number | null, good: true };
+                    const n = parseFloat(v);
+                    return { text: `${n >= 0 ? '+' : ''}${v}% ${t('vsLast30d')}`, delta: n, good: n === 0 ? true : (n > 0) === goodUp };
+                  };
+                  const revF = fmtA(revTrendA, true), ordF = fmtA(orderTrendA, true), avgF = fmtA(avgTrendA, true), pndF = fmtA(pendTrendA, false);
                   const allAnalyticsCards = [
-                    { label: t('totalRevenue').toUpperCase(), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), trend: fmtA(revTrendA).text, trendUp: fmtA(revTrendA).up, color: '#2563eb', sparkColor: '#2563eb', adminOnly: true },
-                    { label: t('totalOrders').toUpperCase(), value: orders.length.toString(), trend: fmtA(orderTrendA).text, trendUp: fmtA(orderTrendA).up, color: '#10b981', sparkColor: '#10b981', adminOnly: false },
-                    { label: t('avgOrderValue').toUpperCase(), value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), trend: fmtA(avgTrendA).text, trendUp: fmtA(avgTrendA).up, color: '#f59e0b', sparkColor: '#f59e0b', adminOnly: true },
-                    { label: t('pendingOrders').toUpperCase(), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length.toString(), trend: fmtA(pendTrendA, pendTrendA !== null ? parseFloat(pendTrendA) <= 0 : true).text, trendUp: fmtA(pendTrendA, pendTrendA !== null ? parseFloat(pendTrendA) <= 0 : true).up, color: '#ef4444', sparkColor: '#ef4444', adminOnly: false },
+                    { label: t('totalRevenue').toUpperCase(), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: revF, sparkColor: '#2563eb', spark: seriesOf(sumRev), adminOnly: true },
+                    { label: t('totalOrders').toUpperCase(), value: orders.length.toString(), f: ordF, sparkColor: '#10b981', spark: seriesOf(os => os.length), adminOnly: false },
+                    { label: t('avgOrderValue').toUpperCase(), value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: avgF, sparkColor: '#f59e0b', spark: seriesOf(os => os.length ? sumRev(os) / os.length : 0), adminOnly: true },
+                    { label: t('pendingOrders').toUpperCase(), value: orders.filter(isPend).length.toString(), f: pndF, sparkColor: '#ef4444', spark: seriesOf(os => os.filter(isPend).length), adminOnly: false },
                   ];
                   const analyticsCards = allAnalyticsCards.filter(c => isAdmin || !c.adminOnly);
-                  // Sparkline: monthly order counts for last 12 months
-                  const sparkMap: Record<number, number> = {};
-                  orders.forEach(o => { if (o.date) { const m = new Date(o.date).getMonth(); sparkMap[m] = (sparkMap[m] ?? 0) + 1; } });
-                  const sparkData = Array.from({ length: 12 }, (_, i) => sparkMap[i] ?? 0);
                   return (
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,1fr)', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
                       {analyticsCards.map((card) => (
                         <Paper key={card.label} elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5, overflow: 'hidden' }}>
                           <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', mb: 0.5 }}>{card.label}</Typography>
                           <Typography sx={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--text)', mb: 0.5 }}>{card.value}</Typography>
-                          <Typography sx={{ fontSize: '0.72rem', color: card.trendUp ? '#10b981' : '#ef4444', fontWeight: 600 }}>
-                            {card.trendUp ? '↑' : '↓'} {card.trend}
+                          <Typography sx={{ fontSize: '0.72rem', color: card.f.delta === null ? '#94a3b8' : card.f.good ? '#10b981' : '#ef4444', fontWeight: 600 }}>
+                            {card.f.delta === null ? '' : card.f.delta >= 0 ? '↑ ' : '↓ '}{card.f.text}
                           </Typography>
                           <Box sx={{ mt: 1, mx: -0.5 }}>
                             <ResponsiveContainer width="100%" height={40}>
-                              <LineChart data={sparkData.map((v, i) => ({ i, v }))}>
-                                <Line type="monotone" dataKey="v" stroke={card.sparkColor} strokeWidth={2} dot={false} />
+                              <LineChart data={card.spark}>
+                                <Line type="monotone" dataKey="v" stroke={card.sparkColor} strokeWidth={2} dot={false} isAnimationActive={false} />
                               </LineChart>
                             </ResponsiveContainer>
                           </Box>
@@ -1323,7 +1376,7 @@ export default function Home() {
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
                         <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
-                        <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} />
+                        <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} animationDuration={600} />
                       </LineChart>
                     </ResponsiveContainer>
                   </Paper>}
@@ -1339,7 +1392,7 @@ export default function Home() {
                         <>
                           <ResponsiveContainer width="100%" height={160}>
                             <PieChart>
-                              <Pie data={allPie} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={2} dataKey="value">
+                              <Pie data={allPie} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={2} dataKey="value" animationDuration={600}>
                                 {allPie.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" opacity={entry.realCount === 0 ? 0.25 : 1} />)}
                               </Pie>
                               <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
@@ -1379,7 +1432,7 @@ export default function Home() {
                         <>
                           <ResponsiveContainer width="100%" height={160}>
                             <PieChart>
-                              <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={3} dataKey="value">
+                              <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={3} dataKey="value" animationDuration={600}>
                                 {pieData.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" />)}
                               </Pie>
                               <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
@@ -1418,7 +1471,7 @@ export default function Home() {
                             <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
                             <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: tick2C }} axisLine={false} tickLine={false} width={105} />
                             <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]} label={{ position: 'right', formatter: (v: unknown) => `$${(Number(v)/1000).toFixed(1)}k`, fontSize: 11, fill: '#64748b' }}>
+                            <Bar dataKey="value" animationDuration={600} radius={[0, 4, 4, 0]} label={{ position: 'right', formatter: (v: unknown) => `$${(Number(v)/1000).toFixed(1)}k`, fontSize: 11, fill: '#64748b' }}>
                               {top.map((_, i) => <Cell key={i} fill={PROD_COLORS[i % PROD_COLORS.length]} />)}
                             </Bar>
                           </BarChart>
@@ -1439,7 +1492,7 @@ export default function Home() {
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', flexShrink: 0 }}>
                     {(isAdmin ? getQuickQuestionsAdmin(t) : getQuickQuestionsUser(t)).map(q => (
                       <Chip key={q} label={q} clickable onClick={() => sendMessage(q)}
-                        sx={{ bgcolor: 'var(--blue-bg)', color: '#2563eb', border: '1px solid var(--blue-bg)', fontWeight: 500, fontSize: '0.78rem', '&:hover': { bgcolor: 'var(--violet-bg)' } }} />
+                        sx={{ bgcolor: 'var(--surface)', color: '#2563eb', border: '1px solid var(--blue-bd)', height: 32, px: 0.5, fontWeight: 600, fontSize: '0.78rem', '&:hover': { bgcolor: 'var(--blue-bg)' } }} />
                     ))}
                   </Box>
 
@@ -1575,14 +1628,14 @@ export default function Home() {
               </FormControl>
               {customerType === 'individual' ? (
                 <Box sx={{ display: 'flex', gap: 2 }}>
-                  <TextField label="First Name *" fullWidth size="small" value={editCustomer.firstName || ''} onChange={e => { setEditCustomer({ ...editCustomer, firstName: e.target.value }); setFormErrors(p => ({ ...p, firstName: '' })); }} error={!!formErrors.firstName} helperText={formErrors.firstName} />
-                  <TextField label="Last Name *" fullWidth size="small" value={editCustomer.lastName || ''} onChange={e => { setEditCustomer({ ...editCustomer, lastName: e.target.value }); setFormErrors(p => ({ ...p, lastName: '' })); }} error={!!formErrors.lastName} helperText={formErrors.lastName} />
+                  <TextField label={`${t('firstName')} *`} fullWidth size="small" value={editCustomer.firstName || ''} onChange={e => { setEditCustomer({ ...editCustomer, firstName: e.target.value }); setFormErrors(p => ({ ...p, firstName: '' })); }} error={!!formErrors.firstName} helperText={formErrors.firstName} />
+                  <TextField label={`${t('lastName')} *`} fullWidth size="small" value={editCustomer.lastName || ''} onChange={e => { setEditCustomer({ ...editCustomer, lastName: e.target.value }); setFormErrors(p => ({ ...p, lastName: '' })); }} error={!!formErrors.lastName} helperText={formErrors.lastName} />
                 </Box>
               ) : (
                 <TextField label={`${t('firstName')} *`} fullWidth size="small" value={editCustomer.firstName || ''} onChange={e => { setEditCustomer({ ...editCustomer, firstName: e.target.value }); setFormErrors(p => ({ ...p, firstName: '' })); }} error={!!formErrors.firstName} helperText={formErrors.firstName} />
               )}
-              <TextField label={`Email${!editCustomer.phone?.trim() ? ' *' : ''}`} fullWidth size="small" value={editCustomer.email || ''} onChange={e => { setEditCustomer({ ...editCustomer, email: e.target.value }); setFormErrors(p => ({ ...p, email: '', phone: '' })); }} error={!!formErrors.email} helperText={formErrors.email || t('emailOrPhoneHint')} />
-              <TextField label={`Phone${!editCustomer.email?.trim() ? ' *' : ''}`} fullWidth size="small" value={editCustomer.phone || ''} onChange={e => { setEditCustomer({ ...editCustomer, phone: e.target.value }); setFormErrors(p => ({ ...p, email: '', phone: '' })); }} error={!!formErrors.phone} helperText={formErrors.phone} />
+              <TextField label={`${t('email')}${!editCustomer.phone?.trim() ? ' *' : ''}`} fullWidth size="small" value={editCustomer.email || ''} onChange={e => { setEditCustomer({ ...editCustomer, email: e.target.value }); setFormErrors(p => ({ ...p, email: '', phone: '' })); }} error={!!formErrors.email} helperText={formErrors.email || t('emailOrPhoneHint')} />
+              <TextField label={`${t('phone')}${!editCustomer.email?.trim() ? ' *' : ''}`} fullWidth size="small" value={editCustomer.phone || ''} onChange={e => { setEditCustomer({ ...editCustomer, phone: e.target.value }); setFormErrors(p => ({ ...p, email: '', phone: '' })); }} error={!!formErrors.phone} helperText={formErrors.phone} />
             </Box>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
@@ -1594,7 +1647,7 @@ export default function Home() {
         {/* Customer Delete */}
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteCustomerTitle')}</DialogTitle>
-          <DialogContent><Typography variant="body2" color="text.secondary">Are you sure? This action cannot be undone.</Typography></DialogContent>
+          <DialogContent><Typography variant="body2" color="text.secondary">{t('areYouSure')}</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setDeleteDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
             <Button variant="contained" color="error" onClick={handleDelete} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{ t('delete') }</Button>
@@ -1635,7 +1688,7 @@ export default function Home() {
         {/* Order Delete */}
         <Dialog open={orderDeleteDialogOpen} onClose={() => setOrderDeleteDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteOrderTitle')}</DialogTitle>
-          <DialogContent><Typography variant="body2" color="text.secondary">Are you sure? This action cannot be undone.</Typography></DialogContent>
+          <DialogContent><Typography variant="body2" color="text.secondary">{t('areYouSure')}</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setOrderDeleteDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
             <Button variant="contained" color="error" onClick={handleDeleteOrder} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{ t('delete') }</Button>
@@ -1660,9 +1713,29 @@ export default function Home() {
           </DialogActions>
         </Dialog>
 
+        <Dialog open={pwDialog !== null} onClose={() => { if (!pwBusy) setPwDialog(null); }} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
+          <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem', pb: 1 }}>
+            {pwDialog?.mode === 'reset' ? `${t('resetPasswordFor')} ${pwDialog.username ?? ''}` : t('changePassword')}
+          </DialogTitle>
+          <form onSubmit={(e) => { e.preventDefault(); void submitPassword(); }}>
+            <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '8px !important' }}>
+              {pwDialog?.mode === 'self' && (
+                <TextField label={t('currentPassword')} type="password" autoComplete="current-password" autoFocus fullWidth size="small" value={pwForm.current} onChange={e => setPwForm({ ...pwForm, current: e.target.value })} />
+              )}
+              <TextField label={t('newPassword')} type="password" autoComplete="new-password" autoFocus={pwDialog?.mode === 'reset'} fullWidth size="small" value={pwForm.next} onChange={e => setPwForm({ ...pwForm, next: e.target.value })} helperText={t('passwordMin8')} />
+              <TextField label={t('confirmPassword')} type="password" autoComplete="new-password" fullWidth size="small" value={pwForm.confirm} onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })} />
+              {pwError && <Typography role="alert" sx={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 600 }}>{pwError}</Typography>}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={() => setPwDialog(null)} disabled={pwBusy} sx={{ textTransform: 'none', color: '#64748b' }}>{t('cancel')}</Button>
+              <Button type="submit" variant="contained" disabled={pwBusy} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{pwDialog?.mode === 'reset' ? t('resetPassword') : t('changePassword')}</Button>
+            </DialogActions>
+          </form>
+        </Dialog>
+
         <Dialog open={deleteUserDialogOpen} onClose={() => setDeleteUserDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteUserTitle')}</DialogTitle>
-          <DialogContent><Typography variant="body2" color="text.secondary">Are you sure? This action cannot be undone.</Typography></DialogContent>
+          <DialogContent><Typography variant="body2" color="text.secondary">{t('areYouSure')}</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setDeleteUserDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
             <Button variant="contained" color="error" onClick={handleDeleteUser} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{ t('delete') }</Button>
@@ -1735,7 +1808,7 @@ export default function Home() {
                         <Box key={o.id} sx={{ p: 1.5, border: '1px solid var(--surface-2)', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <Box sx={{ flex: 1 }}>
                             <Typography sx={{ fontWeight: 600, fontSize: '0.85rem' }}>{o.productName}</Typography>
-                            <Typography sx={{ fontSize: '0.72rem', color: '#94a3b8' }}>{formatDate(o.date)} · {o.quantity} pcs</Typography>
+                            <Typography sx={{ fontSize: '0.72rem', color: '#94a3b8' }}>{formatDate(o.date, lang)} · {o.quantity} {t('pcs')}</Typography>
                           </Box>
                           <Box sx={{ textAlign: 'right' }}>
                             {isAdmin && (

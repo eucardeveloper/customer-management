@@ -122,16 +122,21 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 | Auth | `POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/logout` | public |
 | Customers | `GET/POST /api/customers`, `PUT/DELETE /api/customers/{id}` | read: any user, write: ADMIN |
 | Orders | `GET/POST /api/orders`, `PUT/DELETE /api/orders/{id}` | read: any user, write: ADMIN |
-| Users | `GET /api/users`, `PATCH /api/users/{id}/role`, `DELETE /api/users/{id}` | ADMIN |
+| Auth (signed in) | `POST /api/auth/password` (change own password; needs the current one, throttled) | any signed-in user |
+| Users | `GET /api/users`, `PATCH /api/users/{id}/role`, `PUT /api/users/{id}/password` (admin reset), `DELETE /api/users/{id}` | ADMIN |
 
 ## Known limitations
 
 - `auth-service` still uses Spring Boot 3.3.x, which is out of open-source support; the other services use 4.0.x. Aligning it is the next upgrade step.
 - Tokens are not revocable before they expire (24 h); logout clears the cookie but does not blacklist the token.
+- **Changing a password does not sign out other sessions.** JWTs are stateless, so a token issued before the change stays valid until it expires. Fixing this needs a token version / `passwordChangedAt` claim checked by the gateway.
+- **Login throttling is in-memory and per instance** (5 failures per username in 15 minutes, then `429` with `Retry-After`). It resets on restart and is not shared between instances; it also lets someone lock a known username out for a short time. A shared store (Redis) and per-IP limits would be the next step.
+- **Demo defaults are for local use only.** The compose file uses development database passwords, seeded demo accounts, and publishes n8n, Prometheus and Grafana ports on the host. Change all of them and drop the extra ports before exposing the stack anywhere.
+- Frontend tests are limited (3 unit tests, no end-to-end suite); the backend has unit and controller tests per service.
 - The in-memory AI rate limiter is per process; behind several instances it would need a shared store.
 - **No transactional outbox.** `order-service` saves the order and then sends the Kafka event directly. If the process dies between the two steps, the order exists but the event is lost. The consumer side is idempotent and has a dead-letter topic; the producer side would need an outbox table plus a relay as the next step.
 - **No cross-service integrity on delete.** Customers and orders live in separate databases, so deleting a customer does not touch their orders. The dashboard refuses to delete a customer that still has orders; the API itself does not check this. A `customer-deleted` event (or an order-service lookup before delete) would enforce it server-side.
-- No cloud deployment is configured on purpose; the project is meant to be demonstrated from `docker compose`.
+- The reference setup is `docker compose`. No cloud deployment is configured in this repository; any hosted demo is a separate deployment of the same images and is not covered by this README.
 
 ## License
 

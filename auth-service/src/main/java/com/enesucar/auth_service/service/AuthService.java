@@ -1,18 +1,23 @@
 package com.enesucar.auth_service.service;
 
 import com.enesucar.auth_service.dto.AuthResponse;
+import com.enesucar.auth_service.dto.ChangePasswordRequest;
 import com.enesucar.auth_service.dto.LoginRequest;
 import com.enesucar.auth_service.dto.RegisterRequest;
 import com.enesucar.auth_service.entity.Role;
 import com.enesucar.auth_service.entity.User;
 import com.enesucar.auth_service.repository.UserRepository;
 import com.enesucar.auth_service.security.JwtUtil;
+import com.enesucar.auth_service.security.LoginAttemptLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.enesucar.auth_service.exception.InvalidPasswordException;
 import com.enesucar.auth_service.exception.UserAlreadyExistsException;
+import com.enesucar.auth_service.exception.UserNotFoundException;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -45,14 +51,45 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
+        loginAttemptLimiter.checkAllowed(request.getUsername());
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+            );
+        } catch (AuthenticationException ex) {
+            loginAttemptLimiter.recordFailure(request.getUsername());
+            throw ex;
+        }
+        loginAttemptLimiter.reset(request.getUsername());
 
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
         return new AuthResponse(token, user.getUsername(), user.getRole().name());
+    }
+
+    /**
+     * Lets a signed-in user choose a new password. The current password must be proven again, so a
+     * stolen session alone cannot take the account over. Wrong attempts count against a throttle.
+     */
+    public void changePassword(String username, ChangePasswordRequest request) {
+        String throttleKey = "pwchange:" + username;
+        loginAttemptLimiter.checkAllowed(throttleKey);
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            loginAttemptLimiter.recordFailure(throttleKey);
+            throw new InvalidPasswordException("Current password is incorrect");
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new InvalidPasswordException("New password must be different from the current one");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        loginAttemptLimiter.reset(throttleKey);
     }
 }

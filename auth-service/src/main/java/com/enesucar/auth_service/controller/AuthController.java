@@ -1,6 +1,7 @@
 package com.enesucar.auth_service.controller;
 
 import com.enesucar.auth_service.dto.AuthResponse;
+import com.enesucar.auth_service.dto.ChangePasswordRequest;
 import com.enesucar.auth_service.dto.LoginRequest;
 import com.enesucar.auth_service.dto.RegisterRequest;
 import com.enesucar.auth_service.dto.SessionResponse;
@@ -10,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -36,6 +38,14 @@ public class AuthController {
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, authCookies.clear().toString())
                 .build();
+    }
+
+    /** Change the signed-in user's own password. */
+    @PostMapping("/password")
+    public ResponseEntity<Void> changePassword(Authentication authentication,
+                                               @RequestBody @Valid ChangePasswordRequest request) {
+        authService.changePassword(authentication.getName(), request);
+        return ResponseEntity.noContent().build();
     }
 
     private ResponseEntity<SessionResponse> session(AuthResponse auth) {

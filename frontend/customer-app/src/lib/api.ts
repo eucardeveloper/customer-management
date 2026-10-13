@@ -7,7 +7,7 @@ function buildHeaders(extra?: HeadersInit): HeadersInit {
 async function handleResponse<T>(res: Response): Promise<T> {
   if (res.status === 401) {
     localStorage.removeItem('auth_user');
-    window.location.href = '/login';
+    window.location.replace('/login');
     throw new Error('Unauthorized');
   }
   if (!res.ok) {
