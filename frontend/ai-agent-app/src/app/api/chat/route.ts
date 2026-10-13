@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   const webhook = process.env.N8N_WEBHOOK_URL;
   if (!webhook) {
     return NextResponse.json(
-      { output: 'The AI agent is not configured (N8N_WEBHOOK_URL is not set).' },
+      { output: 'Yapay zeka ajanı yapılandırılmamış (N8N_WEBHOOK_URL tanımlı değil).' },
       { status: 503 },
     );
   }
@@ -25,11 +25,11 @@ export async function POST(req: NextRequest) {
 
     const text = await response.text();
     if (!text) {
-      return NextResponse.json({ output: 'No response received.' });
+      return NextResponse.json({ output: 'Yanıt alınamadı.' });
     }
 
     return NextResponse.json(JSON.parse(text));
   } catch {
-    return NextResponse.json({ output: 'The AI agent did not answer.' }, { status: 502 });
+    return NextResponse.json({ output: 'Ajan yanıt vermedi.' }, { status: 502 });
   }
 }

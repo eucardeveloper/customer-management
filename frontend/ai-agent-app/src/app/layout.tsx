@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "AI Agent Orchestration System",
+  title: "AI Ajan Orkestrasyon Sistemi",
   description: "n8n + Spring Boot + GPT-4o Mini",
 };
 export default function RootLayout({
