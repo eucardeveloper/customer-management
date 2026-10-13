@@ -7,5 +7,7 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
+RUN useradd --system --no-create-home --uid 1001 app
+USER app
 EXPOSE 8083
 ENTRYPOINT ["java", "-jar", "app.jar"]
