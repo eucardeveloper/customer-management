@@ -914,7 +914,7 @@ export default function Home() {
                                   <FormControl size="small">
                                     <Select value={o.status ?? 'PENDING'} onChange={e => { e.stopPropagation(); updateOrderStatus(o.id, e.target.value); }}
                                       renderValue={v => statusChip(v, t)}
-                                      sx={{ width: 150, '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, '& .MuiSelect-select': { p: '0 28px 0 0 !important', display: 'flex', justifyContent: 'flex-start' }, '& .MuiSelect-icon': { right: 6 } }}>
+                                      sx={{ width: 124, '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, '& .MuiSelect-select': { p: '0 28px 0 0 !important', display: 'flex', justifyContent: 'flex-start' }, '& .MuiSelect-icon': { right: 6 } }}>
                                       {ORDER_STATUSES.map(s => <MenuItem key={s} value={s}>{statusChip(s, t)}</MenuItem>)}
                                     </Select>
                                   </FormControl>
