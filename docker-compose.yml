@@ -175,7 +175,7 @@ services:
     container_name: ai-agent-frontend
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "3001:3000"
     environment:
       NEXT_PUBLIC_N8N_URL: http://localhost:5678
       # Production URL of an n8n chat webhook; without it the agent UI answers 503.
