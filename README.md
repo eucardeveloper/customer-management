@@ -31,7 +31,7 @@ Four Spring Boot services (gateway, auth, customer, order), one PostgreSQL datab
 |-----------|-----------|
 | Frontend | Next.js 16 (App Router), React, MUI 9, TypeScript |
 | Gateway | Spring Cloud Gateway (WebFlux), JWT check, upstream timeouts, restricted CORS |
-| Services | Spring Boot 4.0 (auth-service is still on 3.3, see Known limitations), Spring Security, JPA, Flyway |
+| Services | Spring Boot 4.0, Spring Security, JPA, Flyway |
 | Data | PostgreSQL 16, one database per service, Flyway migrations with seed data |
 | Messaging | Kafka (order-service produces `order-events`) |
 | Observability | Actuator + Micrometer, Prometheus, Grafana |
@@ -127,7 +127,6 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 
 ## Known limitations
 
-- `auth-service` still uses Spring Boot 3.3.x, which is out of open-source support; the other services use 4.0.x. Aligning it is the next upgrade step.
 - **Sessions.** Each account has a `token_version`; a password change, admin reset or role change bumps it and every older JWT stops working. The gateway confirms tokens with the auth-service (`GET /api/auth/session`) and caches a positive answer for 10 s, so a revoked session can live at most that long; if the auth-service is down the gateway answers `503` instead of guessing. Logout revokes the token on the server too (its id goes on a `revoked_token` list until it would have expired), so a token someone copied before logout stops working as well. What is not covered: a token stolen while the user stays signed in is valid until it expires (24 h) or the account's version is bumped.
 - **Login throttling is stored in the database** (5 failures per username in 15 minutes, then `429` with `Retry-After`), so it survives restarts and is shared by all instances. It still lets someone lock a known username out for a short time, and there is no per-IP limit; that belongs at the gateway or a reverse proxy.
 - **Demo defaults are for local use only.** The compose file uses development database passwords, seeded demo accounts, and publishes n8n, Prometheus and Grafana ports on the host. Change all of them and drop the extra ports before exposing the stack anywhere.

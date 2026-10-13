@@ -4,7 +4,8 @@ import com.enesucar.auth_service.exception.TooManyLoginAttemptsException;
 import com.enesucar.auth_service.repository.LoginFailureRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -17,7 +18,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Runs against a real (in-memory) database, because the limiter's state lives in the database now. */
-@DataJpaTest
+@SpringBootTest
+@Transactional
 class LoginAttemptLimiterTest {
 
     /** A clock the test can move forward. */
