@@ -1,5 +1,6 @@
 package com.enesucar.orderservice.controller;
 
+import com.enesucar.orderservice.client.CustomerClient;
 import com.enesucar.orderservice.kafka.OrderProducer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OrderApiAuthorizationTest {
 
     @MockitoBean OrderProducer orderProducer;
+    @MockitoBean CustomerClient customerClient; // the customer-service is not running in this test
 
     @Autowired WebApplicationContext context;
     @Autowired Filter springSecurityFilterChain;
@@ -41,6 +43,7 @@ class OrderApiAuthorizationTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.when(customerClient.exists(org.mockito.ArgumentMatchers.any())).thenReturn(true);
         mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(springSecurityFilterChain).build();
     }
 
