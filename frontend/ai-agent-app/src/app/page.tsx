@@ -190,7 +190,7 @@ export default function Home() {
                   sx={{ fontSize: 8, color: '#22c55e' }}
                 />
                 <Typography variant="caption" color="text.secondary">
-                  Online · Railway Production
+                  n8n AI agent
                 </Typography>
               </Box>
             </Box>
@@ -420,7 +420,7 @@ export default function Home() {
               color="text.disabled"
               sx={{ display: 'block', textAlign: 'center', mt: 1 }}
             >
-              n8n · OpenRouter GPT-4o Mini · Spring Boot Microservices · Railway
+              n8n workflow · OpenRouter · Spring Boot microservices
             </Typography>
           </Container>
         </Box>

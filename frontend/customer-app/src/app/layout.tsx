@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Customer Management System",
-  description: "Spring Boot Microservices · Railway",
+  description: "Spring Boot microservices customer and order management",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -178,6 +178,8 @@ services:
       - "3001:3001"
     environment:
       NEXT_PUBLIC_N8N_URL: http://localhost:5678
+      # Production URL of an n8n chat webhook; without it the agent UI answers 503.
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-}
 
   n8n:
     image: n8nio/n8n:latest
