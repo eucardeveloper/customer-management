@@ -73,7 +73,7 @@ class OutboxIntegrationTest {
 
         assertThat(outbox.count()).isEqualTo(before + 1);
         List<OutboxEvent> pending = tx.execute(s -> outbox.lockNextUnpublished(1000));
-        assertThat(pending).anyMatch(e -> e.getPayload().equals("Order created: " + created.getId())
+        assertThat(pending).anyMatch(e -> OrderEvent.parse(e.getPayload()).map(ev -> ev.orderId() == created.getId()).orElse(false)
                 && e.getTopic().equals("order-events") && e.getPublishedAt() == null);
     }
 

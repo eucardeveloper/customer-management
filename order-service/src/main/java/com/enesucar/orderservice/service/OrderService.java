@@ -6,6 +6,7 @@ import com.enesucar.orderservice.entity.Order;
 import com.enesucar.orderservice.exception.ResourceNotFoundException;
 import com.enesucar.orderservice.exception.UnknownCustomerException;
 import com.enesucar.orderservice.entity.OutboxEvent;
+import com.enesucar.orderservice.kafka.OrderEvent;
 import com.enesucar.orderservice.repository.OutboxEventRepository;
 import org.springframework.transaction.annotation.Transactional;
 import com.enesucar.orderservice.repository.OrderRepository;
@@ -52,7 +53,7 @@ public class OrderService {
         order.setDate(request.getDate() != null ? request.getDate() : LocalDateTime.now());		order.setStatus(request.getStatus() != null ? request.getStatus() : "PENDING");
         Order saved = orderRepository.save(order);
         // Written in the same transaction as the order: either both exist or neither does.
-        outbox.save(new OutboxEvent("order-events", "Order created: " + saved.getId()));
+        outbox.save(new OutboxEvent("order-events", OrderEvent.created(saved.getId()).toJson()));
         return toResponse(saved);
     }
     public OrderResponseDTO getOrderById(Long id) {

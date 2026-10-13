@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 /**
- * Consumes order events with a durable idempotency check.
+ * Consumes order events with a durable idempotency check (by business event id, else by offset).
  *
  * Kafka is at-least-once, so a record can be redelivered. Each record is identified by
  * group:topic:partition:offset and stored in processed_event inside the same transaction as
@@ -39,7 +39,11 @@ public class OrderConsumer {
     @KafkaListener(topics = "order-events", groupId = GROUP)
     @Transactional
     public void consume(ConsumerRecord<String, String> record) {
-        String eventId = GROUP + ":" + record.topic() + ":" + record.partition() + ":" + record.offset();
+        // A business event id (when the message has one) identifies the event even if it is published twice
+        // at different offsets; otherwise the record's position identifies this delivery.
+        String eventId = OrderEvent.parse(record.value())
+                .map(e -> GROUP + ":event:" + e.eventId())
+                .orElseGet(() -> GROUP + ":" + record.topic() + ":" + record.partition() + ":" + record.offset());
 
         if (processedEvents.existsById(eventId)) {
             logger.warn("Duplicate delivery, skipping: {}", eventId);

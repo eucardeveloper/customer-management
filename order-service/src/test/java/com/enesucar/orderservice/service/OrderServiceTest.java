@@ -98,7 +98,10 @@ class OrderServiceTest {
         var captor = org.mockito.ArgumentCaptor.forClass(OutboxEvent.class);
         verify(outbox).save(captor.capture());
         assertThat(captor.getValue().getTopic()).isEqualTo("order-events");
-        assertThat(captor.getValue().getPayload()).isEqualTo("Order created: 1");
+        var event = com.enesucar.orderservice.kafka.OrderEvent.parse(captor.getValue().getPayload()).orElseThrow();
+        assertThat(event.orderId()).isEqualTo(1L);
+        assertThat(event.type()).isEqualTo("ORDER_CREATED");
+        assertThat(event.eventId()).isNotBlank();
         assertThat(captor.getValue().getPublishedAt()).isNull();
     }
 
