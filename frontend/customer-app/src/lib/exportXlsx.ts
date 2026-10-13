@@ -41,7 +41,8 @@ export async function downloadXlsx<Row>(opts: XlsxOptions<Row>): Promise<void> {
     views: [{ state: 'frozen', ySplit: 1 }],
   });
 
-  ws.columns = opts.columns.map((c) => ({ width: c.width }));
+  // +5 characters keep the header text clear of the filter button Excel draws on the right edge.
+  ws.columns = opts.columns.map((c) => ({ width: Math.max(c.width, c.header.length + 5) }));
 
   const header = ws.addRow(opts.columns.map((c) => c.header));
   header.height = 24;

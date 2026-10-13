@@ -459,7 +459,7 @@ export default function Home() {
 
   const exportExcel = async (type: 'customers' | 'orders') => {
     const stamp = new Date().toISOString().slice(0, 10);
-    const dateFormat = lang === 'tr' ? 'dd.mm.yyyy' : 'mm/dd/yyyy';
+    const dateFormat = 'yyyy-mm-dd'; // unambiguous in every Excel locale
     const statusBadge: Record<string, { bg: string; fg: string }> = {
       PENDING: { bg: 'FEF3C7', fg: '92400E' },
       PROCESSING: { bg: 'E2E8F0', fg: '334155' },
@@ -474,7 +474,7 @@ export default function Home() {
           sheetName: t('customers'),
           dateFormat,
           totalLabel: t('totalCol'),
-          rows: customers,
+          rows: [...customers].sort((a, b) => (a.id ?? 0) - (b.id ?? 0)),
           columns: [
             { header: t('id'), width: 7, format: 'integer', align: 'center', value: c => c.id },
             { header: t('firstName'), width: 16, value: c => c.firstName },
@@ -491,7 +491,7 @@ export default function Home() {
           sheetName: t('orders'),
           dateFormat,
           totalLabel: t('totalCol'),
-          rows: orders,
+          rows: [...orders].sort((a, b) => (a.id ?? 0) - (b.id ?? 0)),
           columns: [
             { header: t('id'), width: 7, format: 'integer', align: 'center', value: o => o.id },
             { header: t('customer'), width: 22, value: o => getCustomerName(o.customerId) },
