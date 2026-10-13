@@ -194,11 +194,11 @@ class AuthControllerTest {
     }
 
     @org.junit.jupiter.api.Test
-    void changePassword_shouldBeRejected_whenNotSignedIn() throws Exception {
+    void changePassword_shouldReturn401_whenNotSignedIn() throws Exception {
         mockMvc.perform(post("/api/auth/password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\":\"password123\",\"newPassword\":\"newPassword456\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
         org.mockito.Mockito.verifyNoInteractions(authService);
     }
 
@@ -214,8 +214,8 @@ class AuthControllerTest {
     }
 
     @org.junit.jupiter.api.Test
-    void session_shouldBeRejected_whenNotSignedIn() throws Exception {
+    void session_shouldReturn401_whenNotSignedIn() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/session"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }

@@ -66,9 +66,9 @@ class UserControllerTest {
     }
 
     @Test
-    void getAllUsers_shouldReturn403_whenUnauthenticated() throws Exception {
+    void getAllUsers_shouldReturn401_whenUnauthenticated() throws Exception {
         mockMvc.perform(get("/api/users"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
