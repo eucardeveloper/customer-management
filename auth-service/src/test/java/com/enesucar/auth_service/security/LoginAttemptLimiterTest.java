@@ -1,7 +1,10 @@
 package com.enesucar.auth_service.security;
 
 import com.enesucar.auth_service.exception.TooManyLoginAttemptsException;
+import com.enesucar.auth_service.repository.LoginFailureRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -13,6 +16,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Runs against a real (in-memory) database, because the limiter's state lives in the database now. */
+@DataJpaTest
 class LoginAttemptLimiterTest {
 
     /** A clock the test can move forward. */
@@ -39,11 +44,18 @@ class LoginAttemptLimiterTest {
         }
     }
 
+    @Autowired
+    LoginFailureRepository repository;
+
     private final MutableClock clock = new MutableClock();
-    private final LoginAttemptLimiter limiter = new LoginAttemptLimiter(3, Duration.ofMinutes(15), clock);
+
+    private LoginAttemptLimiter limiter() {
+        return new LoginAttemptLimiter(3, Duration.ofMinutes(15), clock, repository);
+    }
 
     @Test
     void allowsAttemptsBelowTheLimit() {
+        var limiter = limiter();
         limiter.recordFailure("ali");
         limiter.recordFailure("ali");
 
@@ -52,6 +64,7 @@ class LoginAttemptLimiterTest {
 
     @Test
     void locksTheAccountAfterTooManyFailuresAndReportsRetryTime() {
+        var limiter = limiter();
         for (int i = 0; i < 3; i++) limiter.recordFailure("ali");
 
         assertThatThrownBy(() -> limiter.checkAllowed("ali"))
@@ -61,6 +74,7 @@ class LoginAttemptLimiterTest {
 
     @Test
     void unlocksOnceTheOldestFailureLeavesTheWindow() {
+        var limiter = limiter();
         for (int i = 0; i < 3; i++) limiter.recordFailure("ali");
         clock.advance(Duration.ofMinutes(16));
 
@@ -69,6 +83,7 @@ class LoginAttemptLimiterTest {
 
     @Test
     void successfulSignInClearsTheCounter() {
+        var limiter = limiter();
         for (int i = 0; i < 3; i++) limiter.recordFailure("ali");
         limiter.reset("ali");
 
@@ -77,9 +92,28 @@ class LoginAttemptLimiterTest {
 
     @Test
     void doesNotMixUpDifferentUsersAndIgnoresCaseAndWhitespace() {
+        var limiter = limiter();
         for (int i = 0; i < 3; i++) limiter.recordFailure("  ALI ");
 
         assertThatThrownBy(() -> limiter.checkAllowed("ali")).isInstanceOf(TooManyLoginAttemptsException.class);
         assertThatCode(() -> limiter.checkAllowed("veli")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void anotherInstanceSharingTheDatabaseSeesTheSameLockout() {
+        for (int i = 0; i < 3; i++) limiter().recordFailure("ali");
+
+        // a second limiter object stands in for a second auth-service instance (or a restart)
+        assertThatThrownBy(() -> limiter().checkAllowed("ali")).isInstanceOf(TooManyLoginAttemptsException.class);
+    }
+
+    @Test
+    void purgeRemovesFailuresThatCanNoLongerCount() {
+        var limiter = limiter();
+        limiter.recordFailure("ali");
+        clock.advance(Duration.ofMinutes(16));
+        limiter.purgeExpired();
+
+        assertThat(repository.count()).isZero();
     }
 }
