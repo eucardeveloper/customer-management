@@ -26,4 +26,10 @@ class OrderEventTest {
         assertThat(OrderEvent.parse("{\"type\":\"ORDER_CREATED\",\"orderId\":1}")).isEmpty(); // no event id
         assertThat(OrderEvent.parse(null)).isEmpty();
     }
+
+    @Test
+    void updatedAndDeletedEventsCarryTheirType() {
+        assertThat(OrderEvent.parse(OrderEvent.updated(5).toJson()).orElseThrow().type()).isEqualTo("ORDER_UPDATED");
+        assertThat(OrderEvent.parse(OrderEvent.deleted(5).toJson()).orElseThrow().type()).isEqualTo("ORDER_DELETED");
+    }
 }

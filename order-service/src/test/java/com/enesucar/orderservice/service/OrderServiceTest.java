@@ -141,6 +141,38 @@ class OrderServiceTest {
     }
 
     @Test
+    void updateOrder_shouldWriteAnOrderUpdatedEvent() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        orderService.updateOrder(1L, requestDTO);
+        var captor = org.mockito.ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outbox).save(captor.capture());
+        var event = com.enesucar.orderservice.kafka.OrderEvent.parse(captor.getValue().getPayload()).orElseThrow();
+        assertThat(event.type()).isEqualTo("ORDER_UPDATED");
+        assertThat(event.orderId()).isEqualTo(1L);
+    }
+
+    @Test
+    void deleteOrder_shouldWriteAnOrderDeletedEvent() {
+        when(orderRepository.existsById(1L)).thenReturn(true);
+        orderService.deleteOrder(1L);
+        var captor = org.mockito.ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outbox).save(captor.capture());
+        var event = com.enesucar.orderservice.kafka.OrderEvent.parse(captor.getValue().getPayload()).orElseThrow();
+        assertThat(event.type()).isEqualTo("ORDER_DELETED");
+        assertThat(event.orderId()).isEqualTo(1L);
+    }
+
+    @Test
+    void failedUpdateAndDeleteWriteNoEvent() {
+        when(orderRepository.findById(99L)).thenReturn(Optional.empty());
+        when(orderRepository.existsById(99L)).thenReturn(false);
+        assertThatThrownBy(() -> orderService.updateOrder(99L, requestDTO)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> orderService.deleteOrder(99L)).isInstanceOf(ResourceNotFoundException.class);
+        verify(outbox, never()).save(any());
+    }
+
+    @Test
     void updateOrder_shouldThrowException_whenNotFound() {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> orderService.updateOrder(99L, requestDTO))

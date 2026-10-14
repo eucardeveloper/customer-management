@@ -18,6 +18,14 @@ public record OrderEvent(String eventId, String type, long orderId) {
         return new OrderEvent(UUID.randomUUID().toString(), "ORDER_CREATED", orderId);
     }
 
+    public static OrderEvent updated(long orderId) {
+        return new OrderEvent(UUID.randomUUID().toString(), "ORDER_UPDATED", orderId);
+    }
+
+    public static OrderEvent deleted(long orderId) {
+        return new OrderEvent(UUID.randomUUID().toString(), "ORDER_DELETED", orderId);
+    }
+
     public String toJson() {
         try {
             return MAPPER.writeValueAsString(this);

@@ -61,6 +61,7 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + id));
         return toResponse(order);
     }
+    @Transactional
     public OrderResponseDTO updateOrder(Long id, OrderRequestDTO request) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + id));
@@ -73,13 +74,16 @@ public class OrderService {
         order.setQuantity(request.getQuantity());
 		if (request.getStatus() != null) order.setStatus(request.getStatus());
         Order saved = orderRepository.save(order);
+        outbox.save(new OutboxEvent("order-events", OrderEvent.updated(id).toJson()));
         return toResponse(saved);
     }
+    @Transactional
     public void deleteOrder(Long id) {
         if (!orderRepository.existsById(id)) {
             throw new ResourceNotFoundException("Order not found with ID: " + id);
         }
         orderRepository.deleteById(id);
+        outbox.save(new OutboxEvent("order-events", OrderEvent.deleted(id).toJson()));
     }
     private OrderResponseDTO toResponse(Order order) {
         OrderResponseDTO response = new OrderResponseDTO();
