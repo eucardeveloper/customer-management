@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
  * transaction, the relay query returns pending rows, and a rollback leaves neither behind.
  * Skipped automatically when Docker is not available.
  */
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",

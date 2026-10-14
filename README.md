@@ -41,7 +41,7 @@ Four Spring Boot services (gateway, auth, customer, order), one PostgreSQL datab
 
 ## Screenshots
 
-Captured from the local docker compose stack with the Playwright spec `e2e/tests/screenshots.spec.ts` (`SCREENSHOTS=1`).
+Captured from the local docker compose stack with `cd e2e && npm run screenshots` (`e2e/tools/screenshots.spec.ts`; not part of the test suite).
 
 | | |
 |---|---|
@@ -126,7 +126,7 @@ cd frontend/customer-app && npm ci && npm run lint && npx tsc --noEmit && npm te
 cd frontend/ai-agent-app && npm ci && npm run lint && npm test && npm run build
 ```
 
-The Testcontainers test runs the real Flyway chain on PostgreSQL with Hibernate in `validate` mode and checks that a redelivered Kafka record is recorded once. It is skipped automatically when Docker is not available. The other service tests use H2.
+The two Testcontainers test classes in order-service run the real Flyway chain on PostgreSQL with Hibernate in `validate` mode. They check that a redelivered consumer record is handled once (no broker involved) and that creating an order writes its outbox event in the same transaction, with nothing left behind when the create fails. They need Docker running and fail with a clear error when it is not, rather than being skipped, so the reported test count is always the real one. The other service tests use H2.
 
 ## API summary
 

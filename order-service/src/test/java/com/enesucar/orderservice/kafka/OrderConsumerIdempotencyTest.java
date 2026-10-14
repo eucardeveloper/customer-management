@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * the listener method is called directly with the same record twice.
  * Skipped automatically when Docker is not available.
  */
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",
