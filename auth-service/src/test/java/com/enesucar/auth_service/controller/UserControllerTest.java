@@ -2,6 +2,8 @@ package com.enesucar.auth_service.controller;
 
 import com.enesucar.auth_service.dto.UserResponse;
 import com.enesucar.auth_service.entity.Role;
+import com.enesucar.auth_service.exception.InvalidRoleException;
+import com.enesucar.auth_service.exception.UserNotFoundException;
 import com.enesucar.auth_service.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,14 +116,26 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void updateRole_shouldReturn500_whenUserNotFound() throws Exception {
+    void updateRole_shouldReturn404_whenUserNotFound() throws Exception {
         when(userService.updateRole(eq(99L), anyString()))
-                .thenThrow(new RuntimeException("User not found"));
+                .thenThrow(new UserNotFoundException("User not found"));
 
         mockMvc.perform(patch("/api/users/99/role")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("role", "ADMIN"))))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void updateRole_shouldReturn400_whenRoleIsUnknown() throws Exception {
+        when(userService.updateRole(eq(1L), anyString()))
+                .thenThrow(new InvalidRoleException("Unknown role: SUPERUSER"));
+
+        mockMvc.perform(patch("/api/users/1/role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("role", "SUPERUSER"))))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

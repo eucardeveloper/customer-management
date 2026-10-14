@@ -169,8 +169,7 @@ class AuthServiceTest {
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.login(loginRequest))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("User not found");
+                .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
