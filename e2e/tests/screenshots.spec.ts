@@ -26,12 +26,12 @@ test('capture the screens', async ({ page }) => {
   await shot(page, 'dashboard');
 
   // Each section is optional: a renamed tab must not stop the others from being captured.
-  for (const name of ['Customers', 'Orders', 'Analytics', 'Users']) {
+  for (const [name, label] of [['customers', 'Customers'], ['orders', 'Orders'], ['analytics', 'Analytics'], ['users', 'User Management']]) {
     try {
-      await page.getByRole('button', { name }).first().click({ timeout: 5000 });
-      await shot(page, name.toLowerCase());
+      await page.getByRole('button', { name: label }).first().click({ timeout: 5000 });
+      await shot(page, name);
     } catch {
-      console.warn(`skipped "${name}": no such navigation button`);
+      console.warn(`skipped: no such navigation button: ${label}`);
     }
   }
 });
