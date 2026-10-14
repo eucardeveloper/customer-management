@@ -31,6 +31,8 @@ interface AuthResponse {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 // Build-time opt-in: the demo-account hint is only compiled in when explicitly requested (docker compose does, a hosted build does not).
 const SHOW_DEMO_LOGIN = process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === 'true';
+// A hosted demo can show only the read-only account (the admin password stays private): build with NEXT_PUBLIC_DEMO_ADMIN_HINT=false.
+const SHOW_DEMO_ADMIN = process.env.NEXT_PUBLIC_DEMO_ADMIN_HINT !== 'false';
 // Same for the sign-up link: public registration is off on the server unless AUTH_REGISTRATION_ENABLED is set.
 const ALLOW_REGISTER = process.env.NEXT_PUBLIC_ALLOW_REGISTER === 'true';
 
@@ -115,12 +117,14 @@ export default function LoginPage() {
               Demo Credentials
             </Typography>
             <Box sx={{ display: 'flex', gap: 3 }}>
+              {SHOW_DEMO_ADMIN && (
               <Box>
                 <Typography sx={{ display: "block" }} variant="caption" color="text.secondary">Admin</Typography>
                 <Typography variant="caption" sx={{ display: "block", fontWeight: 600, fontFamily: 'monospace' }}>admin / admin123</Typography>
               </Box>
+              )}
               <Box>
-                <Typography sx={{ display: "block" }} variant="caption" color="text.secondary">User</Typography>
+                <Typography sx={{ display: "block" }} variant="caption" color="text.secondary">{SHOW_DEMO_ADMIN ? 'User' : 'Read-only demo account'}</Typography>
                 <Typography variant="caption" sx={{ display: "block", fontWeight: 600, fontFamily: 'monospace' }}>user1 / user123</Typography>
               </Box>
             </Box>

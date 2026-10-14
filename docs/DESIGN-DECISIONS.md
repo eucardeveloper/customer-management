@@ -26,5 +26,5 @@ Why it is built as four services: this project is a deliberate learning and port
 - Race window between "customer has no orders" and the delete (see above).
 - The consumers only log; there is no business effect behind the events yet.
 - Frontend unit tests are few; the end-to-end suite is run manually (`e2e` workflow) rather than on every push.
-- Demo accounts are seeded by a Flyway migration; hosted deployments must use the bootstrap variables or change them at once.
+- Demo accounts are seeded by a Flyway migration. A hosted deployment replaces the admin password at start-up (`AUTH_BOOTSTRAP_ADMIN_PASSWORD`) and keeps only the read-only `user1` as the public way in: the `USER` role cannot write anything and does not see prices or revenue.
 - The AI chat sends customer names and order data to a third-party model provider (OpenRouter); e-mail and phone are not sent. With real personal data a data-processing agreement would be required.
