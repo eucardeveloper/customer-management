@@ -7,6 +7,8 @@ import com.enesucar.auth_service.dto.RegisterRequest;
 import com.enesucar.auth_service.dto.SessionResponse;
 import com.enesucar.auth_service.security.AuthCookies;
 import com.enesucar.auth_service.service.AuthService;
+import com.enesucar.auth_service.security.ClientIp;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -28,8 +30,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<SessionResponse> login(@RequestBody @Valid LoginRequest request) {
-        return session(authService.login(request));
+    public ResponseEntity<SessionResponse> login(@RequestBody @Valid LoginRequest request,
+                                                 HttpServletRequest http) {
+        return session(authService.login(request, ClientIp.resolve(http)));
     }
 
     /** Ends the session: the cookie is expired and the token is revoked. Safe to call without being signed in. */

@@ -96,7 +96,7 @@ class AuthControllerTest {
 
     @Test
     void login_shouldReturn200_whenValidCredentials() throws Exception {
-        when(authService.login(any(LoginRequest.class))).thenReturn(authResponse);
+        when(authService.login(any(LoginRequest.class), any())).thenReturn(authResponse);
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -114,7 +114,7 @@ class AuthControllerTest {
 
     @Test
     void login_shouldReturn401WithGenericMessage_whenBadCredentials() throws Exception {
-        when(authService.login(any(LoginRequest.class)))
+        when(authService.login(any(LoginRequest.class), any()))
                 .thenThrow(new org.springframework.security.authentication.BadCredentialsException("Bad credentials"));
 
         mockMvc.perform(post("/api/auth/login")
@@ -126,7 +126,7 @@ class AuthControllerTest {
 
     @Test
     void login_shouldReturn429WithRetryAfter_whenAccountIsLockedOut() throws Exception {
-        when(authService.login(any(LoginRequest.class)))
+        when(authService.login(any(LoginRequest.class), any()))
                 .thenThrow(new com.enesucar.auth_service.exception.TooManyLoginAttemptsException(600));
 
         mockMvc.perform(post("/api/auth/login")
@@ -138,7 +138,7 @@ class AuthControllerTest {
 
     @Test
     void login_shouldReturn500WithoutLeakingDetails_whenUnexpectedErrorOccurs() throws Exception {
-        when(authService.login(any(LoginRequest.class)))
+        when(authService.login(any(LoginRequest.class), any()))
                 .thenThrow(new RuntimeException("jdbc:postgresql://secret-host connection refused"));
 
         mockMvc.perform(post("/api/auth/login")

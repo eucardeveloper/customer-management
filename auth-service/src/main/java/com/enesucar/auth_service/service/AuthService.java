@@ -54,6 +54,12 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
+        return login(request, null);
+    }
+
+    /** {@code clientIp} may be null (no address known); then only the per-username limit applies. */
+    public AuthResponse login(LoginRequest request, String clientIp) {
+        loginAttemptLimiter.checkAllowedIp(clientIp);
         loginAttemptLimiter.checkAllowed(request.getUsername());
         try {
             authenticationManager.authenticate(
@@ -61,6 +67,7 @@ public class AuthService {
             );
         } catch (AuthenticationException ex) {
             loginAttemptLimiter.recordFailure(request.getUsername());
+            loginAttemptLimiter.recordFailureIp(clientIp);
             throw ex;
         }
         loginAttemptLimiter.reset(request.getUsername());

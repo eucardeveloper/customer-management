@@ -118,4 +118,23 @@ class LoginAttemptLimiterTest {
 
         assertThat(repository.count()).isZero();
     }
+
+    @Test
+    void oneAddressIsLockedAfterTooManyFailuresEvenAcrossDifferentUsernames() {
+        var limiter = new LoginAttemptLimiter(3, 4, Duration.ofMinutes(15), clock, repository);
+        for (int i = 0; i < 4; i++) limiter.recordFailureIp("203.0.113.9");
+
+        assertThatThrownBy(() -> limiter.checkAllowedIp("203.0.113.9"))
+                .isInstanceOf(TooManyLoginAttemptsException.class);
+        assertThatCode(() -> limiter.checkAllowedIp("203.0.113.10")).doesNotThrowAnyException();
+        assertThatCode(() -> limiter.checkAllowed("ali")).doesNotThrowAnyException(); // usernames are separate
+    }
+
+    @Test
+    void aMissingAddressIsNeverLimited() {
+        var limiter = limiter();
+        limiter.recordFailureIp(null);
+        assertThatCode(() -> limiter.checkAllowedIp(null)).doesNotThrowAnyException();
+        assertThatCode(() -> limiter.checkAllowedIp("")).doesNotThrowAnyException();
+    }
 }

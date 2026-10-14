@@ -208,6 +208,28 @@ class AuthServiceTest {
         verifyNoInteractions(authenticationManager);
     }
 
+    @Test
+    void login_shouldCountTheFailureAgainstTheClientAddress_whenCredentialsAreWrong() {
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new BadCredentialsException("Bad credentials"));
+
+        assertThatThrownBy(() -> authService.login(loginRequest, "203.0.113.9"))
+                .isInstanceOf(BadCredentialsException.class);
+
+        verify(loginAttemptLimiter).recordFailureIp("203.0.113.9");
+        verify(loginAttemptLimiter).recordFailure("testuser");
+    }
+
+    @Test
+    void login_shouldNotTouchAuthentication_whenTheClientAddressIsLockedOut() {
+        doThrow(new TooManyLoginAttemptsException(300)).when(loginAttemptLimiter).checkAllowedIp("203.0.113.9");
+
+        assertThatThrownBy(() -> authService.login(loginRequest, "203.0.113.9"))
+                .isInstanceOf(TooManyLoginAttemptsException.class);
+
+        verifyNoInteractions(authenticationManager);
+    }
+
     // ---- changePassword ----
 
     private com.enesucar.auth_service.dto.ChangePasswordRequest pwRequest(String current, String next) {

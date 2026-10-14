@@ -103,7 +103,7 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (copy .env.example)}
-      JWT_EXPIRATION: 86400000
+      JWT_EXPIRATION: 7200000
       AUTH_COOKIE_SECURE: "false"   # local http; set true behind HTTPS
 
   customer-backend:
@@ -159,6 +159,7 @@ services:
       context: ./frontend/customer-app
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_SHOW_DEMO_LOGIN: ${SHOW_DEMO_LOGIN:-true}
     container_name: customer-frontend
     restart: unless-stopped
     depends_on:
