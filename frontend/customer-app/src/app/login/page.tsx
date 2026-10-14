@@ -29,6 +29,8 @@ interface AuthResponse {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+// Build-time opt-in: the demo-account hint is only compiled in when explicitly requested (docker compose does, a hosted build does not).
+const SHOW_DEMO_LOGIN = process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === 'true';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -104,7 +106,8 @@ export default function LoginPage() {
 
           {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
 
-          {/* Demo credentials hint */}
+          {/* Demo credentials hint (build-time opt-in) */}
+          {SHOW_DEMO_LOGIN && (
           <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(21,101,192,0.06)', border: '1px solid rgba(21,101,192,0.2)' }}>
             <Typography variant="caption" color="primary" sx={{ display: "block", fontWeight: 700, mb: 0.5 }}>
               Demo Credentials
@@ -120,6 +123,7 @@ export default function LoginPage() {
               </Box>
             </Box>
           </Box>
+          )}
 
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <Stack spacing={3}>

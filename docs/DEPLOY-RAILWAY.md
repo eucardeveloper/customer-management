@@ -23,7 +23,7 @@ Use Railway private networking (`<service>.railway.internal`) between backends. 
 
 | Service | Variables |
 |---|---|
-| auth-backend | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRATION=86400000`, `AUTH_COOKIE_SECURE=true` |
+| auth-backend | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRATION=7200000`, `AUTH_COOKIE_SECURE=true` |
 | customer-backend | `PORT=8081`, `DATABASE_URL` (JDBC form), `PGUSER`, `PGPASSWORD`, `KAFKACLUSTER_BROKERS`, `ORDER_SERVICE_URL=http://order-backend.railway.internal:8082` |
 | order-backend | `PORT=8082`, `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `KAFKA_URL`, `CUSTOMER_SERVICE_URL=http://customer-backend.railway.internal:8081` |
 | api-gateway | `JWT_SECRET` (same value as auth), `AUTH_SERVICE_URL`, `CUSTOMER_SERVICE_URL`, `ORDER_SERVICE_URL`, `CORS_ALLOWED_ORIGINS=https://<frontend domain>` |
@@ -40,6 +40,7 @@ Locally nothing changes: without those two settings the app talks to `http://loc
 
 ## 4. Before the demo is public
 
+- **The demo-account hint on the login screen is off in hosted builds** (`NEXT_PUBLIC_SHOW_DEMO_LOGIN` defaults to `false`; only the local docker compose turns it on).
 - **Change the seeded accounts.** `admin / admin123` and `user1 / user123` are published in this README. On a public URL, change both passwords right after the first start (Users page → reset password), or the demo is open to anyone.
 - Do not expose databases, Kafka, n8n, Prometheus or Grafana publicly.
 - Set a spending limit on the OpenRouter key and keep it only in the frontend's runtime variables.
