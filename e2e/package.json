@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test": "playwright test",
-    "install-browser": "playwright install chromium"
+    "install-browser": "playwright install chromium",
+    "screenshots": "playwright test tests/screenshots.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1"
