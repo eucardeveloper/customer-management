@@ -37,6 +37,18 @@ Four Spring Boot services (gateway, auth, customer, order), one PostgreSQL datab
 | Observability | Actuator + Micrometer, Prometheus, Grafana |
 | AI | OpenRouter, called only from a Next.js server route |
 
+## Screenshots
+
+Captured from the local docker compose stack with the Playwright spec `e2e/tests/screenshots.spec.ts` (`SCREENSHOTS=1`).
+
+| | |
+|---|---|
+| ![Login](docs/screenshots/customer-login.png) | ![Dashboard](docs/screenshots/customer-dashboard.png) |
+| ![Customers](docs/screenshots/customer-customers.png) | ![Orders](docs/screenshots/customer-orders.png) |
+| ![Analytics](docs/screenshots/customer-analytics.png) | ![User management](docs/screenshots/customer-users.png) |
+
+Seed orders are dated Aug–Sep 2026, so the dashboard's "vs last 30 days" trend can look negative on later dates; that is seed-data age, not a calculation bug.
+
 ## Run it locally
 
 Requirements: Docker Desktop. No cloud account is needed.
