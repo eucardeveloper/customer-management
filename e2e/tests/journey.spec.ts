@@ -3,6 +3,28 @@ import { test, expect, Page } from '@playwright/test';
 const API = process.env.API_URL ?? 'http://localhost:8080';
 const ADMIN = { user: process.env.E2E_ADMIN_USER ?? 'admin', pass: process.env.E2E_ADMIN_PASS ?? 'admin123' };
 
+// Throw-away accounts created by a run; removed again in afterAll so the demo data stays clean.
+const created: string[] = [];
+
+test.afterAll(async ({ playwright }) => {
+  const api = await playwright.request.newContext();
+  try {
+    const login = await api.post(`${API}/api/auth/login`, {
+      data: { username: ADMIN.user, password: ADMIN.pass },
+      headers: { Origin: 'http://localhost:3000' },
+    });
+    if (!login.ok()) return;
+    const token = (await login.headersArray()).find((h) => h.name.toLowerCase() === 'set-cookie')!.value.match(/customer_session=([^;]+)/)![1];
+    const auth = { Authorization: `Bearer ${token}` };
+    const users: Array<{ id: number; username: string }> = await (await api.get(`${API}/api/users`, { headers: auth })).json();
+    for (const u of users.filter((x) => created.includes(x.username))) {
+      await api.delete(`${API}/api/users/${u.id}`, { headers: auth });
+    }
+  } finally {
+    await api.dispose();
+  }
+});
+
 async function signIn(page: Page, user: string, pass: string) {
   await page.goto('/login');
   await page.getByPlaceholder('Username').fill(user);
@@ -37,6 +59,7 @@ test('changing a password ends every older session', async ({ page, request }) =
   const name = `e2e_${Date.now()}`;
   const oldPass = 'OldPass-12345';
   const newPass = 'NewPass-67890';
+  created.push(name);
 
   const reg = await request.post(`${API}/api/auth/register`, {
     data: { username: name, email: `${name}@example.com`, password: oldPass },
