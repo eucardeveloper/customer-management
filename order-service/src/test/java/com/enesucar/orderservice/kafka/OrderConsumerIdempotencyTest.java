@@ -20,12 +20,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * drift between the entities and the migrations fails here instead of in production, and
  * proves that a redelivered Kafka record is handled exactly once. No broker is needed:
  * the listener method is called directly with the same record twice.
- * Skipped automatically when Docker is not available.
+ * Needs Docker; fails with a clear error when it is not running (never skipped silently).
  */
 @Testcontainers
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=validate",
-        "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",
         "spring.datasource.driver-class-name=org.postgresql.Driver",
         "spring.flyway.enabled=true",
         "app.kafka.enabled=false"

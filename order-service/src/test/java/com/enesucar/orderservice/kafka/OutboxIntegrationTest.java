@@ -26,12 +26,11 @@ import static org.mockito.Mockito.when;
 /**
  * Proves the outbox on a real PostgreSQL: creating an order writes the order and its event in one
  * transaction, the relay query returns pending rows, and a rollback leaves neither behind.
- * Skipped automatically when Docker is not available.
+ * Needs Docker; fails with a clear error when it is not running (never skipped silently).
  */
 @Testcontainers
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=validate",
-        "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",
         "spring.datasource.driver-class-name=org.postgresql.Driver",
         "spring.flyway.enabled=true",
         "app.kafka.enabled=false"
