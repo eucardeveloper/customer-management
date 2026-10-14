@@ -90,6 +90,25 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    @DisplayName("the shared secret is added for the services, and a client-supplied one is dropped")
+    void gatewaySecretIsForwarded() {
+        ReflectionTestUtils.setField(filter, "gatewaySecret", "s3cret");
+        run(MockServerHttpRequest.get("/api/customers")
+                .header("Authorization", "Bearer " + token("alice", "ADMIN"))
+                .header("X-Gateway-Secret", "guess"));
+        assertThat(forwarded.get().getRequest().getHeaders().get("X-Gateway-Secret")).containsExactly("s3cret");
+    }
+
+    @Test
+    @DisplayName("without a configured secret a client-supplied one is not passed on either")
+    void clientSuppliedSecretIsNeverForwarded() {
+        run(MockServerHttpRequest.get("/api/customers")
+                .header("Authorization", "Bearer " + token("alice", "ADMIN"))
+                .header("X-Gateway-Secret", "guess"));
+        assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-Gateway-Secret")).isNull();
+    }
+
+    @Test
     @DisplayName("session cookie authenticates a read")
     void cookieRead() {
         run(MockServerHttpRequest.get("/api/customers").cookie(new HttpCookie("customer_session", token("bob", "USER"))));

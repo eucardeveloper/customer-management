@@ -50,4 +50,17 @@ class OutboxRelayTest {
         relay.publishPending();
         verifyNoInteractions(producer);
     }
+
+    @Test
+    void jsonEventsAreKeyedByOrderSoOneOrdersEventsStayInOrder() throws Exception {
+        OutboxEvent created = new OutboxEvent("order-events", OrderEvent.created(7).toJson());
+        OutboxEvent updated = new OutboxEvent("order-events", OrderEvent.updated(7).toJson());
+        when(outbox.lockNextUnpublished(anyInt())).thenReturn(List.of(created, updated));
+
+        relay.publishPending();
+
+        verify(producer).publish("order-events", "order-7", created.getPayload());
+        verify(producer).publish("order-events", "order-7", updated.getPayload());
+        assertThat(updated.getPublishedAt()).isNotNull();
+    }
 }

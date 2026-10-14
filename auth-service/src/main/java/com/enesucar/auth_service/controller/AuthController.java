@@ -5,6 +5,7 @@ import com.enesucar.auth_service.dto.ChangePasswordRequest;
 import com.enesucar.auth_service.dto.LoginRequest;
 import com.enesucar.auth_service.dto.RegisterRequest;
 import com.enesucar.auth_service.dto.SessionResponse;
+import com.enesucar.auth_service.exception.RegistrationDisabledException;
 import com.enesucar.auth_service.security.AuthCookies;
 import com.enesucar.auth_service.service.AuthService;
 import com.enesucar.auth_service.security.ClientIp;
@@ -24,8 +25,18 @@ public class AuthController {
     private final AuthService authService;
     private final AuthCookies authCookies;
 
+    /**
+     * Public sign-up gives every visitor read access to the CRM data, so it is off unless switched on
+     * (docker compose turns it on for the local demo; a hosted deployment leaves it off).
+     */
+    @org.springframework.beans.factory.annotation.Value("${auth.registration.enabled:false}")
+    private boolean registrationEnabled;
+
     @PostMapping("/register")
     public ResponseEntity<SessionResponse> register(@RequestBody @Valid RegisterRequest request) {
+        if (!registrationEnabled) {
+            throw new RegistrationDisabledException();
+        }
         return session(authService.register(request));
     }
 

@@ -24,6 +24,10 @@ public class OrderClient {
 
     private final RestClient client;
 
+    /** Proves to the other service that this call comes from inside (see GatewayHeaderAuthFilter). */
+    @Value("${gateway.shared-secret:}")
+    private String gatewaySecret = "";
+
     public OrderClient(@Value("${order.service.url:http://order-backend:8082}") String baseUrl) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(2));
@@ -41,6 +45,7 @@ public class OrderClient {
                     .uri("/api/orders/customer/{id}", customerId)
                     .header("X-Auth-User", user)
                     .header("X-Auth-Role", role)
+                    .headers(h -> { if (gatewaySecret != null && !gatewaySecret.isBlank()) h.set("X-Gateway-Secret", gatewaySecret); })
                     .retrieve()
                     .body(new ParameterizedTypeReference<>() {});
             return orders != null && !orders.isEmpty();

@@ -28,6 +28,15 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     @Value("#{'${app.allowed-origins}'.split(',')}")
     private List<String> allowedOrigins;
 
+    /**
+     * Shared with the customer and order services. They only trust the X-Auth-* headers when this
+     * secret comes with them, so anything else on the network (another container, a misconfigured
+     * public port) cannot make up an identity. Empty = not configured (local tests only).
+     */
+    @Value("${gateway.shared-secret:}")
+    private String gatewaySecret;
+
+    static final String GATEWAY_SECRET_HEADER = "X-Gateway-Secret";
     static final String COOKIE_NAME = "customer_session";
 
     private final SessionValidator sessionValidator;
@@ -125,6 +134,11 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                                 h.remove("Cookie");
                                 h.set("X-Auth-User", info.username());
                                 h.set("X-Auth-Role", info.role());
+                                if (gatewaySecret != null && !gatewaySecret.isBlank()) {
+                                    h.set(GATEWAY_SECRET_HEADER, gatewaySecret);
+                                } else {
+                                    h.remove(GATEWAY_SECRET_HEADER); // never pass on one a client made up
+                                }
                             }))
                             .build();
                     return chain.filter(mutatedExchange);

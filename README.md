@@ -4,6 +4,8 @@
 
 A microservice CRM: customers, orders and users behind an API gateway, order events over Kafka, a Next.js dashboard with an AI assistant, and Prometheus/Grafana monitoring. Everything runs locally with one `docker compose up`.
 
+**Why four services for a CRM?** On purpose: this is a learning and portfolio project about distributed-system problems (identity across services, session revocation, a reliable event after a database write, consistency across two databases). A product of this size would normally be a modular monolith; the costs of the split are listed in [Known limitations](#known-limitations). **How it was built:** with AI assistance (Claude), directed and reviewed by the author; the commit trailers say so, and every behaviour described here is covered by a test or was checked against the running stack ([docs/TEST-EVIDENCE.md](docs/TEST-EVIDENCE.md)).
+
 ## Architecture
 
 ```mermaid
@@ -56,7 +58,7 @@ Requirements: Docker Desktop. No cloud account is needed.
 ```bash
 git clone <this repo> && cd customer-management
 cp .env.example .env
-# put a random value into JWT_SECRET:  openssl rand -hex 32
+# put a random value into JWT_SECRET and into GATEWAY_SHARED_SECRET:  openssl rand -hex 32
 # optional: OPENROUTER_API_KEY for the AI assistant (without it the chat answers 503)
 docker compose up --build
 ```
@@ -88,7 +90,7 @@ These credentials are demo data. Change them before exposing the stack anywhere.
 ## Security model
 
 - **Gateway** validates the JWT on every request except login/register and forwards the verified user and role to the services; anonymous calls get `401`.
-- **Roles are enforced in the services**: reading customers and orders needs any signed-in user, creating/changing/deleting them needs ADMIN, and order prices are returned as `null` to non-admins, so the restriction holds for curl/Postman as well as for the UI. Public self-registration always creates a USER. `OrderApiAuthorizationTest` and `CustomerApiAuthorizationTest` run the real security chain.
+- **Roles are enforced in the services**: reading customers and orders needs any signed-in user, creating/changing/deleting them needs ADMIN, and order prices are returned as `null` to non-admins, so the restriction holds for curl/Postman as well as for the UI. Public self-registration is off by default (`AUTH_REGISTRATION_ENABLED`, switched on by the local compose file) and always creates a USER. The services trust the gateway's identity headers only together with a shared secret (`GATEWAY_SHARED_SECRET`), so another container cannot invent an identity. `OrderApiAuthorizationTest` and `CustomerApiAuthorizationTest` run the real security chain.
 - **Passwords** are hashed with BCrypt. The JWT secret has no default: `docker compose` refuses to start without `JWT_SECRET`.
 - **Network exposure**: only gateway, frontends, n8n, Prometheus and Grafana are published. DB and Kafka ports are internal.
 - **CORS** is limited to the two frontend origins (`CORS_ALLOWED_ORIGINS` to change).
@@ -107,9 +109,9 @@ These credentials are demo data. Change them before exposing the stack anywhere.
 
 ## Order events and idempotency
 
-`order-service` publishes `order-events` after an order is created. Kafka delivers at least once, so the consumer stores `group:topic:partition:offset` in a `processed_event` table (primary key) in the same transaction as the handling step. A redelivered record is skipped; a concurrent duplicate loses on the primary key and is retried. Failed records are retried three times (3 s apart) and then published to `order-events.DLT`.
+`order-service` publishes `order-events` (`ORDER_CREATED`, `ORDER_UPDATED`, `ORDER_DELETED`) through a transactional outbox, keyed by order id. Kafka delivers at least once, so the consumer stores the event's business id (or, for plain messages, `group:topic:partition:offset`) in a `processed_event` table (primary key) in the same transaction as the handling step. Published outbox rows and old idempotency records are deleted after 14 days. A redelivered record is skipped; a concurrent duplicate loses on the primary key and is retried. Failed records are retried three times (3 s apart) and then published to `order-events.DLT`.
 
-Honest scope: the event payload is a plain notification string and the handler currently logs it. The idempotency and dead-letter plumbing is real; a business side effect (stock, e-mail, analytics) would plug into `OrderConsumer.handle`. `customer-service` also consumes the topic and only logs.
+Honest scope: the handler currently only logs the event. The idempotency and dead-letter plumbing is real; a business side effect (stock, e-mail, analytics) would plug into `OrderConsumer.handle`. `customer-service` also consumes the topic and only logs.
 
 ## Tests and checks
 
@@ -121,6 +123,7 @@ cd auth-service && ./mvnw verify
 
 # frontend
 cd frontend/customer-app && npm ci && npm run lint && npx tsc --noEmit && npm test && npm run build
+cd frontend/ai-agent-app && npm ci && npm run lint && npm test && npm run build
 ```
 
 The Testcontainers test runs the real Flyway chain on PostgreSQL with Hibernate in `validate` mode and checks that a redelivered Kafka record is recorded once. It is skipped automatically when Docker is not available. The other service tests use H2.
@@ -143,7 +146,7 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 - **Login throttling is stored in the database** (5 failures per username in 15 minutes, then `429` with `Retry-After`), so it survives restarts and is shared by all instances. A second, looser limit counts failures per client address (30 in 15 minutes, `app.login.max-failures-per-ip`), so one source cannot spread guesses over many usernames; the address is the right-most public entry of `X-Forwarded-For` (forged left entries are ignored). It still lets someone lock a known username out for a short time.
 - **Demo defaults are for local use only.** The compose file uses development database passwords, seeded demo accounts, and publishes n8n, Prometheus and Grafana ports on the host. Change all of them and drop the extra ports before exposing the stack anywhere.
 - **`npm audit --omit=dev` reports 2 moderate findings** (`uuid` < 11.1.1, pulled in by `exceljs`; advisory GHSA-w5hq-g745-h8pq: missing bounds check in uuid v3/v5/v6 when a caller supplies its own output buffer). ExcelJS does not call it that way and runs only in the browser on the user's own export data, so it is not exploitable here. The suggested `npm audit fix --force` would downgrade `exceljs` to 3.4.0 and break the export, so it is accepted until `exceljs` ships a release with a patched `uuid`.
-- Tests: backend unit/controller tests per service, Testcontainers tests on real PostgreSQL (migrations vs. entities, idempotent consumer, outbox), 3 frontend unit tests, and a Playwright journey in `e2e/` that is run manually against the compose stack (see `e2e/README.md`). There is no browser test in the automatic CI.
+- Tests: backend unit/controller tests per service, Testcontainers tests on real PostgreSQL (migrations vs. entities, idempotent consumer, outbox), frontend unit tests for the API client, auth helpers, percentages and the chat guard (`npm test`), and a Playwright journey in `e2e/` that is run manually against the compose stack (see `e2e/README.md`). There is no browser test in the automatic CI.
 - The in-memory AI rate limiter is per process; behind several instances it would need a shared store.
 - **Transactional outbox (order-service).** An order and its event are written in one database transaction (`outbox_event` table); a scheduled relay publishes pending rows to Kafka and marks them published only after the broker acknowledged them, so a crash can no longer lose the event. Delivery is at-least-once (a crash after the broker accepted but before the commit publishes the row again) and the consumer is idempotent: events carry a business `eventId` (JSON payload) and are recognised by it even if published twice at different offsets; plain-text messages fall back to offset-based detection. Order creation, update and deletion each emit an event (`ORDER_CREATED`, `ORDER_UPDATED`, `ORDER_DELETED`) in the same transaction as the change.
 - **Cross-service integrity is enforced by service calls, not by a database.** Deleting a customer is refused with `409` while the order-service still lists orders for them; creating or re-assigning an order is refused with `400` if the customer does not exist. If the other service cannot be reached the change is refused with `503` (fail closed). Two services with separate databases cannot share a transaction, so an order created in the instant between the check and the delete can still slip through; closing that fully needs events plus a saga or a shared database.

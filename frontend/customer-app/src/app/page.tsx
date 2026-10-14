@@ -8,6 +8,7 @@ import { getAuthUser, logout } from '@/lib/auth';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useMounted } from '@/lib/useMounted';
 import { useState, useEffect, useCallback } from 'react';
+import { percentShares } from '@/lib/percent';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ThemeOptions } from '@mui/material/styles';
 import {
@@ -757,10 +758,6 @@ export default function Home() {
                     {colorMode === 'dark' ? <LightModeIcon sx={{ fontSize: 17 }} /> : <DarkModeIcon sx={{ fontSize: 17 }} />}
                   </IconButton>
                 </Tooltip>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, px: 1.2, py: 0.4, borderRadius: 10, bgcolor: 'var(--green-bg)', border: '1px solid var(--green-bd)' }}>
-                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#22c55e' }} />
-                  <Typography sx={{ fontSize: '0.68rem', color: 'var(--green-tx)', fontWeight: 600 }}>Live</Typography>
-                </Box>
               </Box>
             </Toolbar>
           </AppBar>
@@ -1266,8 +1263,11 @@ export default function Home() {
                               </PieChart>
                             </ResponsiveContainer>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, mt: 1 }}>
-                              {ORDER_STATUSES.map((s, i) => {
-                                const count = orders.filter(o => (o.status ?? 'PENDING') === s).length;
+                              {(() => {
+                                const counts = ORDER_STATUSES.map(s => orders.filter(o => (o.status ?? 'PENDING') === s).length);
+                                const shares = percentShares(counts);
+                                return ORDER_STATUSES.map((s, i) => {
+                                const count = counts[i];
                                 return (
                                   <Box key={s} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1275,11 +1275,12 @@ export default function Home() {
                                       <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{statusText(s, t)}</Typography>
                                     </Box>
                                     <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>
-                                      {count} ({orders.length > 0 ? ((count / orders.length) * 100).toFixed(0) : 0}%)
+                                      {count} ({shares[i]}%)
                                     </Typography>
                                   </Box>
                                 );
-                              })}
+                                });
+                              })()}
                             </Box>
                           </>
                         );
@@ -1402,17 +1403,17 @@ export default function Home() {
                             </PieChart>
                           </ResponsiveContainer>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, mt: 1 }}>
-                            {statusCounts.map((s, i) => (
+                            {(() => { const shares = percentShares(statusCounts.map(x => x.count)); return statusCounts.map((s, i) => (
                               <Box key={s.status} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: PIE_COLORS[i] }} />
                                   <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>{statusText(s.status, t)}</Typography>
                                 </Box>
                                 <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>
-                                  {s.count} ({orders.length > 0 ? ((s.count / orders.length) * 100).toFixed(0) : 0}%)
+                                  {s.count} ({shares[i]}%)
                                 </Typography>
                               </Box>
-                            ))}
+                            )); })()}
                           </Box>
                         </>
                       );

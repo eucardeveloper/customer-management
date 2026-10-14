@@ -18,4 +18,9 @@ public class OrderProducer {
     public void publish(String topic, String payload) throws Exception {
         kafkaTemplate.send(topic, payload).get(5, TimeUnit.SECONDS);
     }
+
+    /** Same, with a message key: events with the same key (one order) go to the same partition, in order. */
+    public void publish(String topic, String key, String payload) throws Exception {
+        kafkaTemplate.send(topic, key, payload).get(5, TimeUnit.SECONDS);
+    }
 }

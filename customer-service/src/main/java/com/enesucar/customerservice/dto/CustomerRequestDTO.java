@@ -25,5 +25,6 @@ public class CustomerRequestDTO {
     @Pattern(regexp = "^[+0-9 ()-]*$", message = "Phone may contain only digits, +, spaces, - and parentheses")
     private String phone;
 
+    @Pattern(regexp = "^(INDIVIDUAL|COMPANY)$", message = "Customer type must be INDIVIDUAL or COMPANY")
     private String customerType;
 }

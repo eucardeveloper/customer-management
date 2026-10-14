@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/translations.test.ts tests/api-auth.test.ts"
+    "test": "node --test tests/translations.test.ts tests/api-auth.test.ts tests/percent.test.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

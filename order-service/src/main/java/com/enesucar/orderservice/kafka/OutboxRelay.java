@@ -38,7 +38,13 @@ public class OutboxRelay {
         List<OutboxEvent> batch = outbox.lockNextUnpublished(BATCH_SIZE);
         for (OutboxEvent event : batch) {
             try {
-                producer.publish(event.getTopic(), event.getPayload());
+                // Key by order id: Kafka keeps the events of one order in one partition, in the order sent.
+                var parsed = OrderEvent.parse(event.getPayload());
+                if (parsed.isPresent()) {
+                    producer.publish(event.getTopic(), "order-" + parsed.get().orderId(), event.getPayload());
+                } else {
+                    producer.publish(event.getTopic(), event.getPayload());
+                }
             } catch (Exception e) {
                 logger.warn("Outbox event {} not published yet, will retry: {}", event.getId(), e.toString());
                 // Keep order: stop here, the row (and the ones behind it) stay unpublished.

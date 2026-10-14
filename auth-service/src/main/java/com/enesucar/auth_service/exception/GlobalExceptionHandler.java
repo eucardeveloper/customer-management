@@ -45,6 +45,11 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.UNAUTHORIZED, "Invalid username or password");
     }
 
+    @ExceptionHandler(RegistrationDisabledException.class)
+    public ResponseEntity<Map<String, Object>> handleRegistrationDisabled(RegistrationDisabledException ex) {
+        return body(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
     @ExceptionHandler(TooManyLoginAttemptsException.class)
     public ResponseEntity<Map<String, Object>> handleTooManyAttempts(TooManyLoginAttemptsException ex) {
         long minutes = Math.max(1, (ex.getRetryAfterSeconds() + 59) / 60);

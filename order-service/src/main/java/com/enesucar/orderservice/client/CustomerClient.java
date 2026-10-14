@@ -20,6 +20,10 @@ public class CustomerClient {
 
     private final RestClient client;
 
+    /** Proves to the other service that this call comes from inside (see GatewayHeaderAuthFilter). */
+    @Value("${gateway.shared-secret:}")
+    private String gatewaySecret = "";
+
     public CustomerClient(@Value("${customer.service.url:http://customer-backend:8081}") String baseUrl) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(2));
@@ -36,6 +40,7 @@ public class CustomerClient {
             client.get().uri("/api/customers/{id}", customerId)
                     .header("X-Auth-User", user)
                     .header("X-Auth-Role", role)
+                    .headers(h -> { if (gatewaySecret != null && !gatewaySecret.isBlank()) h.set("X-Gateway-Secret", gatewaySecret); })
                     .retrieve()
                     .toBodilessEntity();
             return true;

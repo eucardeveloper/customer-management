@@ -105,6 +105,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (copy .env.example)}
       JWT_EXPIRATION: 7200000
       AUTH_COOKIE_SECURE: "false"   # local http; set true behind HTTPS
+      AUTH_REGISTRATION_ENABLED: "true"   # local demo only; leave unset on a hosted deployment
 
   customer-backend:
     build: ./customer-service
@@ -116,6 +117,7 @@ services:
       kafka:
         condition: service_healthy
     environment:
+      GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:?Set GATEWAY_SHARED_SECRET in .env (copy .env.example)}
       PORT: 8081
       DATABASE_URL: jdbc:postgresql://customer-db:5432/customer_db
       PGUSER: postgres
@@ -132,6 +134,7 @@ services:
       kafka:
         condition: service_healthy
     environment:
+      GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:?Set GATEWAY_SHARED_SECRET in .env (copy .env.example)}
       PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/order_db
       SPRING_DATASOURCE_USERNAME: postgres
@@ -149,6 +152,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:?Set GATEWAY_SHARED_SECRET in .env (copy .env.example)}
       CUSTOMER_SERVICE_URL: http://customer-backend:8081
       ORDER_SERVICE_URL: http://order-backend:8082
       AUTH_SERVICE_URL: http://auth-backend:8083
@@ -160,6 +164,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8080
         NEXT_PUBLIC_SHOW_DEMO_LOGIN: ${SHOW_DEMO_LOGIN:-true}
+        NEXT_PUBLIC_ALLOW_REGISTER: ${SHOW_DEMO_LOGIN:-true}
     container_name: customer-frontend
     restart: unless-stopped
     depends_on:
@@ -181,6 +186,7 @@ services:
       NEXT_PUBLIC_N8N_URL: http://localhost:5678
       # Production URL of an n8n chat webhook; without it the agent UI answers 503.
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-}
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
 
   n8n:
     image: n8nio/n8n:latest

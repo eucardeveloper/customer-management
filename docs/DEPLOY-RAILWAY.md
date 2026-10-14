@@ -23,14 +23,14 @@ Use Railway private networking (`<service>.railway.internal`) between backends. 
 
 | Service | Variables |
 |---|---|
-| auth-backend | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRATION=7200000`, `AUTH_COOKIE_SECURE=true` |
-| customer-backend | `PORT=8081`, `DATABASE_URL` (JDBC form), `PGUSER`, `PGPASSWORD`, `KAFKACLUSTER_BROKERS`, `ORDER_SERVICE_URL=http://order-backend.railway.internal:8082` |
-| order-backend | `PORT=8082`, `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `KAFKA_URL`, `CUSTOMER_SERVICE_URL=http://customer-backend.railway.internal:8081` |
-| api-gateway | `JWT_SECRET` (same value as auth), `AUTH_SERVICE_URL`, `CUSTOMER_SERVICE_URL`, `ORDER_SERVICE_URL`, `CORS_ALLOWED_ORIGINS=https://<frontend domain>` |
+| auth-backend | `AUTH_BOOTSTRAP_ADMIN_PASSWORD` (min. 12 chars), `AUTH_BOOTSTRAP_REMOVE_DEMO_USER=true`, `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRATION=7200000`, `AUTH_COOKIE_SECURE=true` |
+| customer-backend | `GATEWAY_SHARED_SECRET`, `PORT=8081`, `DATABASE_URL` (JDBC form), `PGUSER`, `PGPASSWORD`, `KAFKACLUSTER_BROKERS`, `ORDER_SERVICE_URL=http://order-backend.railway.internal:8082` |
+| order-backend | `GATEWAY_SHARED_SECRET`, `PORT=8082`, `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `KAFKA_URL`, `CUSTOMER_SERVICE_URL=http://customer-backend.railway.internal:8081` |
+| api-gateway | `GATEWAY_SHARED_SECRET` (same value as the two backends), `JWT_SECRET` (same value as auth), `AUTH_SERVICE_URL`, `CUSTOMER_SERVICE_URL`, `ORDER_SERVICE_URL`, `CORS_ALLOWED_ORIGINS=https://<frontend domain>` |
 | customer-frontend | build args `NEXT_PUBLIC_API_URL=` (empty) and `API_PROXY_TARGET=http://api-gateway.railway.internal:8080`; runtime `API_INTERNAL_URL` (same URL), `OPENROUTER_API_KEY` |
 | ai-agent-frontend | `N8N_WEBHOOK_URL` |
 
-`JWT_SECRET`: a fresh `openssl rand -hex 32`, never the local one.
+`JWT_SECRET` and `GATEWAY_SHARED_SECRET`: a fresh `openssl rand -hex 32` each, never the local ones. The customer and order services only trust the identity headers when the gateway's secret comes with them, so even a reachable backend cannot be talked to with made-up identities.
 
 ## 3. Why the frontend proxies `/api`
 
@@ -41,7 +41,8 @@ Locally nothing changes: without those two settings the app talks to `http://loc
 ## 4. Before the demo is public
 
 - **The demo-account hint on the login screen is off in hosted builds** (`NEXT_PUBLIC_SHOW_DEMO_LOGIN` defaults to `false`; only the local docker compose turns it on).
-- **Change the seeded accounts.** `admin / admin123` and `user1 / user123` are published in this README. On a public URL, change both passwords right after the first start (Users page → reset password), or the demo is open to anyone.
+- **The seeded accounts never work on the hosted deployment.** `admin / admin123` and `user1 / user123` are published in this README. Set `AUTH_BOOTSTRAP_ADMIN_PASSWORD` (a long random value; it replaces the admin password at start-up and ends old sessions) and `AUTH_BOOTSTRAP_REMOVE_DEMO_USER=true` on the auth-backend, so the published passwords are dead before the first visitor arrives. Public sign-up stays off (`AUTH_REGISTRATION_ENABLED` unset).
+- Optional: `N8N_WEBHOOK_SECRET` on the AI agent frontend is sent as `X-Webhook-Secret`; give the n8n webhook node Header Auth with the same value so the URL alone is not enough.
 - Do not expose databases, Kafka, n8n, Prometheus or Grafana publicly.
 - Set a spending limit on the OpenRouter key and keep it only in the frontend's runtime variables.
 - The AI agent UI answers `503` until `N8N_WEBHOOK_URL` points to a workflow whose webhook you control.

@@ -31,6 +31,8 @@ interface AuthResponse {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 // Build-time opt-in: the demo-account hint is only compiled in when explicitly requested (docker compose does, a hosted build does not).
 const SHOW_DEMO_LOGIN = process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === 'true';
+// Same for the sign-up link: public registration is off on the server unless AUTH_REGISTRATION_ENABLED is set.
+const ALLOW_REGISTER = process.env.NEXT_PUBLIC_ALLOW_REGISTER === 'true';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -179,12 +181,14 @@ export default function LoginPage() {
             </Stack>
           </Box>
 
+          {ALLOW_REGISTER && (
           <Typography variant="body2" align="center" sx={{ mt: 3, color: 'text.secondary' }}>
             Don&apos;t have an account?{' '}
             <Link href="/register" style={{ color: '#1d4ed8', fontWeight: 600, textDecoration: 'none' }}>
               Create account
             </Link>
           </Typography>
+          )}
         </CardContent>
       </Card>
     </Box>

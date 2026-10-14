@@ -10,6 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 
 /**
@@ -31,7 +33,7 @@ public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
         String username = request.getHeader("X-Auth-User");
         String role = request.getHeader("X-Auth-Role");
 
-        if (username != null && role != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (fromGateway(request) && username != null && role != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             // Prefix role with ROLE_ if the gateway sends plain role names (e.g. "ADMIN")
             String authority = role.startsWith("ROLE_") ? role : "ROLE_" + role;
             var auth = new UsernamePasswordAuthenticationToken(
