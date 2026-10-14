@@ -1474,7 +1474,7 @@ export default function Home() {
                           <BarChart data={top} layout="vertical" margin={{ top: 0, right: 50, left: 0, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke={gridC} horizontal={false} />
                             <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
-                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: tick2C }} axisLine={false} tickLine={false} width={105} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: tick2C }} axisLine={false} tickLine={false} width={125} />
                             <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                             <Bar dataKey="value" animationDuration={600} radius={[0, 4, 4, 0]} label={{ position: 'right', formatter: (v: unknown) => `$${(Number(v)/1000).toFixed(1)}k`, fontSize: 11, fill: '#64748b' }}>
                               {top.map((_, i) => <Cell key={i} fill={PROD_COLORS[i % PROD_COLORS.length]} />)}
