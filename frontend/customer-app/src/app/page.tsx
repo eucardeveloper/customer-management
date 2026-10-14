@@ -43,6 +43,7 @@ import LockResetIcon from '@mui/icons-material/LockReset';
 import MenuIcon from '@mui/icons-material/Menu';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
+import { pctChange } from '@/lib/trend';
 
 const DRAWER_WIDTH = 256;
 
@@ -1037,14 +1038,14 @@ export default function Home() {
               const prevOrders30 = orders.filter(o => o.date && (now - new Date(o.date).getTime()) >= d30 && (now - new Date(o.date).getTime()) < 2 * d30);
               const recentRev = recentOrders30.reduce((s, o) => s + o.price * o.quantity, 0);
               const prevRev = prevOrders30.reduce((s, o) => s + o.price * o.quantity, 0);
-              const revTrend = prevRev > 0 ? (((recentRev - prevRev) / prevRev) * 100).toFixed(1) : null;
+              const revTrend = pctChange(recentRev, prevRev, recentOrders30.length, prevOrders30.length);
               const prevDelivered = prevOrders30.filter(o => o.status === 'DELIVERED').length;
               const prevFulfillRate = prevOrders30.length > 0 ? (prevDelivered / prevOrders30.length) * 100 : null;
               const currFulfillNum = recentOrders30.length > 0 ? (recentOrders30.filter(o => o.status === 'DELIVERED').length / recentOrders30.length) * 100 : null;
               const fulfillTrend = prevFulfillRate !== null && currFulfillNum !== null ? (currFulfillNum - prevFulfillRate).toFixed(1) : null;
               const prevPending = prevOrders30.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
               const currPending = recentOrders30.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
-              const pendTrend = prevPending > 0 ? (((currPending - prevPending) / prevPending) * 100).toFixed(1) : null;
+              const pendTrend = prevOrders30.length > 0 && recentOrders30.length > 0 && prevPending > 0 ? (((currPending - prevPending) / prevPending) * 100).toFixed(1) : null;
               // Top customers by revenue
               const custRevMap: Record<number, number> = {};
               orders.forEach(o => { custRevMap[o.customerId] = (custRevMap[o.customerId] ?? 0) + o.price * o.quantity; });
@@ -1075,24 +1076,24 @@ export default function Home() {
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,1fr)', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
                     {(() => {
                       const fmtTrend = (val: string | null, higherIsBetter = true) => {
-                        if (val === null) return { label: t('vsLast30d'), up: true, dir: true };
+                        if (val === null) return { label: t('trendNoData'), up: true, dir: true, none: true };
                         const n = parseFloat(val);
-                        return { label: `${n >= 0 ? '+' : ''}${val}% ${t('vsLast30d')}`, up: higherIsBetter ? n >= 0 : n <= 0, dir: n >= 0 };
+                        return { label: `${n >= 0 ? '+' : ''}${val}% ${t('vsLast30d')}`, up: higherIsBetter ? n >= 0 : n <= 0, dir: n >= 0, none: false };
                       };
                       const revT = fmtTrend(revTrend);
                       const fufT = fmtTrend(fulfillTrend);
                       const pndT = fmtTrend(pendTrend, false);
                       const adminCards = [
-                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--blue-bg)', trend: revT.label, up: revT.up, dir: revT.dir, spark: monthSeries(os => os.reduce((a, o) => a + o.price * o.quantity, 0)) },
-                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: 'var(--sky-bg)', border: 'var(--sky-bd)', trend: t('allTime'), up: true },
-                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, dir: fufT.dir, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
-                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, dir: pndT.dir, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
+                        { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), sub: `${orders.length} ${t('ordersTotal')}`, icon: <AttachMoneyIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--blue-bg)', trend: revT.label, up: revT.up, dir: revT.dir, none: revT.none, spark: monthSeries(os => os.reduce((a, o) => a + o.price * o.quantity, 0)) },
+                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: 'var(--sky-bg)', border: 'var(--sky-bd)', trend: t('allTime'), up: true, none: true },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, dir: fufT.dir, none: fufT.none, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, dir: pndT.dir, none: pndT.none, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
                       ];
                       const userCards = [
                         { label: t('totalOrdersLabel'), value: orders.length.toString(), sub: `${delivered} ${t('delivered')}`, icon: <ReceiptIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--blue-bg)', trend: t('allTime'), up: true, spark: monthSeries(os => os.length) },
-                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: 'var(--sky-bg)', border: 'var(--sky-bd)', trend: t('allTime'), up: true },
-                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, dir: fufT.dir, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
-                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, dir: pndT.dir, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
+                        { label: t('totalCustomers2'), value: customers.length.toString(), sub: `${customers.filter(isCompany).length} ${t('companies')}`, icon: <PeopleIcon />, color: '#0ea5e9', bg: 'var(--sky-bg)', border: 'var(--sky-bd)', trend: t('allTime'), up: true, none: true },
+                        { label: t('fulfillmentRate2'), value: `${fulfillmentRate}%`, sub: `${delivered} ${t('of')} ${orders.length} ${t('delivered')}`, icon: <TrendingUpIcon />, color: '#10b981', bg: 'var(--green-bg)', border: 'var(--green-bd)', trend: fufT.label, up: fufT.up, dir: fufT.dir, none: fufT.none, spark: monthSeries(os => os.length > 0 ? (os.filter(o => o.status === 'DELIVERED').length / os.length) * 100 : 0) },
+                        { label: t('pendingOrders2'), value: pending.toString(), sub: `${cancelled} ${t('cancelledSub')}`, icon: <ShoppingCartIcon />, color: '#f59e0b', bg: 'var(--amber-bg)', border: 'var(--amber-bd)', trend: pndT.label, up: pndT.up, dir: pndT.dir, none: pndT.none, spark: monthSeries(os => os.filter(o => (o.status ?? 'PENDING') === 'PENDING').length) },
                       ];
                       return (isAdmin ? adminCards : userCards).map(card => (
                         <Paper key={card.label} elevation={0} sx={{
@@ -1115,8 +1116,8 @@ export default function Home() {
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
                             <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>{card.sub}</Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, px: 0.8, py: 0.2, borderRadius: 5, bgcolor: card.up ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)' }}>
-                              <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, color: card.up ? '#10b981' : '#ef4444' }}>{(('dir' in card ? card.dir : card.up) ? '↑' : '↓')} {card.trend}</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, px: 0.8, py: 0.2, borderRadius: 5, bgcolor: ('none' in card && card.none) ? 'rgba(148,163,184,0.10)' : card.up ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)' }}>
+                              <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, color: ('none' in card && card.none) ? '#94a3b8' : card.up ? '#10b981' : '#ef4444' }}>{('none' in card && card.none) ? '' : (('dir' in card ? card.dir : card.up) ? '↑ ' : '↓ ')}{card.trend}</Typography>
                             </Box>
                           </Box>
                           {card.spark && card.spark.some(v => v > 0) && (
@@ -1304,7 +1305,7 @@ export default function Home() {
                   const aPrev = orders.filter(o => o.date && (now2 - new Date(o.date).getTime()) >= d30a && (now2 - new Date(o.date).getTime()) < 2 * d30a);
                   const aNowRev = aNow.reduce((s, o) => s + o.price * o.quantity, 0);
                   const aPrevRev = aPrev.reduce((s, o) => s + o.price * o.quantity, 0);
-                  const calcTrend = (curr: number, prev: number) => prev > 0 ? (((curr - prev) / prev) * 100).toFixed(1) : null;
+                  const calcTrend = (curr: number, prev: number) => pctChange(curr, prev, aNow.length, aPrev.length);
                   const revTrendA = calcTrend(aNowRev, aPrevRev);
                   const orderTrendA = calcTrend(aNow.length, aPrev.length);
                   const aNowAvg = aNow.length > 0 ? aNowRev / aNow.length : 0;
@@ -1320,7 +1321,7 @@ export default function Home() {
                   const isPend = (o: Order) => (o.status ?? 'PENDING') === 'PENDING';
                   // delta: direction of the change; goodUp: whether an increase is good news (pending orders: no).
                   const fmtA = (v: string | null, goodUp: boolean) => {
-                    if (v === null) return { text: t('vsLast30d'), delta: null as number | null, good: true };
+                    if (v === null) return { text: t('trendNoData'), delta: null as number | null, good: true };
                     const n = parseFloat(v);
                     return { text: `${n >= 0 ? '+' : ''}${v}% ${t('vsLast30d')}`, delta: n, good: n === 0 ? true : (n > 0) === goodUp };
                   };
