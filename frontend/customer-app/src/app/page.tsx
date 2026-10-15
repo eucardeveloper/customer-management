@@ -9,6 +9,10 @@ import { useAuthUser } from '@/lib/useAuthUser';
 import { useMounted } from '@/lib/useMounted';
 import { useState, useEffect, useCallback } from 'react';
 import { percentShares } from '@/lib/percent';
+import {
+  sumRevenue, isPending, countByStatus, trendWindows, deliveredRateChange, monthlyRevenue, dailyRevenue,
+  topCustomersByRevenue, monthlySeries,
+} from '@/lib/orderStats';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ThemeOptions } from '@mui/material/styles';
 import {
@@ -330,7 +334,7 @@ export default function Home() {
     else if (tab === 'users') fetchUsers();
   }, [tab, fetchCustomers, fetchOrders, fetchUsers]);
 
-  const totalRevenue = orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
+  const totalRevenue = sumRevenue(orders);
   const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
 
   const validateCustomer = () => {
@@ -516,34 +520,11 @@ export default function Home() {
   };
 
   // Analytics data
-  const revenueByMonth = (() => {
-    const map: Record<string, { label: string; value: number }> = {};
-    orders.forEach(o => {
-      if (!o.date) return;
-      const d = new Date(o.date);
-      const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = `${d.toLocaleString('en-US', { month: 'short' })} '${String(d.getFullYear()).slice(-2)}`;
-      if (!map[sortKey]) map[sortKey] = { label, value: 0 };
-      map[sortKey].value += o.price * o.quantity;
-    });
-    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => [v.label, v.value] as [string, number]);
-  })();
-
-  const revenueByDay = (() => {
-    const map: Record<string, { label: string; value: number }> = {};
-    orders.forEach(o => {
-      if (!o.date) return;
-      const d = new Date(o.date);
-      const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      if (!map[sortKey]) map[sortKey] = { label, value: 0 };
-      map[sortKey].value += o.price * o.quantity;
-    });
-    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => [v.label, v.value] as [string, number]);
-  })();
+  const revenueByMonth = monthlyRevenue(orders).map(p => [p.label, p.value] as [string, number]);
+  const revenueByDay = dailyRevenue(orders).map(p => [p.label, p.value] as [string, number]);
 
   const chartData = chartMode === 'monthly' ? revenueByMonth : revenueByDay;
-  const statusCounts = ORDER_STATUSES.map(s => ({ status: s, count: orders.filter(o => (o.status ?? 'PENDING') === s).length }));
+  const statusCounts = countByStatus(orders, ORDER_STATUSES);
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -604,7 +585,7 @@ export default function Home() {
           { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <AttachMoneyIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
           { label: t('avgOrderValue'), value: avgOrderValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), icon: <TrendingUpIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
         ] : []),
-        { label: t('pendingOrders2'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, icon: <ShoppingCartIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
+        { label: t('pendingOrders2'), value: orders.filter(isPending).length, icon: <ShoppingCartIcon />, color: '#2563eb', bg: 'var(--blue-bg)', border: 'var(--border)' },
       ]
     : [];
 
@@ -738,7 +719,7 @@ export default function Home() {
                     : `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')}`
                   )}
                   {tab === 'customers' && `${customers.length} ${t('total')} · ${customers.filter(isCompany).length} ${t('companies')} · ${customers.filter(c => !isCompany(c)).length} ${t('individuals')}`}
-                  {tab === 'orders' && `${orders.length} ${t('total')} · ${orders.filter(o => o.status === 'DELIVERED').length} ${t('delivered')} · ${orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length} ${t('pending')}`}
+                  {tab === 'orders' && `${orders.length} ${t('total')} · ${orders.filter(o => o.status === 'DELIVERED').length} ${t('delivered')} · ${orders.filter(isPending).length} ${t('pending')}`}
                   {tab === 'analytics' && t('businessIntelligence')}
                   {tab === 'ai' && t('aiSubtitle')}
                   {tab === 'users' && `${users.length} ${t('registeredAccounts')}`}
@@ -1029,46 +1010,27 @@ export default function Home() {
             {/* ── DASHBOARD TAB ── */}
             {tab === 'dashboard' && (() => {
               const delivered = orders.filter(o => o.status === 'DELIVERED').length;
-              const pending = orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
+              const pending = orders.filter(isPending).length;
               const cancelled = orders.filter(o => o.status === 'CANCELLED').length;
               const fulfillmentRate = orders.length > 0 ? ((delivered / orders.length) * 100).toFixed(1) : '0';
               // Real trend: compare last 30 days vs prior 30 days
-              const d30 = 30 * 24 * 60 * 60 * 1000;
-              const recentOrders30 = orders.filter(o => o.date && (now - new Date(o.date).getTime()) < d30);
-              const prevOrders30 = orders.filter(o => o.date && (now - new Date(o.date).getTime()) >= d30 && (now - new Date(o.date).getTime()) < 2 * d30);
-              const recentRev = recentOrders30.reduce((s, o) => s + o.price * o.quantity, 0);
-              const prevRev = prevOrders30.reduce((s, o) => s + o.price * o.quantity, 0);
+              const { current: recentOrders30, previous: prevOrders30 } = trendWindows(orders, now);
+              const recentRev = sumRevenue(recentOrders30);
+              const prevRev = sumRevenue(prevOrders30);
               const revTrend = pctChange(recentRev, prevRev, recentOrders30.length, prevOrders30.length);
-              const prevDelivered = prevOrders30.filter(o => o.status === 'DELIVERED').length;
-              const prevFulfillRate = prevOrders30.length > 0 ? (prevDelivered / prevOrders30.length) * 100 : null;
-              const currFulfillNum = recentOrders30.length > 0 ? (recentOrders30.filter(o => o.status === 'DELIVERED').length / recentOrders30.length) * 100 : null;
-              const fulfillTrend = prevFulfillRate !== null && currFulfillNum !== null ? (currFulfillNum - prevFulfillRate).toFixed(1) : null;
-              const prevPending = prevOrders30.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
-              const currPending = recentOrders30.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
-              const pendTrend = prevOrders30.length > 0 && recentOrders30.length > 0 && prevPending > 0 ? (((currPending - prevPending) / prevPending) * 100).toFixed(1) : null;
+              const fulfillTrend = deliveredRateChange(recentOrders30, prevOrders30);
+              const prevPending = prevOrders30.filter(isPending).length;
+              const currPending = recentOrders30.filter(isPending).length;
+              const pendTrend = pctChange(currPending, prevPending, recentOrders30.length, prevOrders30.length);
               // Top customers by revenue
-              const custRevMap: Record<number, number> = {};
-              orders.forEach(o => { custRevMap[o.customerId] = (custRevMap[o.customerId] ?? 0) + o.price * o.quantity; });
-              const topCustomers = Object.entries(custRevMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, rev]) => ({ customer: customers.find(c => c.id === Number(id)), rev })).filter(x => x.customer);
+              const topCustomers = topCustomersByRevenue(orders, 5).map(({ customerId, revenue }) => ({ customer: customers.find(c => c.id === customerId), rev: revenue })).filter(x => x.customer);
               // Recent orders
               const recentOrders = [...orders].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()).slice(0, 6);
               // Revenue chart (last 6 months/days)
-              const revenueChartData = (() => {
-                const map: Record<string, { label: string; value: number }> = {};
-                orders.forEach(o => {
-                  if (!o.date) return;
-                  const d = new Date(o.date);
-                  const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                  const label = `${d.toLocaleString('en-US', { month: 'short' })} '${String(d.getFullYear()).slice(-2)}`;
-                  if (!map[sortKey]) map[sortKey] = { label, value: 0 };
-                  map[sortKey].value += o.price * o.quantity;
-                });
-                return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).slice(-6).map(([, v]) => v);
-              })();
+              const revenueChartData = monthlyRevenue(orders).slice(-6);
 
               // Real monthly series (last 6 calendar months) for the KPI sparklines — no placeholder data
-              const sparkMonths = Array.from({ length: 6 }, (_, k) => { const d = new Date(now); d.setDate(1); d.setMonth(d.getMonth() - (5 - k)); return `${d.getFullYear()}-${d.getMonth()}`; });
-              const monthSeries = (pick: (os: typeof orders) => number) => sparkMonths.map(key => pick(orders.filter(o => { if (!o.date) return false; const d = new Date(o.date); return `${d.getFullYear()}-${d.getMonth()}` === key; })));
+              const monthSeries = (pick: (os: typeof orders) => number) => monthlySeries(orders, now, pick);
 
               return (
                 <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1299,26 +1261,17 @@ export default function Home() {
                 {/* Stat Cards with sparklines */}
                 {(() => {
                   // Real trend: last 30 days vs prior 30 days
-                  const now2 = now;
-                  const d30a = 30 * 24 * 60 * 60 * 1000;
-                  const aNow = orders.filter(o => o.date && (now2 - new Date(o.date).getTime()) < d30a);
-                  const aPrev = orders.filter(o => o.date && (now2 - new Date(o.date).getTime()) >= d30a && (now2 - new Date(o.date).getTime()) < 2 * d30a);
-                  const aNowRev = aNow.reduce((s, o) => s + o.price * o.quantity, 0);
-                  const aPrevRev = aPrev.reduce((s, o) => s + o.price * o.quantity, 0);
+                  const { current: aNow, previous: aPrev } = trendWindows(orders, now);
+                  const aNowRev = sumRevenue(aNow);
+                  const aPrevRev = sumRevenue(aPrev);
                   const calcTrend = (curr: number, prev: number) => pctChange(curr, prev, aNow.length, aPrev.length);
                   const revTrendA = calcTrend(aNowRev, aPrevRev);
                   const orderTrendA = calcTrend(aNow.length, aPrev.length);
                   const aNowAvg = aNow.length > 0 ? aNowRev / aNow.length : 0;
                   const aPrevAvg = aPrev.length > 0 ? aPrevRev / aPrev.length : 0;
                   const avgTrendA = calcTrend(aNowAvg, aPrevAvg);
-                  const aNowPend = aNow.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
-                  const aPrevPend = aPrev.filter(o => (o.status ?? 'PENDING') === 'PENDING').length;
-                  const pendTrendA = calcTrend(aNowPend, aPrevPend);
-                  const monthKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}`;
-                  const last6 = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (5 - i)); return monthKey(d); });
-                  const seriesOf = (fn: (os: Order[]) => number) => last6.map((k, i) => ({ i, v: fn(orders.filter(o => o.date && monthKey(new Date(o.date)) === k)) }));
-                  const sumRev = (os: Order[]) => os.reduce((a, o) => a + o.price * o.quantity, 0);
-                  const isPend = (o: Order) => (o.status ?? 'PENDING') === 'PENDING';
+                  const pendTrendA = calcTrend(aNow.filter(isPending).length, aPrev.filter(isPending).length);
+                  const seriesOf = (fn: (os: Order[]) => number) => monthlySeries(orders, now, fn).map((v, i) => ({ i, v }));
                   // delta: direction of the change; goodUp: whether an increase is good news (pending orders: no).
                   const fmtA = (v: string | null, goodUp: boolean) => {
                     if (v === null) return { text: t('trendNoData'), delta: null as number | null, good: true };
@@ -1327,10 +1280,10 @@ export default function Home() {
                   };
                   const revF = fmtA(revTrendA, true), ordF = fmtA(orderTrendA, true), avgF = fmtA(avgTrendA, true), pndF = fmtA(pendTrendA, false);
                   const allAnalyticsCards = [
-                    { label: t('totalRevenue').toUpperCase(), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: revF, sparkColor: '#2563eb', spark: seriesOf(sumRev), adminOnly: true },
+                    { label: t('totalRevenue').toUpperCase(), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: revF, sparkColor: '#2563eb', spark: seriesOf(sumRevenue), adminOnly: true },
                     { label: t('totalOrders').toUpperCase(), value: orders.length.toString(), f: ordF, sparkColor: '#10b981', spark: seriesOf(os => os.length), adminOnly: false },
-                    { label: t('avgOrderValue').toUpperCase(), value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: avgF, sparkColor: '#f59e0b', spark: seriesOf(os => os.length ? sumRev(os) / os.length : 0), adminOnly: true },
-                    { label: t('pendingOrders').toUpperCase(), value: orders.filter(isPend).length.toString(), f: pndF, sparkColor: '#ef4444', spark: seriesOf(os => os.filter(isPend).length), adminOnly: false },
+                    { label: t('avgOrderValue').toUpperCase(), value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: avgF, sparkColor: '#f59e0b', spark: seriesOf(os => os.length ? sumRevenue(os) / os.length : 0), adminOnly: true },
+                    { label: t('pendingOrders').toUpperCase(), value: orders.filter(isPending).length.toString(), f: pndF, sparkColor: '#ef4444', spark: seriesOf(os => os.filter(isPending).length), adminOnly: false },
                   ];
                   const analyticsCards = allAnalyticsCards.filter(c => isAdmin || !c.adminOnly);
                   return (
@@ -1572,7 +1525,7 @@ export default function Home() {
                       {[
                         { label: t('totalOrdersLabel'), value: orders.length, color: '#2563eb', icon: '🛒' },
                         { label: t('deliveredLabel'), value: orders.filter(o => o.status === 'DELIVERED').length, color: '#10b981', icon: '✅' },
-                        { label: t('pendingLabel'), value: orders.filter(o => (o.status ?? 'PENDING') === 'PENDING').length, color: '#f59e0b', icon: '⏳' },
+                        { label: t('pendingLabel'), value: orders.filter(isPending).length, color: '#f59e0b', icon: '⏳' },
                         { label: t('cancelledLabel'), value: orders.filter(o => o.status === 'CANCELLED').length, color: '#ef4444', icon: '❌' },
                       ].map(s => (
                         <Box key={s.label} sx={{ bgcolor: 'var(--surface-2)', borderRadius: 2, p: 1.5, border: '1px solid var(--surface-2)' }}>
