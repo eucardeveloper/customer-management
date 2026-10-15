@@ -23,7 +23,7 @@ Use Railway private networking (`<service>.railway.internal`) between backends. 
 
 | Service | Variables |
 |---|---|
-| auth-backend | `AUTH_BOOTSTRAP_ADMIN_PASSWORD` (min. 12 chars; keep it private), `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRATION=7200000`, `AUTH_COOKIE_SECURE=true` |
+| auth-backend | `AUTH_BOOTSTRAP_ADMIN_PASSWORD` (min. 12 chars; keep it private), `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRATION=1800000`, `AUTH_COOKIE_SECURE=true` |
 | customer-backend | `GATEWAY_SHARED_SECRET`, `PORT=8081`, `DATABASE_URL` (JDBC form), `PGUSER`, `PGPASSWORD`, `KAFKACLUSTER_BROKERS`, `ORDER_SERVICE_URL=http://order-backend.railway.internal:8082` |
 | order-backend | `GATEWAY_SHARED_SECRET`, `PORT=8082`, `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `KAFKA_URL`, `CUSTOMER_SERVICE_URL=http://customer-backend.railway.internal:8081` |
 | api-gateway | `GATEWAY_SHARED_SECRET` (same value as the two backends), `JWT_SECRET` (same value as auth), `AUTH_SERVICE_URL`, `CUSTOMER_SERVICE_URL`, `ORDER_SERVICE_URL`, `CORS_ALLOWED_ORIGINS=https://<frontend domain>` |
