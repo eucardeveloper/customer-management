@@ -44,6 +44,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // The app sends users here with ?expired=1 when the server no longer accepts their session.
+  const sessionExpired = mounted && new URLSearchParams(window.location.search).get('expired') === '1';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -108,6 +110,7 @@ export default function LoginPage() {
             <Typography variant="body2" color="text.secondary">Sign in to your account</Typography>
           </Box>
 
+          {sessionExpired && !error && <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>Your session has ended. Please sign in again.</Alert>}
           {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
 
           {/* Demo credentials hint (build-time opt-in) */}

@@ -54,7 +54,7 @@ test('a 401 forgets the local user and sends the browser to the login page', asy
   mockFetch(401, '');
   await assert.rejects(() => api.get('/api/customers'), /Unauthorized/);
   assert.equal(getAuthUser(), null);
-  assert.equal(redirectedTo, '/login');
+  assert.equal(redirectedTo, '/login?expired=1');
 });
 
 test('an error response surfaces the server message, falling back to the status', async () => {
