@@ -49,6 +49,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    @ExceptionHandler(DeletionInProgressException.class)
+    public ResponseEntity<Map<String, Object>> handleDeletionInProgress(DeletionInProgressException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", 409);
+        body.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(OrderServiceUnavailableException.class)
     public ResponseEntity<Map<String, Object>> handleOrderServiceDown(OrderServiceUnavailableException ex) {
         Map<String, Object> body = new HashMap<>();

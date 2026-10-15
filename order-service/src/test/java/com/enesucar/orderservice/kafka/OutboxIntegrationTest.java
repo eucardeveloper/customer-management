@@ -52,6 +52,7 @@ class OutboxIntegrationTest {
 
     @Autowired OrderService orderService;
     @Autowired OutboxEventRepository outbox;
+    @Autowired com.enesucar.orderservice.repository.OrderRepository orders;
     @Autowired TransactionTemplate tx;
 
     private OrderRequestDTO request() {
@@ -87,5 +88,17 @@ class OutboxIntegrationTest {
         })).isInstanceOf(IllegalStateException.class);
 
         assertThat(outbox.count()).isEqualTo(before);
+    }
+
+    @Test
+    void anOrderWhoseCustomerIsDeletedWhileItIsBeingCreatedDoesNotSurvive() {
+        // first check passes, the customer is deleted before the order commits, the re-check fails
+        when(customerClient.exists(1L)).thenReturn(true, false);
+        long ordersBefore = orders.count();
+
+        assertThatThrownBy(() -> orderService.createOrder(request()))
+                .isInstanceOf(com.enesucar.orderservice.exception.UnknownCustomerException.class);
+
+        assertThat(orders.count()).isEqualTo(ordersBefore);
     }
 }
