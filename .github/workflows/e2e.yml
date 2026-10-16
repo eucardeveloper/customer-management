@@ -19,33 +19,43 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Create .env from the example
         run: |
           cp .env.example .env
           sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" .env
           sed -i "s|^GATEWAY_SHARED_SECRET=.*|GATEWAY_SHARED_SECRET=$(openssl rand -hex 32)|" .env
       - name: Start the stack
-        run: docker compose up -d --build
-      - name: Wait for the gateway
+        # Only what the journey needs. n8n, Grafana, Prometheus and the AI agent UI are not exercised and
+        # together with the rest they would not fit in a hosted runner's ~7 GB.
         run: |
-          for i in $(seq 1 60); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/customers || true)
-            [ "$code" = "401" ] && exit 0
+          docker compose up -d --build auth-backend customer-backend order-backend api-gateway customer-frontend
+          docker compose ps
+      - name: Wait until the whole stack really answers
+        # A 401 from the gateway only proves the gateway is up. Sign in and read the lists from the
+        # customer- and order-service, and load the login page, so the tests never start on a half-started stack.
+        run: |
+          echo '{"username":"admin","password":"admin123"}' > login.json
+          ready() {
+            token=$(curl -s -i -H 'Content-Type: application/json' --data @login.json http://localhost:8080/api/auth/login \
+              | grep -i '^set-cookie: customer_session=' | sed -E 's/.*customer_session=([^;]+).*/\1/')
+            [ -n "$token" ] || return 1
+            for path in /api/customers /api/orders /api/users; do
+              [ "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "http://localhost:8080$path")" = "200" ] || return 1
+            done
+            [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/login)" = "200" ]
+          }
+          for i in $(seq 1 90); do
+            ready && exit 0
+            # say what is missing, so a failed run explains itself
+            echo "attempt $i: not ready yet ($(docker compose ps --format '{{.Service}}={{.Status}}' | tr '\n' ' '))"
             sleep 5
           done
-          docker compose logs --tail=100
+          echo "--- memory"; free -m
+          echo "--- containers"; docker compose ps -a
+          echo "--- last log lines"; docker compose logs --tail=60
           exit 1
-      - name: Wait for the customer frontend
-        run: |
-          for i in $(seq 1 60); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login || true)
-            [ "$code" = "200" ] && exit 0
-            sleep 5
-          done
-          docker compose logs --tail=100 customer-frontend
-          exit 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Install and run Playwright
