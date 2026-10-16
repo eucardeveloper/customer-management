@@ -2,6 +2,7 @@ package com.enesucar.auth_service.service;
 
 import com.enesucar.auth_service.dto.UserResponse;
 import com.enesucar.auth_service.entity.Role;
+import com.enesucar.auth_service.exception.InvalidRoleException;
 import com.enesucar.auth_service.entity.User;
 import com.enesucar.auth_service.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,6 +92,18 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.updateRole(99L, "ADMIN"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("User not found");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateRole_shouldRejectUnknownAndMissingRoles_withoutTouchingTheUser() {
+        assertThatThrownBy(() -> userService.updateRole(1L, "SUPERUSER"))
+                .isInstanceOf(InvalidRoleException.class);
+        assertThatThrownBy(() -> userService.updateRole(1L, null))
+                .isInstanceOf(InvalidRoleException.class);
+        assertThatThrownBy(() -> userService.updateRole(1L, "  "))
+                .isInstanceOf(InvalidRoleException.class);
 
         verify(userRepository, never()).save(any());
     }

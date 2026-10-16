@@ -218,4 +218,20 @@ class AuthControllerTest {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/session"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void malformedJson_shouldReturn400_notServerError() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"broken\": "))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void wrongContentType_shouldReturn415() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/login")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("hello"))
+                .andExpect(status().isUnsupportedMediaType());
+    }
 }

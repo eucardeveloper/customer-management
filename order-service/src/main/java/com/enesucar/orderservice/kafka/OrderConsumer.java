@@ -28,6 +28,8 @@ import java.time.LocalDateTime;
 public class OrderConsumer {
 
     static final String GROUP = "order-group";
+    // Only the test configuration switches this off (there is no broker there).
+    private static final String LISTENER_AUTO_STARTUP = "${app.kafka.listener.auto-startup:true}";
     private static final Logger logger = LoggerFactory.getLogger(OrderConsumer.class);
 
     private final ProcessedEventRepository processedEvents;
@@ -36,7 +38,7 @@ public class OrderConsumer {
         this.processedEvents = processedEvents;
     }
 
-    @KafkaListener(topics = "order-events", groupId = GROUP)
+    @KafkaListener(topics = "order-events", groupId = GROUP, autoStartup = LISTENER_AUTO_STARTUP)
     @Transactional
     public void consume(ConsumerRecord<String, String> record) {
         // A business event id (when the message has one) identifies the event even if it is published twice
@@ -59,7 +61,7 @@ public class OrderConsumer {
         logger.info("Order event processed: {}", message);
     }
 
-    @KafkaListener(topics = "order-events.DLT", groupId = "order-group-dlt")
+    @KafkaListener(topics = "order-events.DLT", groupId = "order-group-dlt", autoStartup = LISTENER_AUTO_STARTUP)
     public void consumeDLT(String message) {
         logger.error("Dead Letter Queue message received: {}", message);
     }
