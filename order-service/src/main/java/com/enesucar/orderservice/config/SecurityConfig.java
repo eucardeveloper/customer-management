@@ -10,12 +10,23 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    /**
+     * Identity comes from the gateway headers, not from local users. Declaring an empty UserDetailsService stops
+     * Spring Boot from creating a default "user" with a random password that it prints to the log at start-up.
+     */
+    @Bean
+    public UserDetailsService noLocalUsers() {
+        return new InMemoryUserDetailsManager();
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,

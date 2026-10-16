@@ -2,6 +2,7 @@ package com.enesucar.customerservice.service;
 
 import com.enesucar.customerservice.client.OrderClient;
 import com.enesucar.customerservice.exception.CustomerHasOrdersException;
+import com.enesucar.customerservice.exception.DeletionInProgressException;
 import com.enesucar.customerservice.exception.OrderServiceUnavailableException;
 import com.enesucar.customerservice.dto.CustomerRequestDTO;
 import com.enesucar.customerservice.dto.CustomerResponseDTO;
@@ -15,11 +16,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -116,10 +119,13 @@ class CustomerServiceTest {
     @Test
     void deleteCustomer_shouldDelete_whenExists() {
         when(customerRepository.existsById(1L)).thenReturn(true);
+        when(customerRepository.claimForDeletion(eq(1L), any(), any())).thenReturn(1);
         when(orderClient.hasOrders(1L)).thenReturn(false);
         doNothing().when(customerRepository).deleteById(1L);
         customerService.deleteCustomer(1L);
         verify(customerRepository).deleteById(1L);
+        // deleted: nothing left to release
+        verify(customerRepository, never()).releaseDeletionClaim(any());
     }
 
     @Test
@@ -134,18 +140,65 @@ class CustomerServiceTest {
     @Test
     void deleteCustomer_shouldRefuse_whenCustomerStillHasOrders() {
         when(customerRepository.existsById(1L)).thenReturn(true);
+        when(customerRepository.claimForDeletion(eq(1L), any(), any())).thenReturn(1);
         when(orderClient.hasOrders(1L)).thenReturn(true);
         assertThatThrownBy(() -> customerService.deleteCustomer(1L))
                 .isInstanceOf(CustomerHasOrdersException.class);
         verify(customerRepository, never()).deleteById(any());
+        verify(customerRepository).releaseDeletionClaim(1L);
     }
 
     @Test
     void deleteCustomer_shouldFailClosed_whenOrderServiceCannotBeAsked() {
         when(customerRepository.existsById(1L)).thenReturn(true);
+        when(customerRepository.claimForDeletion(eq(1L), any(), any())).thenReturn(1);
         when(orderClient.hasOrders(1L)).thenThrow(new OrderServiceUnavailableException(new RuntimeException("down")));
         assertThatThrownBy(() -> customerService.deleteCustomer(1L))
                 .isInstanceOf(OrderServiceUnavailableException.class);
         verify(customerRepository, never()).deleteById(any());
+        verify(customerRepository).releaseDeletionClaim(1L);
+    }
+
+    @Test
+    void deleteCustomer_shouldGiveTheClaimBack_whenTheDeleteItselfFails() {
+        when(customerRepository.existsById(1L)).thenReturn(true);
+        when(customerRepository.claimForDeletion(eq(1L), any(), any())).thenReturn(1);
+        when(orderClient.hasOrders(1L)).thenReturn(false);
+        doThrow(new IllegalStateException("db down")).when(customerRepository).deleteById(1L);
+        assertThatThrownBy(() -> customerService.deleteCustomer(1L)).isInstanceOf(IllegalStateException.class);
+        verify(customerRepository).releaseDeletionClaim(1L);
+    }
+
+    @Test
+    void deleteCustomer_shouldRefuse_whenAnotherDeleteHoldsTheClaim() {
+        when(customerRepository.existsById(1L)).thenReturn(true);
+        when(customerRepository.claimForDeletion(eq(1L), any(), any())).thenReturn(0);
+        assertThatThrownBy(() -> customerService.deleteCustomer(1L)).isInstanceOf(DeletionInProgressException.class);
+        verify(orderClient, never()).hasOrders(any());
+        verify(customerRepository, never()).deleteById(any());
+        // the claim belongs to the other delete: it must not be released here
+        verify(customerRepository, never()).releaseDeletionClaim(any());
+    }
+
+    @Test
+    void deleteCustomer_shouldReportNotFound_whenTheCustomerVanishesBetweenCheckAndClaim() {
+        when(customerRepository.existsById(1L)).thenReturn(true, false);
+        when(customerRepository.claimForDeletion(eq(1L), any(), any())).thenReturn(0);
+        assertThatThrownBy(() -> customerService.deleteCustomer(1L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void getCustomerById_shouldReadAsNotFound_whileADeleteHoldsAFreshClaim() {
+        customer.setDeletionPendingSince(LocalDateTime.now().minusSeconds(2));
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        assertThatThrownBy(() -> customerService.getCustomerById(1L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void getCustomerById_shouldIgnoreAnAbandonedClaim() {
+        // a crash in the middle of a delete must not hide the customer for good
+        customer.setDeletionPendingSince(LocalDateTime.now().minus(CustomerService.DELETION_CLAIM_HOLD).minusSeconds(5));
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        assertThat(customerService.getCustomerById(1L).getId()).isEqualTo(1L);
     }
 }

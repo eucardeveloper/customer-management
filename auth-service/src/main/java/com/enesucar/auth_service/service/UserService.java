@@ -3,6 +3,7 @@ package com.enesucar.auth_service.service;
 import com.enesucar.auth_service.dto.UserResponse;
 import com.enesucar.auth_service.entity.Role;
 import com.enesucar.auth_service.entity.User;
+import com.enesucar.auth_service.exception.InvalidRoleException;
 import com.enesucar.auth_service.exception.UserNotFoundException;
 import com.enesucar.auth_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,9 +30,10 @@ public class UserService {
     }
 
     public UserResponse updateRole(Long id, String role) {
+        Role newRole = parseRole(role);
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
-        user.setRole(Role.valueOf(role));
+        user.setRole(newRole);
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
         return new UserResponse(user.getId(), user.getUsername(), user.getEmail(), user.getRole());
@@ -44,5 +46,16 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
+    }
+
+    private static Role parseRole(String role) {
+        if (role == null || role.isBlank()) {
+            throw new InvalidRoleException("role is required");
+        }
+        try {
+            return Role.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidRoleException("Unknown role: " + role);
+        }
     }
 }

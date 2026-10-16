@@ -26,12 +26,11 @@ import static org.mockito.Mockito.when;
 /**
  * Proves the outbox on a real PostgreSQL: creating an order writes the order and its event in one
  * transaction, the relay query returns pending rows, and a rollback leaves neither behind.
- * Skipped automatically when Docker is not available.
+ * Needs Docker; fails with a clear error when it is not running (never skipped silently).
  */
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=validate",
-        "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",
         "spring.datasource.driver-class-name=org.postgresql.Driver",
         "spring.flyway.enabled=true",
         "app.kafka.enabled=false"
@@ -53,6 +52,7 @@ class OutboxIntegrationTest {
 
     @Autowired OrderService orderService;
     @Autowired OutboxEventRepository outbox;
+    @Autowired com.enesucar.orderservice.repository.OrderRepository orders;
     @Autowired TransactionTemplate tx;
 
     private OrderRequestDTO request() {
@@ -88,5 +88,17 @@ class OutboxIntegrationTest {
         })).isInstanceOf(IllegalStateException.class);
 
         assertThat(outbox.count()).isEqualTo(before);
+    }
+
+    @Test
+    void anOrderWhoseCustomerIsDeletedWhileItIsBeingCreatedDoesNotSurvive() {
+        // first check passes, the customer is deleted before the order commits, the re-check fails
+        when(customerClient.exists(1L)).thenReturn(true, false);
+        long ordersBefore = orders.count();
+
+        assertThatThrownBy(() -> orderService.createOrder(request()))
+                .isInstanceOf(com.enesucar.orderservice.exception.UnknownCustomerException.class);
+
+        assertThat(orders.count()).isEqualTo(ordersBefore);
     }
 }

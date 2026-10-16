@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,6 +39,10 @@ class OrderServiceTest {
 
     @Mock
     private CustomerClient customerClient;
+
+    // the service runs its writes through a TransactionTemplate; a mock manager just lets them run
+    @Mock
+    private PlatformTransactionManager transactionManager;
 
     @InjectMocks
     private OrderService orderService;
@@ -220,5 +225,52 @@ class OrderServiceTest {
         when(customerClient.exists(77L)).thenReturn(false);
         assertThatThrownBy(() -> orderService.updateOrder(1L, requestDTO)).isInstanceOf(UnknownCustomerException.class);
         verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void createOrder_shouldUndoTheOrder_whenTheCustomerWasDeletedAfterTheFirstCheck() {
+        // the first check passes, the customer is deleted before the order commits, the re-check fails
+        when(customerClient.exists(10L)).thenReturn(true, false);
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        assertThatThrownBy(() -> orderService.createOrder(requestDTO)).isInstanceOf(UnknownCustomerException.class);
+        verify(orderRepository).deleteById(1L);
+        // created + deleted events: consumers see the order appear and disappear
+        verify(outbox, times(2)).save(any(OutboxEvent.class));
+    }
+
+    @Test
+    void createOrder_shouldUndoTheOrder_whenTheRecheckCannotReachTheCustomerService() {
+        when(customerClient.exists(10L)).thenReturn(true)
+                .thenThrow(new CustomerServiceUnavailableException(new RuntimeException("down")));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        assertThatThrownBy(() -> orderService.createOrder(requestDTO)).isInstanceOf(CustomerServiceUnavailableException.class);
+        verify(orderRepository).deleteById(1L);
+    }
+
+    @Test
+    void createOrder_shouldNotUndoAnything_whenTheRecheckPasses() {
+        when(customerClient.exists(10L)).thenReturn(true, true);
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        orderService.createOrder(requestDTO);
+        verify(customerClient, times(2)).exists(10L);
+        verify(orderRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void updateOrder_shouldMoveTheOrderBack_whenTheNewCustomerWasDeletedDuringTheChange() {
+        requestDTO.setCustomerId(77L);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(customerClient.exists(77L)).thenReturn(true, false);
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        assertThatThrownBy(() -> orderService.updateOrder(1L, requestDTO)).isInstanceOf(UnknownCustomerException.class);
+        assertThat(order.getCustomerId()).isEqualTo(10L);
+    }
+
+    @Test
+    void updateOrder_shouldNotRecheckTheCustomer_whenItDidNotChange() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        orderService.updateOrder(1L, requestDTO);
+        verify(customerClient, never()).exists(any());
     }
 }

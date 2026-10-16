@@ -4,7 +4,8 @@
   "scripts": {
     "test": "playwright test",
     "install-browser": "playwright install chromium",
-    "screenshots": "playwright test tests/screenshots.spec.ts"
+    "screenshots": "playwright test -c playwright.screenshots.config.ts",
+    "mobile": "playwright test -c playwright.mobile.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1"

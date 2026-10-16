@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "customer")
 @Getter
@@ -23,5 +25,9 @@ public class Customer {
     private String phone;
 	
 	private String customerType;
+
+    /** Set while a delete is checking for orders (see V3 migration); null otherwise. */
+    @Column(name = "deletion_pending_since")
+    private LocalDateTime deletionPendingSince;
 }
 
