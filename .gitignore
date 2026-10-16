@@ -47,3 +47,6 @@ _private_not_in_git/
 .idea/
 *.iml
 seeddata.js
+
+# phone screenshots taken for review
+e2e/mobile-shots/

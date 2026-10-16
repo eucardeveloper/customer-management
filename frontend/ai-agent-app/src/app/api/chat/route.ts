@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MAX_BODY_BYTES, RateLimiter, clientKey, parsePayload } from '@/lib/chatGuard';
 
 const limiter = new RateLimiter();
+let warnedNoSecret = false;
 
 /**
  * Forwards the chat to an n8n webhook. The URL comes from the environment (N8N_WEBHOOK_URL) and is
@@ -32,7 +33,12 @@ export async function POST(req: NextRequest) {
   }
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (process.env.N8N_WEBHOOK_SECRET) headers['X-Webhook-Secret'] = process.env.N8N_WEBHOOK_SECRET;
+  if (process.env.N8N_WEBHOOK_SECRET) {
+    headers['X-Webhook-Secret'] = process.env.N8N_WEBHOOK_SECRET;
+  } else if (!warnedNoSecret) {
+    warnedNoSecret = true;
+    console.warn('N8N_WEBHOOK_SECRET is not set: anyone who learns the webhook URL can run the workflow. Add Header Auth to the n8n webhook node and set the same value here.');
+  }
 
   try {
     const response = await fetch(webhook, {

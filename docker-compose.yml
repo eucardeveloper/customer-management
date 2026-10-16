@@ -103,7 +103,7 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (copy .env.example)}
-      JWT_EXPIRATION: 7200000
+      JWT_EXPIRATION: 1800000
       AUTH_COOKIE_SECURE: "false"   # local http; set true behind HTTPS
       AUTH_REGISTRATION_ENABLED: "true"   # local demo only; leave unset on a hosted deployment
 
@@ -189,11 +189,11 @@ services:
       N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
 
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:2.42.4
     container_name: n8n
     restart: unless-stopped
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"
     environment:
       N8N_PORT: 5678
       DB_TYPE: postgresdb
@@ -210,11 +210,11 @@ services:
 
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.15.0
     container_name: prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
@@ -224,11 +224,11 @@ services:
       - order-backend
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.2.3
     container_name: grafana
     restart: unless-stopped
     ports:
-      - "3002:3000"
+      - "127.0.0.1:3002:3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}

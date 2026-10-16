@@ -145,4 +145,20 @@ class OrderControllerTest {
         mockMvc.perform(delete("/api/orders/99"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void malformedJson_shouldReturn400_notServerError() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"broken\": "))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void wrongContentType_shouldReturn415() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/orders")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("hello"))
+                .andExpect(status().isUnsupportedMediaType());
+    }
 }

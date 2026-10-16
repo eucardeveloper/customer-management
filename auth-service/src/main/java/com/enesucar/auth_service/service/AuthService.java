@@ -13,6 +13,7 @@ import com.enesucar.auth_service.security.JwtUtil;
 import com.enesucar.auth_service.security.LoginAttemptLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -72,8 +73,9 @@ public class AuthService {
         }
         loginAttemptLimiter.reset(request.getUsername());
 
+        // Authentication just succeeded, so a missing row means the account was deleted in between: same answer as a bad login.
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BadCredentialsException("Invalid username or password"));
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getTokenVersion());
         return new AuthResponse(token, user.getUsername(), user.getRole().name());

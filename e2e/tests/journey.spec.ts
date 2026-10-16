@@ -115,3 +115,40 @@ test('a customer who still has orders cannot be deleted through the API', async 
   });
   expect(bad.status()).toBe(400);
 });
+
+test('deleting a customer: refused while orders exist, claim released, allowed once they are gone', async ({ request }) => {
+  const login = await request.post(`${API}/api/auth/login`, {
+    data: { username: ADMIN.user, password: ADMIN.pass },
+    headers: { Origin: 'http://localhost:3000' },
+  });
+  expect(login.ok()).toBeTruthy();
+  const token = (await login.headersArray()).find((h) => h.name.toLowerCase() === 'set-cookie')!.value.match(/customer_session=([^;]+)/)![1];
+  const auth = { Authorization: `Bearer ${token}` };
+
+  // a throw-away customer with one order (the seed data is never touched)
+  const customer = await (await request.post(`${API}/api/customers`, {
+    headers: auth,
+    data: { firstName: 'E2E', lastName: `Delete-${Date.now()}`, email: 'e2e-delete@example.com', customerType: 'INDIVIDUAL' },
+  })).json();
+  const order = await (await request.post(`${API}/api/orders`, {
+    headers: auth,
+    data: { customerId: customer.id, productName: 'e2e item', price: 1, quantity: 1 },
+  })).json();
+
+  // refused, and the customer reads normally afterwards: the delete's claim was given back
+  expect((await request.delete(`${API}/api/customers/${customer.id}`, { headers: auth })).status()).toBe(409);
+  expect((await request.get(`${API}/api/customers/${customer.id}`, { headers: auth })).status()).toBe(200);
+  // ... so a new order can still be attached to it
+  const second = await request.post(`${API}/api/orders`, {
+    headers: auth,
+    data: { customerId: customer.id, productName: 'e2e item 2', price: 1, quantity: 1 },
+  });
+  expect(second.ok()).toBeTruthy();
+  const secondOrder = await second.json();
+
+  // once both orders are gone the customer can be deleted, and then it is gone
+  expect((await request.delete(`${API}/api/orders/${order.id}`, { headers: auth })).status()).toBe(204);
+  expect((await request.delete(`${API}/api/orders/${secondOrder.id}`, { headers: auth })).status()).toBe(204);
+  expect((await request.delete(`${API}/api/customers/${customer.id}`, { headers: auth })).status()).toBe(204);
+  expect((await request.get(`${API}/api/customers/${customer.id}`, { headers: auth })).status()).toBe(404);
+});

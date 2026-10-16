@@ -7,6 +7,8 @@ ARG NEXT_PUBLIC_API_URL=http://localhost:8080
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SHOW_DEMO_LOGIN=false
 ENV NEXT_PUBLIC_SHOW_DEMO_LOGIN=$NEXT_PUBLIC_SHOW_DEMO_LOGIN
+ARG NEXT_PUBLIC_DEMO_ADMIN_HINT=true
+ENV NEXT_PUBLIC_DEMO_ADMIN_HINT=$NEXT_PUBLIC_DEMO_ADMIN_HINT
 ARG NEXT_PUBLIC_ALLOW_REGISTER=false
 ENV NEXT_PUBLIC_ALLOW_REGISTER=$NEXT_PUBLIC_ALLOW_REGISTER
 ARG API_PROXY_TARGET=
@@ -21,5 +23,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 EXPOSE 3000
 ENV PORT=3000
+# Listen on every interface; otherwise Next binds to the container hostname only and the published port can reset connections.
+ENV HOSTNAME=0.0.0.0
 USER node
 CMD ["node", "server.js"]
