@@ -749,11 +749,11 @@ export default function Home() {
 
             {/* Stat Cards — only customers/orders */}
             {statCards.length > 0 && (
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: { xs: 1, md: 2 }, flexShrink: 0 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(auto-fit, minmax(210px, 1fr))' }, gap: { xs: 1, md: 2 }, flexShrink: 0 }}>
                 {statCards.map((s) => (
                   <Card key={s.label} elevation={0} sx={{ border: `1px solid ${s.border}`, borderRadius: 3, transition: 'all 0.2s ease', cursor: 'default', bgcolor: 'var(--surface)', '&:hover': { boxShadow: '0 8px 28px rgba(0,0,0,0.08)', transform: 'translateY(-2px)', borderColor: s.color + '60' } }}>
-                    <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: '16px !important', px: '18px !important' }}>
-                      <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, flexShrink: 0 }}>{s.icon}</Box>
+                    <CardContent sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 2 }, py: '16px !important', px: { xs: '14px !important', sm: '18px !important' } }}>
+                      <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: s.bg, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'center', color: s.color, flexShrink: 0 }}>{s.icon}</Box>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography noWrap sx={{ fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', mb: 0.2 }}>{s.label}</Typography>
                         <Typography noWrap sx={{ fontWeight: 800, fontSize: '1.25rem', lineHeight: 1.2, color: 'var(--text)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{s.value}</Typography>
@@ -776,9 +776,9 @@ export default function Home() {
                   <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('customers')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchCustomers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                   {isAdmin && (
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} disableElevation size="small"
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', '&:hover': { background: 'linear-gradient(135deg,#1d4ed8,#1e40af)' } }}>
-                      {t('newCustomer')}
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} aria-label={t('newCustomer')} disableElevation size="small"
+                      sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: { xs: 36, sm: 64 }, px: { xs: 1, sm: 1.5 }, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } }, borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', '&:hover': { background: 'linear-gradient(135deg,#1d4ed8,#1e40af)' } }}>
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{t('newCustomer')}</Box>
                     </Button>
                   )}
                 </Box>
@@ -854,9 +854,9 @@ export default function Home() {
                   <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('orders')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchOrders} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                   {isAdmin && (
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={openAddOrder} disableElevation size="small"
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', '&:hover': { background: 'linear-gradient(135deg,#1d4ed8,#1e40af)' } }}>
-                      {t('newOrder')}
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={openAddOrder} aria-label={t('newOrder')} disableElevation size="small"
+                      sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: { xs: 36, sm: 64 }, px: { xs: 1, sm: 1.5 }, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } }, borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', '&:hover': { background: 'linear-gradient(135deg,#1d4ed8,#1e40af)' } }}>
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{t('newOrder')}</Box>
                     </Button>
                   )}
                 </Box>
@@ -948,7 +948,7 @@ export default function Home() {
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: '#94a3b8' }} /></InputAdornment> } }}
                     sx={{ width: 380, maxWidth: '100%', '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
-                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddUserDialogOpen(true)} disableElevation size="small" sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}>{ t('addUser') }</Button>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddUserDialogOpen(true)} aria-label={t('addUser')} disableElevation size="small" sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: { xs: 36, sm: 64 }, px: { xs: 1, sm: 1.5 }, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } }, textTransform: 'none', fontWeight: 600, borderRadius: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}><Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{ t('addUser') }</Box></Button>
                   <Tooltip title="Refresh"><IconButton size="small" onClick={fetchUsers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                 </Box>
                 <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 0 }}>
