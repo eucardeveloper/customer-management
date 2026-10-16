@@ -55,7 +55,7 @@ jobs:
           echo "--- containers"; docker compose ps -a
           echo "--- last log lines"; docker compose logs --tail=60
           exit 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Install and run Playwright
