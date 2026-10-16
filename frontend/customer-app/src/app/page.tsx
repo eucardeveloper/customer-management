@@ -459,7 +459,7 @@ export default function Home() {
     catch { showSnackbar('Status update failed.', 'error'); }
   };
 
-  const filteredCustomers = customers.filter(c => { const q = custSearch.toLowerCase(); if (!q) return true; return `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q); });
+  const filteredCustomers = [...customers].sort((x, y) => (x.id ?? 0) - (y.id ?? 0)).filter(c => { const q = custSearch.toLowerCase(); if (!q) return true; return `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q); });
   const filteredOrders = [...orders].sort((x, y) => (y.id ?? 0) - (x.id ?? 0)).filter(o => { const q = ordSearch.toLowerCase(); if (!q) return true; return (o.productName ?? '').toLowerCase().includes(q) || String(o.customerId ?? '').includes(q) || (o.status ?? '').toLowerCase().includes(q); });
   // Keep the page index valid when rows disappear (delete / search), otherwise the table shows an empty page
   const custPageSafe = Math.min(custPage, Math.max(0, Math.ceil(filteredCustomers.length / custRowsPerPage) - 1));
@@ -614,14 +614,14 @@ export default function Home() {
                   </Box>
                   <Box sx={{ overflow: 'hidden' }}>
                     <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: 'white', lineHeight: 1.2, whiteSpace: 'nowrap', letterSpacing: '-0.02em' }}>CRM Platform</Typography>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.6rem', whiteSpace: 'nowrap', letterSpacing: '0.04em', textTransform: 'uppercase', mt: 0.2 }}>{ t('appSubtitle') }</Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.6rem', whiteSpace: 'nowrap', letterSpacing: '0.04em', textTransform: 'uppercase', mt: 0.2 }}>{ t('appSubtitle') }</Typography>
                   </Box>
                 </Box>
               </Box>
 
               {/* Nav */}
               <List sx={{ px: 1.5, pt: 2, flex: 1 }}>
-                <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.12em', textTransform: 'uppercase', px: 1.5, mb: 1 }}>{t('navigation')}</Typography>
+                <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.12em', textTransform: 'uppercase', px: 1.5, mb: 1 }}>{t('navigation')}</Typography>
                 {sidebarItems.map((item) => {
                   const active = tab === item.key;
                   return (
@@ -641,10 +641,10 @@ export default function Home() {
                           transition: 'all 0.15s ease',
                         }}
                       >
-                        <ListItemIcon sx={{ color: active ? '#60a5fa' : 'rgba(255,255,255,0.28)', minWidth: 34, transition: 'color 0.15s' }}>{item.icon}</ListItemIcon>
+                        <ListItemIcon sx={{ color: active ? '#60a5fa' : 'rgba(255,255,255,0.55)', minWidth: 34, transition: 'color 0.15s' }}>{item.icon}</ListItemIcon>
                         <ListItemText primary={item.label} slotProps={{ primary: { style: { fontSize: '0.855rem', fontWeight: active ? 600 : 400, letterSpacing: active ? '-0.01em' : 'normal' } } }} />
                         {item.count !== null && (
-                          <Chip label={item.count} size="small" sx={{ bgcolor: active ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.06)', color: active ? '#93c5fd' : 'rgba(255,255,255,0.28)', fontSize: '0.65rem', height: 18, minWidth: 22, fontWeight: 600 }} />
+                          <Chip label={item.count} size="small" sx={{ bgcolor: active ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.1)', color: active ? '#93c5fd' : 'rgba(255,255,255,0.7)', fontSize: '0.65rem', height: 18, minWidth: 22, fontWeight: 600 }} />
                         )}
                       </ListItemButton>
                     </ListItem>
@@ -661,10 +661,10 @@ export default function Home() {
                     </Avatar>
                     <Box sx={{ flex: 1, overflow: 'hidden' }}>
                       <Typography sx={{ color: 'white', fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentUser.username}</Typography>
-                      <Typography sx={{ color: isAdmin ? '#34d399' : 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{currentUser.role}</Typography>
+                      <Typography sx={{ color: isAdmin ? '#34d399' : 'rgba(255,255,255,0.65)', fontSize: '0.62rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{currentUser.role}</Typography>
                     </Box>
                                         <Tooltip title={t("signOut")}>
-                      <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { void logout().finally(() => { window.location.replace('/login'); }); }}>
+                      <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.08)' }, borderRadius: 1.5 }} onClick={() => { void logout().finally(() => { window.location.replace('/login'); }); }}>
                         <LogoutIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
@@ -676,7 +676,7 @@ export default function Home() {
                     {t('changePassword')}
                   </Button>
                 )}
-                <Typography sx={{ color: 'rgba(255,255,255,0.12)', fontSize: '0.58rem', letterSpacing: '0.04em' }}>{t('springBootKafkaPostgres')}</Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.58rem', letterSpacing: '0.04em' }}>{t('springBootKafkaPostgres')}</Typography>
               </Box>
             </Box>
           );
@@ -749,7 +749,7 @@ export default function Home() {
 
             {/* Stat Cards — only customers/orders */}
             {statCards.length > 0 && (
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(auto-fit, minmax(210px, 1fr))' }, gap: { xs: 1, md: 2 }, flexShrink: 0 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(auto-fit, minmax(210px, 1fr))' }, gap: { xs: 1, md: 2 }, flexShrink: 0 }}>
                 {statCards.map((s) => (
                   <Card key={s.label} elevation={0} sx={{ border: `1px solid ${s.border}`, borderRadius: 3, transition: 'all 0.2s ease', cursor: 'default', bgcolor: 'var(--surface)', '&:hover': { boxShadow: '0 8px 28px rgba(0,0,0,0.08)', transform: 'translateY(-2px)', borderColor: s.color + '60' } }}>
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 2 }, py: '16px !important', px: { xs: '14px !important', sm: '18px !important' } }}>
@@ -897,7 +897,7 @@ export default function Home() {
                                   <FormControl size="small">
                                     <Select value={o.status ?? 'PENDING'} onChange={e => { e.stopPropagation(); updateOrderStatus(o.id, e.target.value); }}
                                       renderValue={v => statusChip(v, t)}
-                                      sx={{ width: 124, '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, '& .MuiSelect-select': { p: '0 28px 0 0 !important', display: 'flex', justifyContent: 'flex-start' }, '& .MuiSelect-icon': { right: 6 } }}>
+                                      sx={{ width: 'auto', '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, '& .MuiSelect-select': { p: '0 22px 0 0 !important', display: 'flex', justifyContent: 'flex-start' }, '& .MuiSelect-icon': { right: 0 } }}>
                                       {ORDER_STATUSES.map(s => <MenuItem key={s} value={s}>{statusChip(s, t)}</MenuItem>)}
                                     </Select>
                                   </FormControl>
@@ -1035,7 +1035,7 @@ export default function Home() {
               return (
                 <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {/* KPI Cards */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,1fr)', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
                     {(() => {
                       const fmtTrend = (val: string | null, higherIsBetter = true) => {
                         if (val === null) return { label: t('trendNoData'), up: true, dir: true, none: true };
@@ -1121,7 +1121,7 @@ export default function Home() {
                   </Box>
 
                   {/* Revenue Chart + Top Customers */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: isAdmin ? '3fr 2fr' : '1fr' }, gap: 2 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: isAdmin ? '3fr 2fr' : '1fr' }, gap: 2 }}>
                     {isAdmin && (
                       <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', mb: 0.5 }}>{t('revenueTrend')}</Typography>
@@ -1180,7 +1180,7 @@ export default function Home() {
                   </Box>
 
                   {/* Recent Orders + Order Status */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: '2fr 1fr' }, gap: 2 }}>
                     <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, overflow: 'hidden' }}>
                       <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{t('recentOrders')}</Typography>
@@ -1287,7 +1287,7 @@ export default function Home() {
                   ];
                   const analyticsCards = allAnalyticsCards.filter(c => isAdmin || !c.adminOnly);
                   return (
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,1fr)', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
                       {analyticsCards.map((card) => (
                         <Paper key={card.label} elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5, overflow: 'hidden' }}>
                           <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', mb: 0.5 }}>{card.label}</Typography>
@@ -1309,7 +1309,7 @@ export default function Home() {
                 })()}
 
                 {/* Revenue Line Chart + Order Status Pie */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: isAdmin ? '3fr 2fr' : '1fr' }, gap: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: isAdmin ? '3fr 2fr' : '1fr' }, gap: 2 }}>
                   {isAdmin && <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
                       <Box sx={{ flex: 1 }}>
@@ -1376,7 +1376,7 @@ export default function Home() {
                 </Box>
 
                 {/* Customer Types Pie + Top Products */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: isAdmin ? '1fr 2fr' : '1fr' }, gap: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: isAdmin ? '1fr 2fr' : '1fr' }, gap: 2 }}>
                   <Paper elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', mb: 2 }}>{t('customerTypes')}</Typography>
                     {(() => {
@@ -1419,7 +1419,7 @@ export default function Home() {
                     {(() => {
                       const productMap: Record<string, number> = {};
                       orders.forEach(o => { productMap[o.productName] = (productMap[o.productName] ?? 0) + o.price * o.quantity; });
-                      const top = Object.entries(productMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name: name.length > 16 ? name.slice(0, 16) + '…' : name, value }));
+                      const top = Object.entries(productMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name: name.length > 26 ? name.slice(0, 26) + '…' : name, value }));
                       if (top.length === 0) return <Typography variant="body2" color="text.secondary">{t('noOrders')}</Typography>;
                       const PROD_COLORS = ['#2563eb','#0ea5e9','#10b981','#f59e0b','#ef4444'];
                       return (
@@ -1427,7 +1427,7 @@ export default function Home() {
                           <BarChart data={top} layout="vertical" margin={{ top: 0, right: 50, left: 0, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke={gridC} horizontal={false} />
                             <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
-                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: tick2C }} axisLine={false} tickLine={false} width={125} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: tick2C }} axisLine={false} tickLine={false} width={170} />
                             <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                             <Bar dataKey="value" animationDuration={600} radius={[0, 4, 4, 0]} label={{ position: 'right', formatter: (v: unknown) => `$${(Number(v)/1000).toFixed(1)}k`, fontSize: 11, fill: '#64748b' }}>
                               {top.map((_, i) => <Cell key={i} fill={PROD_COLORS[i % PROD_COLORS.length]} />)}

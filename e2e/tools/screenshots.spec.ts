@@ -7,15 +7,17 @@ import path from 'node:path';
 // and never rewrites the files.
 test.use({ viewport: { width: 1440, height: 1200 } });
 
-const OUT = path.resolve(__dirname, '../../docs/screenshots');
+const DARK = process.env.COLOR_MODE === 'dark'; // COLOR_MODE=dark npm run screenshots: written to e2e/mobile-shots, not the README folder
+const OUT = DARK ? path.resolve(__dirname, '../mobile-shots') : path.resolve(__dirname, '../../docs/screenshots');
 const ADMIN = { user: process.env.E2E_ADMIN_USER ?? 'admin', pass: process.env.E2E_ADMIN_PASS ?? 'admin123' };
 
 async function shot(page: Page, name: string) {
   await page.waitForTimeout(2500);
-  await page.screenshot({ path: path.join(OUT, `customer-${name}.png`) });
+  await page.screenshot({ path: path.join(OUT, `customer-${DARK ? 'desktop-dark-' : ''}${name}.png`) });
 }
 
 test('capture the screens', async ({ page }) => {
+  if (DARK) await page.addInitScript(() => localStorage.setItem('colorMode', 'dark'));
   // A README picture of an empty dashboard is worse than no picture: record what the browser saw
   // and refuse to shoot a screen whose data requests failed.
   const problems: string[] = [];
