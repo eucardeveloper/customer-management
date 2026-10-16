@@ -23,5 +23,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 EXPOSE 3000
 ENV PORT=3000
+# Listen on every interface; otherwise Next binds to the container hostname only and the published port can reset connections.
+ENV HOSTNAME=0.0.0.0
 USER node
 CMD ["node", "server.js"]
