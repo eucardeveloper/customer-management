@@ -1076,9 +1076,9 @@ export default function Home() {
                             </Box>
                             <Box sx={{ width: 40, height: 40, borderRadius: 2.5, bgcolor: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color, flexShrink: 0 }}>{card.icon}</Box>
                           </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
                             <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>{card.sub}</Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, px: 0.8, py: 0.2, borderRadius: 5, bgcolor: ('none' in card && card.none) ? 'rgba(148,163,184,0.10)' : card.up ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, whiteSpace: 'nowrap', maxWidth: '100%', px: 0.8, py: 0.2, borderRadius: 5, bgcolor: ('none' in card && card.none) ? 'rgba(148,163,184,0.10)' : card.up ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)' }}>
                               <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, color: ('none' in card && card.none) ? '#94a3b8' : card.up ? '#10b981' : '#ef4444' }}>{('none' in card && card.none) ? '' : (('dir' in card ? card.dir : card.up) ? '↑ ' : '↓ ')}{card.trend}</Typography>
                             </Box>
                           </Box>
@@ -1217,9 +1217,9 @@ export default function Home() {
                         const allPie = ORDER_STATUSES.map((s, i) => ({ name: statusText(s, t), value: orders.filter(o => (o.status ?? 'PENDING') === s).length || 0.001, realCount: orders.filter(o => (o.status ?? 'PENDING') === s).length, color: PIE_COLORS[i] }));
                         return (
                           <>
-                            <ResponsiveContainer width="100%" height={140}>
+                            <ResponsiveContainer width="100%" height={200}>
                               <PieChart>
-                                <Pie data={allPie} cx="50%" cy="50%" innerRadius={38} outerRadius={60} paddingAngle={2} dataKey="value" animationDuration={600}>
+                                <Pie data={allPie} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value" animationDuration={600}>
                                   {allPie.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" opacity={entry.realCount === 0 ? 0.2 : 1} />)}
                                 </Pie>
                                 <ReTooltip formatter={(_v, name, item) => [(item?.payload as { realCount?: number } | undefined)?.realCount, name]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
