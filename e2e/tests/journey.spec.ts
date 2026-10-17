@@ -178,3 +178,21 @@ test('a signed-in USER is refused with 403 (not 401) on admin-only calls', async
   expect(write.status()).toBe(403);
   expect((await request.get(`${API}/api/users`, { headers: auth })).status()).toBe(403);
 });
+
+test('the last administrator cannot be demoted or deleted', async ({ request }) => {
+  const login = await request.post(`${API}/api/auth/login`, {
+    data: { username: ADMIN.user, password: ADMIN.pass },
+    headers: { Origin: 'http://localhost:3000' },
+  });
+  expect(login.ok()).toBeTruthy();
+  const token = (await login.headersArray()).find((h) => h.name.toLowerCase() === 'set-cookie')!.value.match(/customer_session=([^;]+)/)![1];
+  const auth = { Authorization: `Bearer ${token}` };
+  const users: Array<{ id: number; username: string; role: string }> = await (await request.get(`${API}/api/users`, { headers: auth })).json();
+  const admins = users.filter((u) => u.role === 'ADMIN');
+  test.skip(admins.length !== 1, 'only meaningful while exactly one administrator exists');
+
+  const demote = await request.patch(`${API}/api/users/${admins[0].id}/role`, { headers: auth, data: { role: 'USER' } });
+  expect(demote.status()).toBe(409);
+  const remove = await request.delete(`${API}/api/users/${admins[0].id}`, { headers: auth });
+  expect(remove.status()).toBe(409);
+});

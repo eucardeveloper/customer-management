@@ -52,7 +52,7 @@ Setup: `docker compose up -d --build`, frontend `http://localhost:3000`, gateway
 | ID | Role | Steps | Expected | Status | Run |
 |---|---|---|---|---|---|
 | U1 | ADMIN | Create/promote/delete a throw-away user | Works; deleted user cannot sign in | Not run | |
-| U2 | ADMIN | Delete or demote the only ADMIN | Refused with a clear message | Not run | |
+| U2 | ADMIN | Delete or demote the only ADMIN | Refused with `409` and a clear message | Failed 2026-10-17 (no such rule); fixed in code, to be re-run after rebuild | |
 
 ## AI assistant
 

@@ -91,6 +91,7 @@ These credentials are demo data. Change them before exposing the stack anywhere.
 
 - **Gateway** validates the JWT on every request except login/register and forwards the verified user and role to the services; anonymous calls get `401`.
 - **Roles are enforced in the services**: reading customers and orders needs any signed-in user, creating/changing/deleting them needs ADMIN, and order prices are returned as `null` to non-admins, so the restriction holds for curl/Postman as well as for the UI. Public self-registration is off by default (`AUTH_REGISTRATION_ENABLED`, switched on by the local compose file) and always creates a USER. The services trust the gateway's identity headers only together with a shared secret (`GATEWAY_SHARED_SECRET`), so another container cannot invent an identity. `OrderApiAuthorizationTest` and `CustomerApiAuthorizationTest` run the real security chain.
+- **The last ADMIN** can neither be demoted nor deleted (`409`), so the system cannot be left without an administrator.
 - **Passwords** are hashed with BCrypt. The JWT secret has no default: `docker compose` refuses to start without `JWT_SECRET`.
 - **Network exposure**: only gateway, frontends, n8n, Prometheus and Grafana are published. DB and Kafka ports are internal.
 - **CORS** is limited to the two frontend origins (`CORS_ALLOWED_ORIGINS` to change).

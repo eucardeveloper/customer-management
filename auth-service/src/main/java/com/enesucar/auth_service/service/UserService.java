@@ -4,6 +4,7 @@ import com.enesucar.auth_service.dto.UserResponse;
 import com.enesucar.auth_service.entity.Role;
 import com.enesucar.auth_service.entity.User;
 import com.enesucar.auth_service.exception.InvalidRoleException;
+import com.enesucar.auth_service.exception.LastAdminException;
 import com.enesucar.auth_service.exception.UserNotFoundException;
 import com.enesucar.auth_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,13 +27,24 @@ public class UserService {
     }
 
     public void deleteUser(Long id) {
+        userRepository.findById(id).ifPresent(this::requireAnotherAdmin);
         userRepository.deleteById(id);
+    }
+
+    /** Throws when the given user is an ADMIN and no other ADMIN would be left. */
+    private void requireAnotherAdmin(User user) {
+        if (user.getRole() == Role.ADMIN && userRepository.countByRole(Role.ADMIN) <= 1) {
+            throw new LastAdminException();
+        }
     }
 
     public UserResponse updateRole(Long id, String role) {
         Role newRole = parseRole(role);
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
+        if (newRole != Role.ADMIN) {
+            requireAnotherAdmin(user);
+        }
         user.setRole(newRole);
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);

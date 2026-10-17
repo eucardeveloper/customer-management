@@ -3,6 +3,7 @@ package com.enesucar.auth_service.service;
 import com.enesucar.auth_service.dto.UserResponse;
 import com.enesucar.auth_service.entity.Role;
 import com.enesucar.auth_service.exception.InvalidRoleException;
+import com.enesucar.auth_service.exception.LastAdminException;
 import com.enesucar.auth_service.entity.User;
 import com.enesucar.auth_service.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,6 +84,52 @@ class UserServiceTest {
         assertThat(result.getUsername()).isEqualTo("testuser");
         assertThat(user.getRole()).isEqualTo(Role.ADMIN);
         verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateRole_shouldRefuseDemotingTheLastAdmin() {
+        user.setRole(Role.ADMIN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.countByRole(Role.ADMIN)).thenReturn(1L);
+
+        assertThatThrownBy(() -> userService.updateRole(1L, "USER")).isInstanceOf(LastAdminException.class);
+
+        assertThat(user.getRole()).isEqualTo(Role.ADMIN);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void updateRole_shouldAllowDemotingAnAdmin_whenAnotherAdminExists() {
+        user.setRole(Role.ADMIN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.countByRole(Role.ADMIN)).thenReturn(2L);
+        when(userRepository.save(any(User.class))).thenReturn(user);
+
+        userService.updateRole(1L, "USER");
+
+        assertThat(user.getRole()).isEqualTo(Role.USER);
+    }
+
+    @Test
+    void deleteUser_shouldRefuseDeletingTheLastAdmin() {
+        user.setRole(Role.ADMIN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.countByRole(Role.ADMIN)).thenReturn(1L);
+
+        assertThatThrownBy(() -> userService.deleteUser(1L)).isInstanceOf(LastAdminException.class);
+
+        verify(userRepository, never()).deleteById(anyLong());
+    }
+
+    @Test
+    void deleteUser_shouldAllowDeletingAnAdmin_whenAnotherAdminExists() {
+        user.setRole(Role.ADMIN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.countByRole(Role.ADMIN)).thenReturn(2L);
+
+        userService.deleteUser(1L);
+
+        verify(userRepository).deleteById(1L);
     }
 
     @Test
