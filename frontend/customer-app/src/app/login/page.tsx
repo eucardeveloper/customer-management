@@ -22,6 +22,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { saveAuth } from '@/lib/auth';
 import { useMounted } from '@/lib/useMounted';
+import { fetchWithStartupRetry, isTransientStatus, STARTING_MESSAGE } from '@/lib/loginRequest';
 
 interface AuthResponse {
   username: string;
@@ -59,13 +60,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
+      const res = await fetchWithStartupRetry(fetch, `${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ username: user, password: pass }),
       });
 
+      if (isTransientStatus(res.status)) throw new Error(STARTING_MESSAGE);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.message || 'Invalid username or password');
