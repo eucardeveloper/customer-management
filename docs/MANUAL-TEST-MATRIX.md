@@ -36,7 +36,7 @@ Also checked after the rebuild: an admin setting a password shorter than 8 chara
 | O2 | ADMIN | Create an order for a customer id that does not exist (API) | `400` | Passed (API, 400) | 2026-10-17 by Claude, API/browser |
 | O3 | ADMIN | Update and delete an order | Changes visible; dashboard numbers follow | Passed (API) | 2026-10-17 by Claude, API/browser |
 | O4 | ADMIN | After O1, check `outbox_event` and Kafka topic `order-events` | Row `published`; event `ORDER_CREATED` on the topic | Passed (outbox row) | 2026-10-17 by Claude: new order produced an outbox row with `published_at` set; the Kafka topic itself was not read |
-| O5 | ADMIN | Dashboard with no orders in the last 30 days | Neutral "no recent orders", no invented percentage | Not run | |
+| O5 | ADMIN | Dashboard with no orders in the last 30 days | Neutral "no recent orders", no invented percentage | Passed (partly) | 2026-10-17 by Claude: with no orders loaded the dashboard cards showed "no recent orders" and 0%, no invented percentage; the exact 30-day case with older orders only was not set up |
 
 ## Session and password
 
@@ -46,7 +46,7 @@ Also checked after the rebuild: an admin setting a password shorter than 8 chara
 | S2 | any | 6 wrong passwords for one username | `429` with `Retry-After` | Passed: 429 after 5 failures (Retry-After header not readable from a cross-origin script) | 2026-10-17 by Claude, API/browser |
 | S3 | any | Sign out, press Back | Login page, not the dashboard | Passed | 2026-10-17 by Claude, API/browser |
 | S4 | ADMIN | Change a throw-away user's password in tab A | Tab B (same user) is signed out within about 10 s | Partly: old password refused, new one accepted; end of the old session is covered by the Playwright test | 2026-10-17 by Claude, API/browser |
-| S5 | any | Wait past the 30 min lifetime | Next request returns to login with the session notice | Not run | |
+| S5 | any | Wait past the 30 min lifetime | Next request returns to login with the session notice | Passed (API) | 2026-10-17 by Claude: fresh admin session answered `200` at once and `401` after 31.4 minutes; the redirect page and its notice were not looked at |
 | S6 | ADMIN | Change a user's role | That user's old session stops working | Not run | |
 
 ## User management
