@@ -36,6 +36,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Spring forwards sendError (403, 404...) to /error. Without this the forward is judged
+                        // as anonymous and every 403 turns into an empty 401 on a real server.
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/auth/password", "/api/auth/session").authenticated()
                         .requestMatchers("/api/auth/**", "/swagger-ui/**",
                                 "/swagger-ui.html", "/v3/api-docs/**").permitAll()

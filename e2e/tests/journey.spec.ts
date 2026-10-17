@@ -152,3 +152,29 @@ test('deleting a customer: refused while orders exist, claim released, allowed o
   expect((await request.delete(`${API}/api/customers/${customer.id}`, { headers: auth })).status()).toBe(204);
   expect((await request.get(`${API}/api/customers/${customer.id}`, { headers: auth })).status()).toBe(404);
 });
+
+test('a signed-in USER is refused with 403 (not 401) on admin-only calls', async ({ request }) => {
+  const username = `e2e_user_${Date.now() % 1000000}`;
+  const password = 'E2e-Pass#2026';
+  created.push(username);
+  const reg = await request.post(`${API}/api/auth/register`, {
+    data: { username, email: `${username}@example.com`, password },
+    headers: { Origin: 'http://localhost:3000' },
+  });
+  expect(reg.ok()).toBeTruthy();
+  const login = await request.post(`${API}/api/auth/login`, {
+    data: { username, password },
+    headers: { Origin: 'http://localhost:3000' },
+  });
+  expect(login.ok()).toBeTruthy();
+  const token = (await login.headersArray()).find((h) => h.name.toLowerCase() === 'set-cookie')!.value.match(/customer_session=([^;]+)/)![1];
+  const auth = { Authorization: `Bearer ${token}` };
+
+  expect((await request.get(`${API}/api/customers`, { headers: auth })).status()).toBe(200);
+  const write = await request.post(`${API}/api/customers`, {
+    headers: auth,
+    data: { firstName: 'No', lastName: 'Access', email: 'no.access@example.com', customerType: 'INDIVIDUAL' },
+  });
+  expect(write.status()).toBe(403);
+  expect((await request.get(`${API}/api/users`, { headers: auth })).status()).toBe(403);
+});

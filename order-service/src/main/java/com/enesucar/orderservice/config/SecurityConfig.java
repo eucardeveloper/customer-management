@@ -46,6 +46,9 @@ public class SecurityConfig {
                         ).permitAll()
                         // Reading is open to any signed-in user; changing data is an ADMIN action.
                         // (The UI hides the buttons, this is what actually enforces it.)
+                        // Spring forwards sendError (403, 404...) to /error. Without this the forward is judged
+                        // as anonymous and every 403 turns into an empty 401 on a real server.
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/orders/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/orders/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/orders/**").hasRole("ADMIN")

@@ -44,6 +44,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+                        // Spring forwards sendError (403, 404...) to /error. Without this the forward is judged
+                        // as anonymous and every 403 turns into an empty 401 on a real server.
+                        .requestMatchers("/error").permitAll()
                         // Reading is open to any signed-in user; changing data is an ADMIN action.
                         // (The UI hides the buttons, this is what actually enforces it.)
                         .requestMatchers(HttpMethod.GET, "/api/customers/**").authenticated()
