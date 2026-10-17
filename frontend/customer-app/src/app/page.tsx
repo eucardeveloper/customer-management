@@ -147,6 +147,8 @@ const baseThemeOptions: ThemeOptions = {
           borderBottom: '1px solid var(--grid)', padding: '10px 20px', fontVariantNumeric: 'tabular-nums',
           // visible vertical divider between columns, header included
           '&:not(:last-child)': { borderRight: '1px solid var(--border)' },
+          // narrow screens: keep the Actions column (last) pinned so it stays reachable while the table scrolls sideways
+          '@media (max-width:900px)': { '&:last-child': { position: 'sticky', right: 0, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 1 } },
         },
       },
     },

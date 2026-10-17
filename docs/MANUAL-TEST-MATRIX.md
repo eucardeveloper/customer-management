@@ -71,8 +71,8 @@ Also checked after the rebuild: an admin setting a password shorter than 8 chara
 | ID | Role | Steps | Expected | Status | Run |
 |---|---|---|---|---|---|
 | D1 | any | Light and dark theme, reload | Choice persists; contrast readable | Passed (theme only) | 2026-10-17 by Claude in Chrome: dark and light theme both rendered readable; persistence after reload was not separately checked |
-| D2 | any | Widths 390, 768, 1280, 1920 | No horizontal page scroll, actions reachable | Not run | |
-| D3 | any | Keyboard only through login, tables and dialogs | Visible focus ring; Escape closes dialogs | Not run | |
+| D2 | any | Widths 390, 768, 1280, 1920 | No horizontal page scroll, actions reachable | Partly run | 390 px measured live: no page-level horizontal scroll on all five pages; tables scroll inside their own container. Actions column made sticky on narrow screens (≤900 px) after the measurement; 768/1280/1920 not measured. |
+| D3 | any | Keyboard only through login, tables and dialogs | Visible focus ring; Escape closes dialogs | Not run | To be checked by hand by the owner. |
 
 ## Failure behaviour
 
