@@ -16,7 +16,7 @@ Also checked after the rebuild: an admin setting a password shorter than 8 chara
 | R4 | USER | Orders list and dashboard | Prices and revenue are not shown (null/masked) | Passed | 2026-10-17 by Claude, API/browser |
 | R5 | USER | `POST /api/customers` with the USER cookie | `403` | Passed after fix (403) | 2026-10-17 by Claude, API, after rebuild |
 | R6 | USER | Open the Users page / `GET /api/users` | Page hidden or refused; API `403` | Passed after fix (403) | 2026-10-17 by Claude, API, after rebuild |
-| R7 | ADMIN | Sign in as `admin`; open every page | All pages load, no console errors | Not run | |
+| R7 | ADMIN | Sign in as `admin`; open every page | All pages load, no console errors | Passed | 2026-10-17 by Claude in Chrome: signed in through the form, opened Dashboard, Customers, Orders, Analytics and User Management; no console errors |
 
 ## Customers
 
@@ -70,7 +70,7 @@ Also checked after the rebuild: an admin setting a password shorter than 8 chara
 
 | ID | Role | Steps | Expected | Status | Run |
 |---|---|---|---|---|---|
-| D1 | any | Light and dark theme, reload | Choice persists; contrast readable | Not run | |
+| D1 | any | Light and dark theme, reload | Choice persists; contrast readable | Passed (theme only) | 2026-10-17 by Claude in Chrome: dark and light theme both rendered readable; persistence after reload was not separately checked |
 | D2 | any | Widths 390, 768, 1280, 1920 | No horizontal page scroll, actions reachable | Not run | |
 | D3 | any | Keyboard only through login, tables and dialogs | Visible focus ring; Escape closes dialogs | Not run | |
 
