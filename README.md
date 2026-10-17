@@ -155,7 +155,7 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE).
 
 ## Design decisions
 See [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md).

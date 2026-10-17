@@ -2,6 +2,8 @@
 
 This repository is built for `docker compose`. A hosted demo is a **separate deployment of the same images**; this page is the checklist for it. Nothing in the repository deploys itself, and a demo link is only worth putting on a CV while it is up and reflects the current `main`.
 
+> **Status (October 2026):** no hosted demo is running. The services are stopped and auto-deploy is off; this page documents how to bring one up. The reference setup is `docker compose`.
+
 ## 1. Services
 
 One Railway service per row, each from its own folder (Dockerfile):
