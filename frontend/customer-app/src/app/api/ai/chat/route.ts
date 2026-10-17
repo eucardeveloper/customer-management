@@ -184,9 +184,17 @@ export async function POST(req: NextRequest) {
   const statusSummary = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
     .map((st) => `${st}=${statusCounts[st] ?? 0}`)
     .join(', ');
+  const nameOf = new Map<number, string>(customers.map((c) => [c.id, `${clean(c.firstName)} ${clean(c.lastName)}`.trim()]));
+  // Order counts are not financial, so every role may see them. Computed here for the same reason as above.
+  const ordersPerCustomer = new Map<number, number>();
+  orders.forEach((o) => ordersPerCustomer.set(o.customerId, (ordersPerCustomer.get(o.customerId) ?? 0) + 1));
+  const topByOrderCount = [...ordersPerCustomer.entries()]
+    .sort((x, y) => y[1] - x[1])
+    .slice(0, 5)
+    .map(([id, n]) => `${nameOf.get(id) ?? `customer ${id}`}: ${n}`)
+    .join('; ');
   let financeSummary = '';
   if (isAdmin) {
-    const nameOf = new Map<number, string>(customers.map((c) => [c.id, `${clean(c.firstName)} ${clean(c.lastName)}`.trim()]));
     const byCustomer = new Map<number, number>();
     const byProduct = new Map<string, number>();
     orders.forEach((o) => {
@@ -204,7 +212,8 @@ export async function POST(req: NextRequest) {
   }
   const summary = `SERVER-COMPUTED SUMMARY (trusted, exact; quote these numbers and do not recompute them):
 Total orders: ${orders.length}. Orders by status: ${statusSummary}.
-Fulfillment rate = DELIVERED orders / all orders = ${deliveredCount}/${orders.length} = ${fulfillmentRate}%.${financeSummary}
+Fulfillment rate = DELIVERED orders / all orders = ${deliveredCount}/${orders.length} = ${fulfillmentRate}%.
+Top customers by number of orders: ${topByOrderCount || 'none'}.${financeSummary}
 `;
 
   const systemPrompt = `You are a CRM assistant. Answer questions about the customers and orders listed in the DATA block.
