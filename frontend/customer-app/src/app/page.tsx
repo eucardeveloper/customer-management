@@ -147,8 +147,8 @@ const baseThemeOptions: ThemeOptions = {
           borderBottom: '1px solid var(--grid)', padding: '10px 20px', fontVariantNumeric: 'tabular-nums',
           // visible vertical divider between columns, header included
           '&:not(:last-child)': { borderRight: '1px solid var(--border)' },
-          // narrow screens: keep the Actions column (last) pinned so it stays reachable while the table scrolls sideways
-          '@media (max-width:900px)': { '&:last-child': { position: 'sticky', right: 0, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 1 } },
+          // screens narrower than the widest table: keep the Actions column (last) pinned so it stays reachable while the table scrolls sideways
+          '@media (max-width:1600px)': { '&:last-child': { position: 'sticky', right: 0, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 1 } },
         },
       },
     },
@@ -600,7 +600,7 @@ export default function Home() {
   return (
     <ThemeProvider theme={colorMode === 'dark' ? darkTheme : theme}>
       <CssBaseline />
-      <GlobalStyles styles={{ ':root': LIGHT_VARS, ':root[data-mode="dark"]': DARK_VARS, html: { colorScheme: 'light' }, 'html[data-mode="dark"]': { colorScheme: 'dark' }, '*': { scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }, body: { backgroundColor: 'var(--page)' } }} />
+      <GlobalStyles styles={{ ':root': LIGHT_VARS, ':root[data-mode="dark"]': DARK_VARS, html: { colorScheme: 'light' }, 'html[data-mode="dark"]': { colorScheme: 'dark' }, '*': { scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }, body: { backgroundColor: 'var(--page)' }, '*:focus-visible': { outline: '2px solid #3b82f6', outlineOffset: '2px' } }} />
       <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
 
         {/* ── Sidebar content (shared between permanent + swipeable) ── */}

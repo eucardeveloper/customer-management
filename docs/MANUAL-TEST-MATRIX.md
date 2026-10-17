@@ -71,8 +71,8 @@ Also checked after the rebuild: an admin setting a password shorter than 8 chara
 | ID | Role | Steps | Expected | Status | Run |
 |---|---|---|---|---|---|
 | D1 | any | Light and dark theme, reload | Choice persists; contrast readable | Passed (theme only) | 2026-10-17 by Claude in Chrome: dark and light theme both rendered readable; persistence after reload was not separately checked |
-| D2 | any | Widths 390, 768, 1280, 1920 | No horizontal page scroll, actions reachable | Partly run | 390 px measured live: no page-level horizontal scroll on all five pages; tables scroll inside their own container. Actions column made sticky on narrow screens (≤900 px) after the measurement; 768/1280/1920 not measured. |
-| D3 | any | Keyboard only through login, tables and dialogs | Visible focus ring; Escape closes dialogs | Not run | To be checked by hand by the owner. |
+| D2 | any | Widths 390, 768, 1280, 1920 | No horizontal page scroll, actions reachable | Passed | Live, 2026-10-17: document width equals viewport on Customers/Orders/User Management at 390, 768, 1280 and 1904 px. All row action buttons inside the viewport at every width (Actions column pinned below 1600 px; before the fix 1280 px Orders had 0 of 16 in view). |
+| D3 | any | Keyboard only through login, tables and dialogs | Visible focus ring; Escape closes dialogs | Passed | Live, 2026-10-17, real key presses: Tab shows a 2 px blue focus ring (global :focus-visible rule); Enter on New Customer opens the dialog with focus inside it; Escape closes it. |
 
 ## Failure behaviour
 
