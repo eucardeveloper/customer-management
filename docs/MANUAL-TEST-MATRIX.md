@@ -4,6 +4,8 @@ Browser and API scenarios that automated tests do not cover end to end. Each row
 
 Setup: `docker compose up -d --build`, frontend `http://localhost:3000`, gateway `http://localhost:8080`. Demo accounts: `admin / admin123` (ADMIN), `user1 / user123` (USER, read-only).
 
+Also checked after the rebuild: an admin setting a password shorter than 8 characters now gets `400` with the message and stays signed in (before: empty `401` and a forced sign-out).
+
 ## Roles and access
 
 | ID | Role | Steps | Expected | Status | Run |
@@ -12,8 +14,8 @@ Setup: `docker compose up -d --build`, frontend `http://localhost:3000`, gateway
 | R2 | anonymous | `GET /api/customers` through the gateway | `401` | Passed | 2026-10-17 by Claude, API/browser |
 | R3 | USER | Sign in as `user1`; open Customers and Orders | Lists visible; no create/edit/delete buttons | Passed (non-admin account) | 2026-10-17 by Claude, API/browser |
 | R4 | USER | Orders list and dashboard | Prices and revenue are not shown (null/masked) | Passed | 2026-10-17 by Claude, API/browser |
-| R5 | USER | `POST /api/customers` with the USER cookie | `403` | Failed: empty 401 instead of 403; fixed in code (cc6e46d), re-run after rebuild | 2026-10-17 by Claude, API/browser |
-| R6 | USER | Open the Users page / `GET /api/users` | Page hidden or refused; API `403` | Failed: empty 401 instead of 403; fixed in code (cc6e46d), re-run after rebuild | 2026-10-17 by Claude, API/browser |
+| R5 | USER | `POST /api/customers` with the USER cookie | `403` | Passed after fix (403) | 2026-10-17 by Claude, API, after rebuild |
+| R6 | USER | Open the Users page / `GET /api/users` | Page hidden or refused; API `403` | Passed after fix (403) | 2026-10-17 by Claude, API, after rebuild |
 | R7 | ADMIN | Sign in as `admin`; open every page | All pages load, no console errors | Not run | |
 
 ## Customers
@@ -52,13 +54,13 @@ Setup: `docker compose up -d --build`, frontend `http://localhost:3000`, gateway
 | ID | Role | Steps | Expected | Status | Run |
 |---|---|---|---|---|---|
 | U1 | ADMIN | Create/promote/delete a throw-away user | Works; deleted user cannot sign in | Passed (API) | 2026-10-17 by Claude, API/browser |
-| U2 | ADMIN | Delete or demote the only ADMIN | Refused with `409` and a clear message | Failed 2026-10-17 (no such rule); fixed in code, to be re-run after rebuild | |
+| U2 | ADMIN | Delete or demote the only ADMIN | Refused with `409` and a clear message | Failed 2026-10-17 (no such rule); fixed in code. Live re-run skipped on purpose (a failure would lock out the only admin); covered by a Playwright test in CI | |
 
 ## AI assistant
 
 | ID | Role | Steps | Expected | Status | Run |
 |---|---|---|---|---|---|
-| A1 | ADMIN | Ask "Which customer placed the most orders?" | Answer from stored data | Failed: could not name the customer with the most orders; fixed (order counts added to the server summary), re-run after rebuild | 2026-10-17 by Claude, API/browser |
+| A1 | ADMIN | Ask "Which customer placed the most orders?" | Answer from stored data | Passed after fix (names the customers with the most orders) | 2026-10-17 by Claude, API, after rebuild |
 | A2 | USER | Ask for total revenue | No prices or revenue disclosed | Not run | |
 | A3 | any | Message longer than 2000 characters | Rejected with a clear error | Passed | 2026-10-17 by Claude, API/browser |
 | A4 | any | Chat without `OPENROUTER_API_KEY` | `503` with a readable message, no stack trace | Not run | |
