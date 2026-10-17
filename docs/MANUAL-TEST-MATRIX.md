@@ -35,7 +35,7 @@ Also checked after the rebuild: an admin setting a password shorter than 8 chara
 | O1 | ADMIN | Create an order for an existing customer | Row appears with status PENDING | Passed (API) | 2026-10-17 by Claude, API/browser |
 | O2 | ADMIN | Create an order for a customer id that does not exist (API) | `400` | Passed (API, 400) | 2026-10-17 by Claude, API/browser |
 | O3 | ADMIN | Update and delete an order | Changes visible; dashboard numbers follow | Passed (API) | 2026-10-17 by Claude, API/browser |
-| O4 | ADMIN | After O1, check `outbox_event` and Kafka topic `order-events` | Row `published`; event `ORDER_CREATED` on the topic | Not run | |
+| O4 | ADMIN | After O1, check `outbox_event` and Kafka topic `order-events` | Row `published`; event `ORDER_CREATED` on the topic | Passed (outbox row) | 2026-10-17 by Claude: new order produced an outbox row with `published_at` set; the Kafka topic itself was not read |
 | O5 | ADMIN | Dashboard with no orders in the last 30 days | Neutral "no recent orders", no invented percentage | Not run | |
 
 ## Session and password
@@ -78,6 +78,6 @@ Also checked after the rebuild: an admin setting a password shorter than 8 chara
 
 | ID | Steps | Expected | Status | Run |
 |---|---|---|---|---|
-| F1 | Stop `auth-service`, then open any page | Gateway answers `503` (fail closed), UI shows an error, no stale data | Not run | |
-| F2 | Stop `order-service`, delete a customer | Refused with `503`, customer is kept | Not run | |
-| F3 | Stop Kafka, create an order, start Kafka | Order saved; event published after Kafka returns (outbox) | Not run | |
+| F1 | Stop `auth-service`, then open any page | Gateway answers `503` (fail closed), UI shows an error, no stale data | Passed (gateway) | 2026-10-17 by Claude: `GET /api/customers` returned `503` with an empty body while auth-service was stopped; UI error display not checked |
+| F2 | Stop `order-service`, delete a customer | Refused with `503`, customer is kept | Passed | 2026-10-17 by Claude: delete refused with `503` and the message "Could not verify the customer's orders right now"; customer still readable afterwards |
+| F3 | Stop Kafka, create an order, start Kafka | Order saved; event published after Kafka returns (outbox) | Passed | 2026-10-17 by Claude: order created with Kafka stopped (`201`, outbox row `published=false`); after Kafka restarted the row became `published=true` |
