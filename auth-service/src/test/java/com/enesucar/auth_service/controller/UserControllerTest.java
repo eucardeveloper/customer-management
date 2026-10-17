@@ -61,6 +61,27 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
+    void resetPassword_shouldReturn400WithMessage_whenPasswordTooShort() throws Exception {
+        mockMvc.perform(put("/api/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("newPassword", "short"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("New password must be 8-72 characters"));
+        verify(userService, never()).resetPassword(anyLong(), anyString());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void resetPassword_shouldReturn400_whenPasswordMissing() throws Exception {
+        mockMvc.perform(put("/api/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+        verify(userService, never()).resetPassword(anyLong(), any());
+    }
+
+    @Test
     @WithMockUser(roles = "USER")
     void getAllUsers_shouldReturn403_whenNotAdmin() throws Exception {
         mockMvc.perform(get("/api/users"))

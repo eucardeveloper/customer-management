@@ -20,8 +20,8 @@ export async function fetchWithStartupRetry(
   init: RequestInit,
   options: { attempts?: number; delayMs?: number; sleep?: (ms: number) => Promise<void> } = {},
 ): Promise<Response> {
-  const attempts = options.attempts ?? 4;
-  const delayMs = options.delayMs ?? 1500;
+  const attempts = options.attempts ?? 20;
+  const delayMs = options.delayMs ?? 2000;
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
 
   for (let i = 0; i < attempts; i++) {

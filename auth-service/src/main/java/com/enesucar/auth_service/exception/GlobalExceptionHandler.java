@@ -12,6 +12,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -70,6 +72,21 @@ public class GlobalExceptionHandler {
                         "status", 429,
                         "error", "Too Many Requests",
                         "message", "Too many failed sign-in attempts. Try again in " + minutes + " minute(s)."));
+    }
+
+    /**
+     * Bean validation on a request body (@Valid). Without this handler the exception left the controller
+     * unhandled, the error dispatch was rejected by Spring Security and the client saw an empty 401, which
+     * the web app treats as "session expired". It is a plain 400 carrying the field message.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .filter(m -> m != null && !m.isBlank())
+                .findFirst()
+                .orElse("Invalid request");
+        return body(HttpStatus.BAD_REQUEST, message);
     }
 
     /** Malformed JSON, wrong types, missing parameters: the client's mistake, so 400, not 500. */
