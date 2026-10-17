@@ -143,7 +143,11 @@ const baseThemeOptions: ThemeOptions = {
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { borderBottom: '1px solid var(--grid)', padding: '10px 20px', fontVariantNumeric: 'tabular-nums' },
+        root: {
+          borderBottom: '1px solid var(--grid)', padding: '10px 20px', fontVariantNumeric: 'tabular-nums',
+          // visible vertical divider between columns, header included
+          '&:not(:last-child)': { borderRight: '1px solid var(--border)' },
+        },
       },
     },
     MuiButton: {
@@ -790,12 +794,12 @@ export default function Home() {
                       <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: 900 }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
                             <TableCell>{t('customer')}</TableCell>
                             <TableCell>{t('email')}</TableCell>
                             <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('phone')}</TableCell>
-                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
+                            {isAdmin && <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -810,8 +814,8 @@ export default function Home() {
                           )}
                           {filteredCustomers.slice(custPageSafe * custRowsPerPage, custPageSafe * custRowsPerPage + custRowsPerPage).map(c => (
                             <TableRow key={c.id}>
-                              <TableCell><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
-                              <TableCell>{customerTypeChip(c, t)}</TableCell>
+                              <TableCell align="center"><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
+                              <TableCell align="center">{customerTypeChip(c, t)}</TableCell>
                               <TableCell sx={{ cursor: 'pointer' }} onClick={() => setDrawerCustomer(c)}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, maxWidth: '100%' }}>
                                   <Avatar sx={{ width: 30, height: 30, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.72rem', fontWeight: 700 }}>
@@ -823,7 +827,7 @@ export default function Home() {
                               <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={c.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{c.email}</Typography></Box></TableCell>
                               <TableCell sx={{ whiteSpace: 'nowrap' }}><Box sx={{ maxWidth: '100%' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{c.phone}</Typography></Box></TableCell>
                               {isAdmin && (
-                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                                <TableCell align="center" sx={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                                   <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEdit(c)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
                                   <Tooltip title={t('delete')}><IconButton size="small" onClick={() => openDelete(c.id)} sx={{ color: 'var(--icon)', '&:hover': { color: '#ef4444' } }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
                                 </TableCell>
@@ -868,15 +872,15 @@ export default function Home() {
                       <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: isAdmin ? 1100 : 800 }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('status')}</TableCell>
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('status')}</TableCell>
                             <TableCell>{t('product')}</TableCell>
                             <TableCell>{t('customer')}</TableCell>
                             {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('unitPrice')}</TableCell>}
                             <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('qty')}</TableCell>
                             {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('totalCol')}</TableCell>}
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('date')}</TableCell>
-                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('date')}</TableCell>
+                            {isAdmin && <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -891,8 +895,8 @@ export default function Home() {
                           )}
                           {filteredOrders.slice(ordPageSafe * ordRowsPerPage, ordPageSafe * ordRowsPerPage + ordRowsPerPage).map(o => (
                             <TableRow key={o.id}>
-                              <TableCell><Chip label={`#${o.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
-                              <TableCell>
+                              <TableCell align="center"><Chip label={`#${o.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                              <TableCell align="center">
                                 {isAdmin ? (
                                   <FormControl size="small">
                                     <Select value={o.status ?? 'PENDING'} onChange={e => { e.stopPropagation(); updateOrderStatus(o.id, e.target.value); }}
@@ -919,9 +923,9 @@ export default function Home() {
                                   </Typography>
                                 </TableCell>
                               )}
-                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></TableCell>
+                              <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></TableCell>
                               {isAdmin && (
-                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                                <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                                   <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
                                   <Tooltip title={t('delete')}><IconButton size="small" onClick={() => openDeleteOrder(o.id)} sx={{ color: 'var(--icon)', '&:hover': { color: '#ef4444' } }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
                                 </TableCell>
@@ -955,11 +959,11 @@ export default function Home() {
                   <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: 760 }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                        <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
                         <TableCell>{t('username')}</TableCell>
                         <TableCell>{t('email')}</TableCell>
-                        <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('role')}</TableCell>
-                        <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
+                        <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('role')}</TableCell>
+                        <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -971,7 +975,7 @@ export default function Home() {
                       )}
                       {filteredUsers.map(u => (
                         <TableRow key={u.id}>
-                          <TableCell><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                          <TableCell align="center"><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, maxWidth: '100%' }}>
                               <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#059669' : '#2563eb', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
@@ -979,10 +983,10 @@ export default function Home() {
                             </Box>
                           </TableCell>
                           <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
-                          <TableCell>
+                          <TableCell align="center">
                             <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'var(--green-bg)' : 'var(--blue-bg)', color: u.role === 'ADMIN' ? '#059669' : '#2563eb', border: `1px solid ${u.role === 'ADMIN' ? 'var(--green-bd)' : 'var(--blue-bd)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>
-                          <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                          <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                             <Tooltip title={t('changeRole')}>
                               <IconButton size="small" sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#059669' } }} onClick={() => { setSelectedUserId(u.id); setSelectedRole(u.role); setRoleDialogOpen(true); }}>
                                 <AdminPanelSettingsIcon sx={{ fontSize: 16 }} />
