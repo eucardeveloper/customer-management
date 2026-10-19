@@ -6,6 +6,18 @@ A microservice CRM: customers, orders and users behind an API gateway, order eve
 
 **Why four services for a CRM?** On purpose: this is a learning and portfolio project about distributed-system problems (identity across services, session revocation, a reliable event after a database write, consistency across two databases). A product of this size would normally be a modular monolith; the costs of the split are listed in [Known limitations](#known-limitations). **How it was built:** with AI assistance (Claude), directed and reviewed by the author; the commit trailers say so, and every behaviour described here is covered by a test or was checked against the running stack ([docs/TEST-EVIDENCE.md](docs/TEST-EVIDENCE.md)).
 
+## Review it in five minutes
+
+| If you want to know... | Look at |
+|---|---|
+| Does it build and pass? | the CI, Frontend and E2E badges above; per-suite counts and what was checked live in [docs/TEST-EVIDENCE.md](docs/TEST-EVIDENCE.md) |
+| How is an order event not lost when Kafka or the service fails? | `order-service/.../kafka/OutboxRelay.java`, `entity/OutboxEvent.java` (transactional outbox, at-least-once, idempotent consumer) |
+| How is a session ended on the server? | `auth-service/.../service/AuthService.java` (`token_version`, revoked-token list) and `apigateway/.../filter/JwtAuthFilter.java` |
+| Why can't another container make up an identity? | `customer-service/.../config/GatewayHeaderAuthFilter.java` (shared secret, constant-time compare) |
+| How is brute force limited? | `auth-service/.../security/LoginAttemptLimiter.java` (database-backed, per username and per address) |
+| Why these trade-offs? | [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md) |
+| What does it not do? | [Known limitations](#known-limitations) |
+
 ## Architecture
 
 ```mermaid
