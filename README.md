@@ -15,6 +15,8 @@ A microservice CRM: customers, orders and users behind an API gateway, order eve
 | How is a session ended on the server? | `auth-service/.../service/AuthService.java` (`token_version`, revoked-token list) and `apigateway/.../filter/JwtAuthFilter.java` |
 | Why can't another container make up an identity? | `customer-service/.../config/GatewayHeaderAuthFilter.java` (shared secret, constant-time compare) |
 | How is brute force limited? | `auth-service/.../security/LoginAttemptLimiter.java` (database-backed, per username and per address) |
+| Who may do what, and where is it enforced? | [docs/ROLE-MATRIX.md](docs/ROLE-MATRIX.md) |
+| How do I accept it myself, role by role? | [docs/UAT-GUIDE.md](docs/UAT-GUIDE.md) |
 | Why these trade-offs? | [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md) |
 | What does it not do? | [Known limitations](#known-limitations) |
 
