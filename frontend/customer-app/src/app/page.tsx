@@ -145,10 +145,10 @@ const baseThemeOptions: ThemeOptions = {
       styleOverrides: {
         root: {
           borderBottom: '1px solid var(--grid)', padding: '10px 20px', fontVariantNumeric: 'tabular-nums',
-          // every column centred (header and body), including flex/stack content inside a cell
-          textAlign: 'center',
-          '&.MuiTableCell-alignLeft, &.MuiTableCell-alignRight, &.MuiTableCell-alignCenter': { textAlign: 'center' },
-          '& > .MuiBox-root, & > .MuiStack-root': { justifyContent: 'center', alignItems: 'center', marginLeft: 'auto', marginRight: 'auto' },
+          // one alignment rule: text left, numbers right (align="right"), badges centre (align="center"); header and cells of a column share the same align prop
+          textAlign: 'left',
+          '&.MuiTableCell-alignRight': { textAlign: 'right' },
+          '&.MuiTableCell-alignCenter': { textAlign: 'center' },
           // visible vertical divider between columns, header included
           '&:not(:last-child)': { borderRight: '1px solid var(--border)' },
           // screens narrower than the widest table: keep the Actions column (last) pinned so it stays reachable while the table scrolls sideways
@@ -800,12 +800,12 @@ export default function Home() {
                       <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: 900 }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
                             <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
                             <TableCell sx={{ width: '30%' }}>{t('customer')}</TableCell>
                             <TableCell sx={{ width: '34%' }}>{t('email')}</TableCell>
-                            <TableCell align="center" sx={{ width: '18%', whiteSpace: 'nowrap' }}>{t('phone')}</TableCell>
-                            {isAdmin && <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
+                            <TableCell sx={{ width: '18%', whiteSpace: 'nowrap' }}>{t('phone')}</TableCell>
+                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -831,9 +831,9 @@ export default function Home() {
                                 </Box>
                               </TableCell>
                               <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={c.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{c.email}</Typography></Box></TableCell>
-                              <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}><Box sx={{ maxWidth: '100%' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{c.phone}</Typography></Box></TableCell>
+                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Box sx={{ maxWidth: '100%' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{c.phone}</Typography></Box></TableCell>
                               {isAdmin && (
-                                <TableCell align="center" sx={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                                   <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEdit(c)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
                                   <Tooltip title={t('delete')}><IconButton size="small" onClick={() => openDelete(c.id)} sx={{ color: 'var(--icon)', '&:hover': { color: '#ef4444' } }}><DeleteIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
                                 </TableCell>
@@ -878,15 +878,15 @@ export default function Home() {
                       <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: isAdmin ? 1100 : 800 }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
                             <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('status')}</TableCell>
                             <TableCell sx={{ width: '30%' }}>{t('product')}</TableCell>
                             <TableCell sx={{ width: '26%' }}>{t('customer')}</TableCell>
                             {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('unitPrice')}</TableCell>}
                             <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('qty')}</TableCell>
                             {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('totalCol')}</TableCell>}
-                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('date')}</TableCell>
-                            {isAdmin && <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
+                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('date')}</TableCell>
+                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -929,9 +929,9 @@ export default function Home() {
                                   </Typography>
                                 </TableCell>
                               )}
-                              <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></TableCell>
+                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></TableCell>
                               {isAdmin && (
-                                <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
+                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                                   <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
                                   <Tooltip title={t('delete')}><IconButton size="small" onClick={() => openDeleteOrder(o.id)} sx={{ color: 'var(--icon)', '&:hover': { color: '#ef4444' } }}><DeleteIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
                                 </TableCell>
@@ -965,11 +965,11 @@ export default function Home() {
                   <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: 760 }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                        <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
                         <TableCell sx={{ width: '34%' }}>{t('username')}</TableCell>
                         <TableCell sx={{ width: '44%' }}>{t('email')}</TableCell>
                         <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('role')}</TableCell>
-                        <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
+                        <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -992,7 +992,7 @@ export default function Home() {
                           <TableCell align="center">
                             <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'var(--green-bg)' : 'var(--blue-bg)', color: u.role === 'ADMIN' ? '#059669' : '#2563eb', border: `1px solid ${u.role === 'ADMIN' ? 'var(--green-bd)' : 'var(--blue-bd)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>
-                          <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
+                          <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                             <Tooltip title={t('changeRole')}>
                               <IconButton size="small" sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#059669' } }} onClick={() => { setSelectedUserId(u.id); setSelectedRole(u.role); setRoleDialogOpen(true); }}>
                                 <AdminPanelSettingsIcon sx={{ fontSize: 19 }} />
