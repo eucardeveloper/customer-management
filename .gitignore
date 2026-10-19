@@ -50,3 +50,6 @@ seeddata.js
 
 # phone screenshots taken for review
 e2e/mobile-shots/
+
+# local backups
+backups/
