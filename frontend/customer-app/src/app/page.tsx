@@ -145,7 +145,7 @@ const baseThemeOptions: ThemeOptions = {
       styleOverrides: {
         root: {
           borderBottom: '1px solid var(--grid)', padding: '10px 20px', fontVariantNumeric: 'tabular-nums',
-          // one rule for every table: all columns left-aligned (header and cells together); only the actions column is right-aligned (align="right")
+          // one alignment rule: text left, numbers right (align="right"), badges centre (align="center"); header and cells of a column share the same align prop
           textAlign: 'left',
           '&.MuiTableCell-alignRight': { textAlign: 'right' },
           '&.MuiTableCell-alignCenter': { textAlign: 'center' },
@@ -801,7 +801,7 @@ export default function Home() {
                         <TableHead>
                           <TableRow>
                             <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
                             <TableCell sx={{ width: '30%' }}>{t('customer')}</TableCell>
                             <TableCell sx={{ width: '34%' }}>{t('email')}</TableCell>
                             <TableCell sx={{ width: '18%', whiteSpace: 'nowrap' }}>{t('phone')}</TableCell>
@@ -820,8 +820,8 @@ export default function Home() {
                           )}
                           {filteredCustomers.slice(custPageSafe * custRowsPerPage, custPageSafe * custRowsPerPage + custRowsPerPage).map(c => (
                             <TableRow key={c.id}>
-                              <TableCell><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
-                              <TableCell>{customerTypeChip(c, t)}</TableCell>
+                              <TableCell align="center"><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
+                              <TableCell align="center">{customerTypeChip(c, t)}</TableCell>
                               <TableCell sx={{ cursor: 'pointer' }} onClick={() => setDrawerCustomer(c)}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, maxWidth: '100%' }}>
                                   <Avatar sx={{ width: 30, height: 30, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.72rem', fontWeight: 700 }}>
@@ -879,12 +879,12 @@ export default function Home() {
                         <TableHead>
                           <TableRow>
                             <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('status')}</TableCell>
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('status')}</TableCell>
                             <TableCell sx={{ width: '30%' }}>{t('product')}</TableCell>
                             <TableCell sx={{ width: '26%' }}>{t('customer')}</TableCell>
-                            {isAdmin && <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('unitPrice')}</TableCell>}
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('qty')}</TableCell>
-                            {isAdmin && <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('totalCol')}</TableCell>}
+                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('unitPrice')}</TableCell>}
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('qty')}</TableCell>
+                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('totalCol')}</TableCell>}
                             <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('date')}</TableCell>
                             {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
                           </TableRow>
@@ -901,8 +901,8 @@ export default function Home() {
                           )}
                           {filteredOrders.slice(ordPageSafe * ordRowsPerPage, ordPageSafe * ordRowsPerPage + ordRowsPerPage).map(o => (
                             <TableRow key={o.id}>
-                              <TableCell><Chip label={`#${o.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
-                              <TableCell>
+                              <TableCell align="center"><Chip label={`#${o.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                              <TableCell align="center">
                                 {isAdmin ? (
                                   <FormControl size="small">
                                     <Select value={o.status ?? 'PENDING'} onChange={e => { e.stopPropagation(); updateOrderStatus(o.id, e.target.value); }}
@@ -920,10 +920,10 @@ export default function Home() {
                                   <Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem' }}>{getCustomerName(o.customerId)}</Typography>
                                 </Box>
                               </TableCell>
-                              {isAdmin && <TableCell sx={{ whiteSpace: 'nowrap' }}><Typography sx={{ fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{o.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography></TableCell>}
-                              <TableCell><Chip label={`${o.quantity}x`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: 'var(--text2)', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                              {isAdmin && <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}><Typography sx={{ fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{o.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography></TableCell>}
+                              <TableCell align="center"><Chip label={`${o.quantity}x`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: 'var(--text2)', fontSize: '0.68rem', height: 20 }} /></TableCell>
                               {isAdmin && (
-                                <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                                   <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
                                     {(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                                   </Typography>
@@ -968,7 +968,7 @@ export default function Home() {
                         <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
                         <TableCell sx={{ width: '34%' }}>{t('username')}</TableCell>
                         <TableCell sx={{ width: '44%' }}>{t('email')}</TableCell>
-                        <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('role')}</TableCell>
+                        <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('role')}</TableCell>
                         <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
                       </TableRow>
                     </TableHead>
@@ -981,7 +981,7 @@ export default function Home() {
                       )}
                       {filteredUsers.map(u => (
                         <TableRow key={u.id}>
-                          <TableCell><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                          <TableCell align="center"><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, maxWidth: '100%' }}>
                               <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#059669' : '#2563eb', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
@@ -989,7 +989,7 @@ export default function Home() {
                             </Box>
                           </TableCell>
                           <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
-                          <TableCell>
+                          <TableCell align="center">
                             <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'var(--green-bg)' : 'var(--blue-bg)', color: u.role === 'ADMIN' ? '#059669' : '#2563eb', border: `1px solid ${u.role === 'ADMIN' ? 'var(--green-bd)' : 'var(--blue-bd)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>
                           <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
