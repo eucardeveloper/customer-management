@@ -50,10 +50,10 @@ test('admin sees the customers table with aligned columns', async ({ page }) => 
   await page.getByRole('button', { name: 'Customers' }).click();
   const header = page.getByRole('columnheader', { name: 'Email' });
   await expect(header).toBeVisible();
-  // header and data of a column share one alignment (text columns: left) and the table has rows
-  expect(await header.evaluate((el) => getComputedStyle(el).textAlign)).toBe('left');
+  // header and data of a column share one alignment (every column centred; text sits left-aligned in a block centred in the column) and the table has rows
+  expect(await header.evaluate((el) => getComputedStyle(el).textAlign)).toBe('center');
   const emailCell = page.getByRole('row').nth(1).getByRole('cell').nth(3);
-  expect(await emailCell.evaluate((el) => getComputedStyle(el).textAlign)).toBe('left');
+  expect(await emailCell.evaluate((el) => getComputedStyle(el).textAlign)).toBe('center');
   expect(await page.getByRole('row').count()).toBeGreaterThan(1);
 });
 

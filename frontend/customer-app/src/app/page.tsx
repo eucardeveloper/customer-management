@@ -145,10 +145,10 @@ const baseThemeOptions: ThemeOptions = {
       styleOverrides: {
         root: {
           borderBottom: '1px solid var(--grid)', padding: '10px 20px', fontVariantNumeric: 'tabular-nums',
-          // one alignment rule: text left, numbers right (align="right"), badges centre (align="center"); header and cells of a column share the same align prop
-          textAlign: 'left',
-          '&.MuiTableCell-alignRight': { textAlign: 'right' },
-          '&.MuiTableCell-alignCenter': { textAlign: 'center' },
+          // one alignment rule: every column (header and cells, Actions included) is centred; text columns keep their text left-aligned inside a block that is centred in the column (see the textBlock wrappers)
+          textAlign: 'center',
+          '&.MuiTableCell-alignRight': { textAlign: 'center' },
+          '&.MuiTableCell-alignLeft': { textAlign: 'center' },
           // visible vertical divider between columns, header included
           '&:not(:last-child)': { borderRight: '1px solid var(--border)' },
           // screens narrower than the widest table: keep the Actions column (last) pinned so it stays reachable while the table scrolls sideways
@@ -235,7 +235,7 @@ const customerTypeChip = (c: Customer, tFn?: (k: string) => string) => {
 
 const formatDate = (dateStr: string, lang: Lang = 'en') => {
   if (!dateStr) return '—';
-  try { return new Date(dateStr).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  try { return new Date(dateStr).toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'de' ? 'de-DE' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
   catch { return dateStr; }
 };
 
@@ -741,7 +741,7 @@ export default function Home() {
                     sx={{ bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.68rem', border: '1px solid var(--blue-bd)', height: 24, fontWeight: 700, letterSpacing: '0.05em', '& .MuiChip-icon': { color: 'var(--blue-tx)' } }} />
                 )}
                 <Box sx={{ display: 'flex', borderRadius: 2, overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                  {(['en', 'tr'] as Lang[]).map(l => (
+                  {(['en', 'tr', 'de'] as Lang[]).map(l => (
                     <Box key={l} onClick={() => setLang(l)} sx={{ px: 1.2, py: 0.4, cursor: 'pointer', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.05em', bgcolor: lang === l ? '#2563eb' : 'transparent', color: lang === l ? 'white' : '#64748b', transition: 'all 0.15s', '&:hover': { bgcolor: lang === l ? '#1d4ed8' : 'var(--surface-2)' } }}>{l.toUpperCase()}</Box>
                   ))}
                 </Box>
@@ -823,15 +823,15 @@ export default function Home() {
                               <TableCell align="center"><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
                               <TableCell align="center">{customerTypeChip(c, t)}</TableCell>
                               <TableCell sx={{ cursor: 'pointer' }} onClick={() => setDrawerCustomer(c)}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, maxWidth: '100%' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: 'min(100%, 230px)', mx: 'auto', textAlign: 'left' }}>
                                   <Avatar sx={{ width: 30, height: 30, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.72rem', fontWeight: 700 }}>
                                     {(c.firstName ?? '?')[0]}{(c.lastName ?? '')[0]}
                                   </Avatar>
                                   <Typography noWrap sx={{ fontWeight: 600, fontSize: '0.875rem', '&:hover': { color: '#2563eb' } }}>{c.firstName} {c.lastName}</Typography>
                                 </Box>
                               </TableCell>
-                              <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={c.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{c.email}</Typography></Box></TableCell>
-                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Box sx={{ maxWidth: '100%' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{c.phone}</Typography></Box></TableCell>
+                              <TableCell><Box sx={{ width: 'min(100%, 260px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={c.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{c.email}</Typography></Box></TableCell>
+                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Box sx={{ width: 'min(100%, 150px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{c.phone}</Typography></Box></TableCell>
                               {isAdmin && (
                                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                                   <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEdit(c)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
@@ -913,9 +913,9 @@ export default function Home() {
                                   </FormControl>
                                 ) : statusChip(o.status ?? 'PENDING', t)}
                               </TableCell>
-                              <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={o.productName} sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{o.productName}</Typography></Box></TableCell>
+                              <TableCell><Box sx={{ width: 'min(100%, 200px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={o.productName} sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{o.productName}</Typography></Box></TableCell>
                               <TableCell>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: '100%' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: 'min(100%, 190px)', mx: 'auto', textAlign: 'left' }}>
                                   <Avatar sx={{ width: 22, height: 22, fontSize: '0.6rem', bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)' }}>{getCustomerName(o.customerId)[0]}</Avatar>
                                   <Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem' }}>{getCustomerName(o.customerId)}</Typography>
                                 </Box>
@@ -929,7 +929,7 @@ export default function Home() {
                                   </Typography>
                                 </TableCell>
                               )}
-                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></TableCell>
+                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Box sx={{ width: 110, mx: 'auto', textAlign: 'left' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></Box></TableCell>
                               {isAdmin && (
                                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                                   <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
@@ -983,12 +983,12 @@ export default function Home() {
                         <TableRow key={u.id}>
                           <TableCell align="center"><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                           <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, maxWidth: '100%' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: 'min(100%, 170px)', mx: 'auto', textAlign: 'left' }}>
                               <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#059669' : '#2563eb', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
                               <Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{u.username}</Typography>
                             </Box>
                           </TableCell>
-                          <TableCell><Box sx={{ maxWidth: '100%' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
+                          <TableCell><Box sx={{ width: 'min(100%, 260px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
                           <TableCell align="center">
                             <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'var(--green-bg)' : 'var(--blue-bg)', color: u.role === 'ADMIN' ? '#059669' : '#2563eb', border: `1px solid ${u.role === 'ADMIN' ? 'var(--green-bd)' : 'var(--blue-bd)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>
