@@ -929,7 +929,7 @@ export default function Home() {
                                   </Typography>
                                 </TableCell>
                               )}
-                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Box sx={{ width: 110, mx: 'auto', textAlign: 'left' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></Box></TableCell>
+                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></TableCell>
                               {isAdmin && (
                                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                                   <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
