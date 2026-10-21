@@ -58,3 +58,7 @@ export const formatDate = (dateStr: string, lang: Lang = 'en') => {
 export type TFn = (key: string) => string;
 export type SessionUser = { username: string; role: string } | null;
 export type TabKey = 'dashboard' | 'customers' | 'orders' | 'ai' | 'analytics' | 'users';
+export type OrderForm = { customerId: string; productName: string; price: string; quantity: string; status: string; date?: string };
+export type NewUserForm = { username: string; email: string; password: string; role: string };
+export type PwDialogState = { mode: 'self' | 'reset'; userId?: number; username?: string } | null;
+export type PwFormState = { current: string; next: string; confirm: string };
