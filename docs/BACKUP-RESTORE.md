@@ -19,7 +19,7 @@
 3. `.\restore.bat <timestamp>`, type `YES`.
 4. Open `http://localhost:3000`: the throw-away customer must be gone, everything else as at backup time.
 
-Status: the scripts are written but **not yet run on this machine**. Date of the first successful restore test: ____.
+Status: first successful restore test on 2026-10-21 (`.\restore-test.ps1`: all three databases backed up, a marker written into a customer, backup restored, marker gone, customer count unchanged).
 
 ## Limits
 
