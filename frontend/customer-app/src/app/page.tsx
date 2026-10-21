@@ -259,7 +259,11 @@ export default function Home() {
   const handleAddUser = async () => {
     if (!newUser.username || !newUser.email || !newUser.password) { showSnackbar(t('allFieldsRequired'), 'error'); return; }
     try { await api.post('/api/auth/register', { username: newUser.username, email: newUser.email, password: newUser.password, role: newUser.role }); showSnackbar(t('userCreated'), 'success'); setAddUserDialogOpen(false); setNewUser({ username: '', email: '', password: '', role: 'USER' }); fetchUsers(); }
-    catch { showSnackbar(t('createFailed'), 'error'); }
+    catch (e) {
+      // "Username already taken" / "Email already registered" tell the admin what to change; the generic text does not.
+      const m = e instanceof Error ? e.message : '';
+      showSnackbar(m && !m.startsWith('HTTP') ? translateServerMessage(lang, m) : t('createFailed'), 'error');
+    }
   };
 
   const handleUpdateRole = async () => {
