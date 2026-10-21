@@ -105,3 +105,10 @@ test('monthlySeries has one value per month, ending with the current month', () 
   // May, Jun, Jul, Aug, Sep, Oct 2026
   assert.deepEqual(monthlySeries(orders, NOW, (os) => os.length), [0, 0, 0, 1, 0, 2]);
 });
+
+test('monthlyRevenue labels follow the requested locale and default to English', () => {
+  const orders = [order({ price: 10, quantity: 1, date: at(2026, 10, 3) })];
+  assert.equal(monthlyRevenue(orders)[0].label, "Oct '26");
+  assert.match(monthlyRevenue(orders, 'tr-TR')[0].label, /^Eki '26$/);
+  assert.match(monthlyRevenue(orders, 'de-DE')[0].label, /^Okt\.? '26$/);
+});

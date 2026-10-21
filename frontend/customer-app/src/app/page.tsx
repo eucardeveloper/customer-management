@@ -1,13 +1,14 @@
 'use client';
-import { useTranslation, type Lang } from './translations';
+import { useTranslation, translate, type Lang } from './translations';
 import { PieChart, Pie, Cell, Tooltip as ReTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { api } from '@/lib/api';
 import { usePersistedPref } from '@/lib/usePersistedPref';
 import { downloadXlsx } from '@/lib/exportXlsx';
+import { useLang } from '@/lib/useLang';
 import { getAuthUser, logout } from '@/lib/auth';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useMounted } from '@/lib/useMounted';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { percentShares } from '@/lib/percent';
 import {
   sumRevenue, isPending, countByStatus, trendWindows, deliveredRateChange, monthlyRevenue, dailyRevenue,
@@ -241,7 +242,11 @@ const formatDate = (dateStr: string, lang: Lang = 'en') => {
 
 export default function Home() {
   const [tab, setTab] = useState<'dashboard' | 'customers' | 'orders' | 'ai' | 'analytics' | 'users'>('dashboard');
-  const [lang, setLang] = useState<Lang>('en');
+  const [lang, setLang] = useLang();
+  const dateLocale = lang === 'tr' ? 'tr-TR' : lang === 'de' ? 'de-DE' : 'en-US';
+  // data loaders read the language through a ref so that switching language does not reload the data
+  const langRef = useRef(lang);
+  useEffect(() => { langRef.current = lang; }, [lang]);
   const { t } = useTranslation(lang);
   const [drawerCustomer, setDrawerCustomer] = useState<Customer | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -313,14 +318,14 @@ export default function Home() {
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try { const data = await api.get<Customer[]>('/api/customers'); setCustomers(Array.isArray(data) ? data : []); }
-    catch { showSnackbar('Failed to load customers.', 'error'); }
+    catch { showSnackbar(translate(langRef.current, 'failedLoadCustomers'), 'error'); }
     finally { setLoading(false); }
   }, [showSnackbar]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try { const data = await api.get<Order[]>('/api/orders'); setOrders(Array.isArray(data) ? data : []); setNow(Date.now()); }
-    catch { showSnackbar('Failed to load orders.', 'error'); }
+    catch { showSnackbar(translate(langRef.current, 'failedLoadOrders'), 'error'); }
     finally { setLoading(false); }
   }, [showSnackbar]);
 
@@ -394,10 +399,10 @@ export default function Home() {
     const customerId = parseInt(editOrder.customerId);
     const price = parseFloat(editOrder.price);
     const quantity = parseInt(editOrder.quantity);
-    if (!editOrder.productName.trim()) { showSnackbar('Product name is required', 'error'); return; }
-    if (isNaN(customerId) || customerId <= 0) { showSnackbar('Valid customer ID is required', 'error'); return; }
-    if (isNaN(price) || price < 0) { showSnackbar('Valid price is required', 'error'); return; }
-    if (isNaN(quantity) || quantity <= 0) { showSnackbar('Valid quantity is required', 'error'); return; }
+    if (!editOrder.productName.trim()) { showSnackbar(t('productNameRequired'), 'error'); return; }
+    if (isNaN(customerId) || customerId <= 0) { showSnackbar(t('customerIdRequired'), 'error'); return; }
+    if (isNaN(price) || price < 0) { showSnackbar(t('priceRequired'), 'error'); return; }
+    if (isNaN(quantity) || quantity <= 0) { showSnackbar(t('quantityRequired'), 'error'); return; }
     try {
       const body: Record<string, unknown> = { customerId, productName: editOrder.productName.trim(), price, quantity, status: editOrder.status || 'PENDING' };
       if (isEditingOrder && editOrderId) {
@@ -466,7 +471,7 @@ export default function Home() {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
     try { await api.put(`/api/orders/${orderId}`, { customerId: order.customerId, productName: order.productName, price: order.price, quantity: order.quantity, status: newStatus }); showSnackbar(t('saved'), 'success'); fetchOrders(); }
-    catch { showSnackbar('Status update failed.', 'error'); }
+    catch { showSnackbar(t('statusUpdateFailed'), 'error'); }
   };
 
   const filteredCustomers = [...customers].sort((x, y) => (x.id ?? 0) - (y.id ?? 0)).filter(c => { const q = custSearch.toLowerCase(); if (!q) return true; return `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q); });
@@ -530,8 +535,8 @@ export default function Home() {
   };
 
   // Analytics data
-  const revenueByMonth = monthlyRevenue(orders).map(p => [p.label, p.value] as [string, number]);
-  const revenueByDay = dailyRevenue(orders).map(p => [p.label, p.value] as [string, number]);
+  const revenueByMonth = monthlyRevenue(orders, dateLocale).map(p => [p.label, p.value] as [string, number]);
+  const revenueByDay = dailyRevenue(orders, dateLocale).map(p => [p.label, p.value] as [string, number]);
 
   const chartData = chartMode === 'monthly' ? revenueByMonth : revenueByDay;
   const statusCounts = countByStatus(orders, ORDER_STATUSES);
@@ -560,11 +565,11 @@ export default function Home() {
       }
 
       const data = await res.json();
-      const reply = data.reply ?? 'No response received.';
+      const reply = data.reply ?? t('noResponse');
       setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Connection failed.';
-      setChatMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Error: ${message}` }]);
+      const message = err instanceof Error ? err.message : t('connectionFailed');
+      setChatMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${t('errorWord')}: ${message}` }]);
     } finally { setChatLoading(false); }
   };
 
@@ -784,7 +789,7 @@ export default function Home() {
                     sx={{ width: 380, maxWidth: '100%', '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
                   <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('customers')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
-                  <Tooltip title="Refresh"><IconButton size="small" onClick={fetchCustomers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
+                  <Tooltip title={t('refresh')}><IconButton size="small" onClick={fetchCustomers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                   {isAdmin && (
                     <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} aria-label={t('newCustomer')} disableElevation size="small"
                       sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: { xs: 36, sm: 64 }, px: { xs: 1, sm: 1.5 }, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } }, borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', '&:hover': { background: 'linear-gradient(135deg,#1d4ed8,#1e40af)' } }}>
@@ -862,7 +867,7 @@ export default function Home() {
                     sx={{ width: 380, maxWidth: '100%', '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
                   <Tooltip title={t('exportExcel')}><IconButton size="small" onClick={() => exportExcel('orders')} sx={{ color: '#64748b' }}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
-                  <Tooltip title="Refresh"><IconButton size="small" onClick={fetchOrders} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
+                  <Tooltip title={t('refresh')}><IconButton size="small" onClick={fetchOrders} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                   {isAdmin && (
                     <Button variant="contained" startIcon={<AddIcon />} onClick={openAddOrder} aria-label={t('newOrder')} disableElevation size="small"
                       sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: { xs: 36, sm: 64 }, px: { xs: 1, sm: 1.5 }, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } }, borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', '&:hover': { background: 'linear-gradient(135deg,#1d4ed8,#1e40af)' } }}>
@@ -959,7 +964,7 @@ export default function Home() {
                     sx={{ width: 380, maxWidth: '100%', '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)', borderRadius: 2 } }} />
                   <Box sx={{ flex: 1 }} />
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddUserDialogOpen(true)} aria-label={t('addUser')} disableElevation size="small" sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: { xs: 36, sm: 64 }, px: { xs: 1, sm: 1.5 }, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } }, textTransform: 'none', fontWeight: 600, borderRadius: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}><Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{ t('addUser') }</Box></Button>
-                  <Tooltip title="Refresh"><IconButton size="small" onClick={fetchUsers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
+                  <Tooltip title={t('refresh')}><IconButton size="small" onClick={fetchUsers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                 </Box>
                 <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 0 }}>
                   <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: 760 }}>
@@ -976,7 +981,7 @@ export default function Home() {
                       {filteredUsers.length === 0 && (
                         <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}>
                           <ManageAccountsIcon sx={{ fontSize: 40, color: '#cbd5e1', mb: 1, display: 'block', mx: 'auto' }} />
-                          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>No users found</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>{t('noUsers')}</Typography>
                         </TableCell></TableRow>
                       )}
                       {filteredUsers.map(u => (
@@ -1037,7 +1042,7 @@ export default function Home() {
               // Recent orders
               const recentOrders = [...orders].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()).slice(0, 6);
               // Revenue chart (last 6 months/days)
-              const revenueChartData = monthlyRevenue(orders).slice(-6);
+              const revenueChartData = monthlyRevenue(orders, dateLocale).slice(-6);
 
               // Real monthly series (last 6 calendar months) for the KPI sparklines — no placeholder data
               const monthSeries = (pick: (os: typeof orders) => number) => monthlySeries(orders, now, pick);
@@ -1148,13 +1153,13 @@ export default function Home() {
                               <CartesianGrid strokeDasharray="3 3" stroke={gridC} />
                               <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(1)}k`} />
-                              <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
+                              <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), t('revenue')]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                               <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} animationDuration={600} />
                             </LineChart>
                           </ResponsiveContainer>
                         ) : (
                           <Box sx={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>No order data yet</Typography>
+                            <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>{t('noOrderDataYet')}</Typography>
                           </Box>
                         )}
                       </Paper>
@@ -1175,7 +1180,7 @@ export default function Home() {
                               <Avatar sx={{ width: 28, height: 28, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.7rem', fontWeight: 700 }}>{(c!.firstName ?? '?')[0]}</Avatar>
                               <Box sx={{ flex: 1, overflow: 'hidden' }}>
                                 <Typography sx={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c!.firstName} {c!.lastName}</Typography>
-                                <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{(() => { const n = orders.filter(o => o.customerId === c!.id).length; return `${n} ${n === 1 && lang === 'en' ? 'Order' : t('orders')}`; })()}</Typography>
+                                <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{(() => { const n = orders.filter(o => o.customerId === c!.id).length; return `${n} ${n === 1 ? t('orderSingular') : t('orders')}`; })()}</Typography>
                               </Box>
                               {isAdmin && (
                                 <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: '#10b981', flexShrink: 0 }}>
@@ -1343,7 +1348,7 @@ export default function Home() {
                         <CartesianGrid strokeDasharray="3 3" stroke={gridC} />
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
-                        <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
+                        <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), t('revenue')]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                         <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2.5} dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} animationDuration={600} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -1438,7 +1443,7 @@ export default function Home() {
                             <CartesianGrid strokeDasharray="3 3" stroke={gridC} horizontal={false} />
                             <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
                             <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: tick2C }} axisLine={false} tickLine={false} width={170} />
-                            <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Revenue']} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
+                            <ReTooltip formatter={(v) => [Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), t('revenue')]} contentStyle={{ borderRadius: 8, border: '1px solid var(--surface-2)', fontSize: 12 }} />
                             <Bar dataKey="value" animationDuration={600} radius={[0, 4, 4, 0]} label={{ position: 'right', formatter: (v: unknown) => `$${(Number(v)/1000).toFixed(1)}k`, fontSize: 11, fill: '#64748b' }}>
                               {top.map((_, i) => <Cell key={i} fill={PROD_COLORS[i % PROD_COLORS.length]} />)}
                             </Bar>
@@ -1724,7 +1729,7 @@ export default function Home() {
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setRoleDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
-            <Button variant="contained" onClick={handleUpdateRole} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>Update Role</Button>
+            <Button variant="contained" onClick={handleUpdateRole} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{t('updateRole')}</Button>
           </DialogActions>
         </Dialog>
 
@@ -1750,7 +1755,7 @@ export default function Home() {
                     </Box>
                   </Box>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.2, mb: 2.5 }}>
-                    {drawerCustomer.email && <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>Email</Typography><Typography sx={{ fontSize: '0.875rem' }}>{drawerCustomer.email}</Typography></Box>}
+                    {drawerCustomer.email && <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>{t('email')}</Typography><Typography sx={{ fontSize: '0.875rem' }}>{drawerCustomer.email}</Typography></Box>}
                     {drawerCustomer.phone && <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>{t('phone')}</Typography><Typography sx={{ fontSize: '0.875rem' }}>{drawerCustomer.phone}</Typography></Box>}
                     <Box sx={{ display: 'flex', gap: 1.5 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.78rem', width: 55 }}>{t('id')}</Typography><Typography sx={{ fontSize: '0.875rem' }}>#{drawerCustomer.id}</Typography></Box>
                   </Box>
@@ -1792,7 +1797,7 @@ export default function Home() {
                 {isAdmin && (
                   <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
                     <Button fullWidth variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => { openDelete(drawerCustomer.id); setDrawerCustomer(null); }} sx={{ textTransform: 'none', borderRadius: 2 }}>{ t('delete') }</Button>
-                    <Button fullWidth variant="contained" startIcon={<EditIcon />} onClick={() => { openEdit(drawerCustomer); setDrawerCustomer(null); }} disableElevation sx={{ textTransform: 'none', borderRadius: 2 }}>Edit</Button>
+                    <Button fullWidth variant="contained" startIcon={<EditIcon />} onClick={() => { openEdit(drawerCustomer); setDrawerCustomer(null); }} disableElevation sx={{ textTransform: 'none', borderRadius: 2 }}>{t('edit')}</Button>
                   </DialogActions>
                 )}
               </>

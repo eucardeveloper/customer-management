@@ -3,6 +3,9 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useLang } from '@/lib/useLang';
+import { useTranslation } from '@/app/translations';
+import { LangPills } from '@/components/LangPills';
 import {
   Box,
   Button,
@@ -28,6 +31,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 export default function RegisterPage() {
   const router = useRouter();
   const mounted = useMounted();
+  const [lang, setLang] = useLang();
+  const { t } = useTranslation(lang);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,11 +48,11 @@ export default function RegisterPage() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('passwordsNoMatch'));
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('passwordMinLong'));
       return;
     }
 
@@ -61,13 +66,13 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || 'Registration failed');
+        throw new Error(body.message || t('registrationFailed'));
       }
 
       setSuccess(true);
       setTimeout(() => router.push('/login'), 2000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      setError(err instanceof Error ? err.message : t('registrationFailed'));
     } finally {
       setLoading(false);
     }
@@ -84,8 +89,10 @@ export default function RegisterPage() {
         justifyContent: 'center',
         background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0b1f3a 100%)',
         p: 2,
+        position: 'relative',
       }}
     >
+      <Box sx={{ position: 'absolute', top: 16, right: 16 }}><LangPills lang={lang} onChange={setLang} /></Box>
       <Card elevation={24} sx={{ width: '100%', maxWidth: 440, borderRadius: 3 }}>
         <CardContent sx={{ p: 5 }}>
           {/* Logo */}
@@ -101,10 +108,10 @@ export default function RegisterPage() {
               <PersonOutlineIcon sx={{ color: '#fff', fontSize: 32 }} />
             </Box>
             <Typography sx={{ fontWeight: 700 }} variant="h5" color="text.primary">
-              Create Account
+              {t('createAccountTitle')}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Join the CRM Platform
+              {t('joinCrm')}
             </Typography>
           </Stack>
 
@@ -113,14 +120,14 @@ export default function RegisterPage() {
           )}
           {success && (
             <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
-              Account created! Redirecting to login…
+              {t('accountCreated')}
             </Alert>
           )}
 
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <Stack spacing={2.5}>
               <TextField
-                placeholder="Username"
+                placeholder={t('username')}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -141,7 +148,7 @@ export default function RegisterPage() {
               />
 
               <TextField
-                placeholder="Email address"
+                placeholder={t('emailAddress')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -161,7 +168,7 @@ export default function RegisterPage() {
               />
 
               <TextField
-                placeholder="Password"
+                placeholder={t('password')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -189,7 +196,7 @@ export default function RegisterPage() {
               />
 
               <TextField
-                placeholder="Confirm password"
+                placeholder={t('confirmPasswordShort')}
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -228,15 +235,15 @@ export default function RegisterPage() {
                   '&:hover': { background: 'linear-gradient(135deg, #1d4ed8, #4338ca)' },
                 }}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
+                {loading ? <CircularProgress size={24} color="inherit" /> : t('createAccountTitle')}
               </Button>
             </Stack>
           </Box>
 
           <Typography variant="body2" align="center" sx={{ mt: 3, color: 'text.secondary' }}>
-            Already have an account?{' '}
+            {t('haveAccount')}{' '}
             <Link href="/login" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
-              Sign in
+              {t('signInLink')}
             </Link>
           </Typography>
         </CardContent>

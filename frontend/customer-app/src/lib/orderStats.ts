@@ -77,19 +77,19 @@ function revenueBy(orders: StatOrder[], keyOf: (d: Date) => string, labelOf: (d:
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Revenue per calendar month, oldest first; label like "Aug '26". */
-export const monthlyRevenue = (orders: StatOrder[]): RevenuePoint[] =>
+export const monthlyRevenue = (orders: StatOrder[], locale = 'en-US'): RevenuePoint[] =>
   revenueBy(
     orders,
     (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`,
-    (d) => `${d.toLocaleString('en-US', { month: 'short' })} '${String(d.getFullYear()).slice(-2)}`,
+    (d) => `${d.toLocaleString(locale, { month: 'short' })} '${String(d.getFullYear()).slice(-2)}`,
   );
 
 /** Revenue per calendar day, oldest first; label like "Aug 25". */
-export const dailyRevenue = (orders: StatOrder[]): RevenuePoint[] =>
+export const dailyRevenue = (orders: StatOrder[], locale = 'en-US'): RevenuePoint[] =>
   revenueBy(
     orders,
     (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    (d) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
   );
 
 /** The customers who brought in the most revenue, best first (ties: lower customer id first). */

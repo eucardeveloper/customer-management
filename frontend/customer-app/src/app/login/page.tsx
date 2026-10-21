@@ -23,6 +23,9 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { saveAuth } from '@/lib/auth';
 import { useMounted } from '@/lib/useMounted';
 import { fetchWithStartupRetry, isTransientStatus, STARTING_MESSAGE } from '@/lib/loginRequest';
+import { useLang } from '@/lib/useLang';
+import { useTranslation } from '@/app/translations';
+import { LangPills } from '@/components/LangPills';
 
 interface AuthResponse {
   username: string;
@@ -40,6 +43,8 @@ const ALLOW_REGISTER = process.env.NEXT_PUBLIC_ALLOW_REGISTER === 'true';
 export default function LoginPage() {
   const router = useRouter();
   const mounted = useMounted();
+  const [lang, setLang] = useLang();
+  const { t } = useTranslation(lang);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -55,7 +60,7 @@ export default function LoginPage() {
     const form = new FormData(e.currentTarget as HTMLFormElement);
     const user = String(form.get('username') ?? username).trim();
     const pass = String(form.get('password') ?? password);
-    if (!user || !pass) { setError('Enter your username and password.'); return; }
+    if (!user || !pass) { setError(t('enterCredentials')); return; }
     setError('');
     setLoading(true);
 
@@ -70,14 +75,14 @@ export default function LoginPage() {
       if (isTransientStatus(res.status)) throw new Error(STARTING_MESSAGE);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || 'Invalid username or password');
+        throw new Error(body.message || t('invalidCredentials'));
       }
 
       const data: AuthResponse = await res.json();
       saveAuth({ username: data.username, role: data.role });
       router.push('/');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? (err.message === STARTING_MESSAGE ? t('serverStarting') : err.message) : t('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -94,8 +99,10 @@ export default function LoginPage() {
         justifyContent: 'center',
         background: 'linear-gradient(135deg, #0b1f3a 0%, #12315c 50%, #1d4ed8 100%)',
         p: 2,
+        position: 'relative',
       }}
     >
+      <Box sx={{ position: 'absolute', top: 16, right: 16 }}><LangPills lang={lang} onChange={setLang} /></Box>
       <Card elevation={24} sx={{ width: '100%', maxWidth: 420, borderRadius: 3, overflow: 'visible' }}>
         <CardContent sx={{ p: 5 }}>
           {/* Logo */}
@@ -108,28 +115,28 @@ export default function LoginPage() {
             }}>
               <LockOutlinedIcon sx={{ color: '#fff', fontSize: 32 }} />
             </Box>
-            <Typography sx={{ fontWeight: 700 }} variant="h5" color="text.primary">Customer Management</Typography>
-            <Typography variant="body2" color="text.secondary">Sign in to your account</Typography>
+            <Typography sx={{ fontWeight: 700 }} variant="h5" color="text.primary">{t('signInTitle')}</Typography>
+            <Typography variant="body2" color="text.secondary">{t('signInSubtitle')}</Typography>
           </Box>
 
-          {sessionExpired && !error && <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>Your session has ended. Please sign in again.</Alert>}
+          {sessionExpired && !error && <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>{t('sessionEnded')}</Alert>}
           {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
 
           {/* Demo credentials hint (build-time opt-in) */}
           {SHOW_DEMO_LOGIN && (
           <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(21,101,192,0.06)', border: '1px solid rgba(21,101,192,0.2)' }}>
             <Typography variant="caption" color="primary" sx={{ display: "block", fontWeight: 700, mb: 0.5 }}>
-              Demo Credentials
+              {t('demoCredentials')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 3 }}>
               {SHOW_DEMO_ADMIN && (
               <Box>
-                <Typography sx={{ display: "block" }} variant="caption" color="text.secondary">Admin</Typography>
+                <Typography sx={{ display: "block" }} variant="caption" color="text.secondary">{t('demoAdmin')}</Typography>
                 <Typography variant="caption" sx={{ display: "block", fontWeight: 600, fontFamily: 'monospace' }}>admin / admin123</Typography>
               </Box>
               )}
               <Box>
-                <Typography sx={{ display: "block" }} variant="caption" color="text.secondary">{SHOW_DEMO_ADMIN ? 'User' : 'Read-only demo account'}</Typography>
+                <Typography sx={{ display: "block" }} variant="caption" color="text.secondary">{SHOW_DEMO_ADMIN ? t('demoUser') : t('demoReadOnly')}</Typography>
                 <Typography variant="caption" sx={{ display: "block", fontWeight: 600, fontFamily: 'monospace' }}>user1 / user123</Typography>
               </Box>
             </Box>
@@ -139,12 +146,12 @@ export default function LoginPage() {
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <Stack spacing={3}>
               <TextField
-                placeholder="Username"
+                placeholder={t('username')}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required fullWidth autoFocus autoComplete="username" variant="outlined"
                 slotProps={{
-                  htmlInput: { name: 'username', 'aria-label': 'Username' },
+                  htmlInput: { name: 'username', 'aria-label': t('username') },
                   input: {
                     startAdornment: (
                       <InputAdornment position="start"><PersonOutlineIcon color="action" /></InputAdornment>
@@ -154,13 +161,13 @@ export default function LoginPage() {
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
               <TextField
-                placeholder="Password"
+                placeholder={t('password')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required fullWidth autoComplete="current-password" variant="outlined"
                 slotProps={{
-                  htmlInput: { name: 'password', 'aria-label': 'Password' },
+                  htmlInput: { name: 'password', 'aria-label': t('password') },
                   input: {
                     startAdornment: (
                       <InputAdornment position="start"><LockOutlinedIcon color="action" /></InputAdornment>
@@ -185,16 +192,16 @@ export default function LoginPage() {
                   '&:hover': { background: 'linear-gradient(135deg, #0d47a1, #0b1f3a)' },
                 }}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+                {loading ? <CircularProgress size={24} color="inherit" /> : t('signIn')}
               </Button>
             </Stack>
           </Box>
 
           {ALLOW_REGISTER && (
           <Typography variant="body2" align="center" sx={{ mt: 3, color: 'text.secondary' }}>
-            Don&apos;t have an account?{' '}
+            {t('noAccount')}{' '}
             <Link href="/register" style={{ color: '#1d4ed8', fontWeight: 600, textDecoration: 'none' }}>
-              Create account
+              {t('createAccountLink')}
             </Link>
           </Typography>
           )}
