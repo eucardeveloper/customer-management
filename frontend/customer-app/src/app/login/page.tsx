@@ -24,6 +24,7 @@ import { saveAuth } from '@/lib/auth';
 import { useMounted } from '@/lib/useMounted';
 import { fetchWithStartupRetry, isTransientStatus, STARTING_MESSAGE } from '@/lib/loginRequest';
 import { useLang } from '@/lib/useLang';
+import { translateServerMessage } from '@/lib/serverMessages';
 import { useTranslation } from '@/app/translations';
 import { LangPills } from '@/components/LangPills';
 
@@ -81,7 +82,7 @@ export default function LoginPage() {
           const minutes = /(\d+)\s*minute/.exec(String(body.message ?? ''))?.[1];
           throw new Error(minutes ? t('tooManyAttempts').replace('{n}', minutes) : t('tooManyAttemptsLater'));
         }
-        throw new Error(body.message || t('loginFailed'));
+        throw new Error(body.message ? translateServerMessage(lang, String(body.message)) : t('loginFailed'));
       }
 
       const data: AuthResponse = await res.json();

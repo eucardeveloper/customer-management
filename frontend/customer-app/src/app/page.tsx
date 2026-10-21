@@ -2,6 +2,7 @@
 import { useTranslation, translate, type Lang } from './translations';
 import { PieChart, Pie, Cell, Tooltip as ReTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { api } from '@/lib/api';
+import { translateServerMessage } from '@/lib/serverMessages';
 import { usePersistedPref } from '@/lib/usePersistedPref';
 import { downloadXlsx } from '@/lib/exportXlsx';
 import { useLang } from '@/lib/useLang';
@@ -381,7 +382,7 @@ export default function Home() {
       setDialogOpen(false); fetchCustomers();
     } catch (e) {
       const m = e instanceof Error ? e.message : '';
-      showSnackbar(m && !m.startsWith('HTTP') ? m : t('error'), 'error');
+      showSnackbar(m && !m.startsWith('HTTP') ? translateServerMessage(lang, m) : t('error'), 'error');
     }
   };
 
@@ -438,7 +439,7 @@ export default function Home() {
       }
     } catch (e) {
       // The server's own message ("Current password is incorrect", throttle notice) is safe to show.
-      setPwError(e instanceof Error && e.message && !e.message.startsWith('HTTP ') ? e.message : t('passwordFailed'));
+      setPwError(e instanceof Error && e.message && !e.message.startsWith('HTTP ') ? translateServerMessage(lang, e.message) : t('passwordFailed'));
     } finally { setPwBusy(false); }
   };
 

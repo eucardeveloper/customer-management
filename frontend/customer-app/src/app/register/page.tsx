@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { translateServerMessage } from '@/lib/serverMessages';
 import { useTranslation } from '@/app/translations';
 import { LangPills } from '@/components/LangPills';
 import {
@@ -66,7 +67,7 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || t('registrationFailed'));
+        throw new Error(body.message ? translateServerMessage(lang, String(body.message)) : t('registrationFailed'));
       }
 
       setSuccess(true);
