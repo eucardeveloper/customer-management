@@ -447,7 +447,7 @@ export const translations = {
     actions: 'Aktionen',
     changeRole: 'Rolle ändern',
     deleteUser: 'Benutzer löschen',
-    searchUsers: 'Nach Benutzername, E-Mail oder Rolle suchen...',
+    searchUsers: 'Nach Benutzer, E-Mail oder Rolle suchen...',
     noUsers: 'Keine Benutzer gefunden',
     registeredAccounts: 'registrierte Konten',
     createUser: 'Erstellen',
