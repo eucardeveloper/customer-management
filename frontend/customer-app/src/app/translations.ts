@@ -222,6 +222,9 @@ export const translations = {
     accountCreated: 'Account created! Redirecting to login…',
     haveAccount: 'Already have an account?',
     signInLink: 'Sign in',
+    customerDetail: 'Customer Detail',
+    tooManyAttempts: 'Too many failed sign-in attempts. Try again in {n} minute(s).',
+    tooManyAttemptsLater: 'Too many failed sign-in attempts. Try again later.',
   },
   tr: {
     appTitle: 'CRM Platform',
@@ -270,7 +273,7 @@ export const translations = {
     deleteOrder: 'Sipariş Sil',
     product: 'Ürün',
     productName: 'Ürün Adı',
-    price: 'Fiyat (₺)',
+    price: 'Fiyat ($)',
     quantity: 'Adet',
     status: 'Durum',
     date: 'Tarih',
@@ -444,6 +447,9 @@ export const translations = {
     accountCreated: 'Hesap oluşturuldu! Girişe yönlendiriliyorsunuz…',
     haveAccount: 'Zaten hesabınız var mı?',
     signInLink: 'Giriş yap',
+    customerDetail: 'Müşteri Detayı',
+    tooManyAttempts: 'Çok fazla başarısız giriş denemesi. {n} dakika sonra tekrar deneyin.',
+    tooManyAttemptsLater: 'Çok fazla başarısız giriş denemesi. Daha sonra tekrar deneyin.',
   },
   de: {
     appTitle: 'CRM Platform',
@@ -666,6 +672,9 @@ export const translations = {
     accountCreated: 'Konto erstellt! Weiterleitung zur Anmeldung…',
     haveAccount: 'Bereits ein Konto?',
     signInLink: 'Anmelden',
+    customerDetail: 'Kundendetails',
+    tooManyAttempts: 'Zu viele fehlgeschlagene Anmeldeversuche. Bitte in {n} Minute(n) erneut versuchen.',
+    tooManyAttemptsLater: 'Zu viele fehlgeschlagene Anmeldeversuche. Bitte später erneut versuchen.',
   },
 };
 

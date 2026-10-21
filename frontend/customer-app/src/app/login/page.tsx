@@ -75,7 +75,13 @@ export default function LoginPage() {
       if (isTransientStatus(res.status)) throw new Error(STARTING_MESSAGE);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || t('invalidCredentials'));
+        // the server answers in English; show the known cases in the chosen language
+        if (res.status === 401) throw new Error(t('invalidCredentials'));
+        if (res.status === 429) {
+          const minutes = /(\d+)\s*minute/.exec(String(body.message ?? ''))?.[1];
+          throw new Error(minutes ? t('tooManyAttempts').replace('{n}', minutes) : t('tooManyAttemptsLater'));
+        }
+        throw new Error(body.message || t('loginFailed'));
       }
 
       const data: AuthResponse = await res.json();
@@ -189,7 +195,7 @@ export default function LoginPage() {
                 sx={{
                   py: 1.5, borderRadius: 2, fontWeight: 600, fontSize: '1rem',
                   background: 'linear-gradient(135deg, #1d4ed8, #12315c)',
-                  '&:hover': { background: 'linear-gradient(135deg, #0d47a1, #0b1f3a)' },
+                  '&:hover': { background: 'linear-gradient(135deg, #0d47a1, #0b1f3a)' }, '&.Mui-disabled': { color: '#fff', opacity: 0.55 },
                 }}
               >
                 {loading ? <CircularProgress size={24} color="inherit" /> : t('signIn')}

@@ -1741,7 +1741,7 @@ export default function Home() {
             return (
               <>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 700 }}>
-                  Customer Detail <IconButton size="small" onClick={() => setDrawerCustomer(null)}><CloseIcon /></IconButton>
+                  {t('customerDetail')} <IconButton size="small" onClick={() => setDrawerCustomer(null)}><CloseIcon /></IconButton>
                 </DialogTitle>
                 <Divider />
                 <DialogContent>

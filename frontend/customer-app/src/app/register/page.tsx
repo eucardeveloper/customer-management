@@ -232,7 +232,7 @@ export default function RegisterPage() {
                 sx={{
                   py: 1.5, borderRadius: 2, fontWeight: 600, fontSize: '1rem', mt: 0.5,
                   background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                  '&:hover': { background: 'linear-gradient(135deg, #1d4ed8, #4338ca)' },
+                  '&:hover': { background: 'linear-gradient(135deg, #1d4ed8, #4338ca)' }, '&.Mui-disabled': { color: '#fff', opacity: 0.55 },
                 }}
               >
                 {loading ? <CircularProgress size={24} color="inherit" /> : t('createAccountTitle')}
