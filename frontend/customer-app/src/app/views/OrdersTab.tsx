@@ -98,8 +98,8 @@ export function OrdersTab({ t, lang, isAdmin, loading, ordSearch, setOrdSearch, 
                               <TableCell sx={{ maxWidth: { xs: 0, md: 'none' } }}><Box sx={{ width: { xs: '100%', md: 'min(100%, 200px)' }, mx: 'auto', textAlign: 'left' }}>
                                 <Typography title={o.productName} sx={{ fontWeight: 600, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, overflowWrap: 'break-word' }}>{o.productName}</Typography>
                                 {/* Customer, quantity and date columns are hidden below the desktop width; they move under the product. */}
-                                <Typography noWrap variant="caption" sx={{ display: { xs: 'block', md: 'none' }, color: '#64748b' }}>{getCustomerName(o.customerId)}</Typography>
-                                <Typography noWrap variant="caption" sx={{ display: { xs: 'block', md: 'none' }, color: '#64748b' }}>{o.quantity}× · {formatDate(o.date, lang)}</Typography>
+                                <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, color: '#64748b', lineHeight: 1.35, overflowWrap: 'break-word' }}>{getCustomerName(o.customerId)}</Typography>
+                                <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, color: '#64748b', lineHeight: 1.35, overflowWrap: 'break-word' }}>{o.quantity}× · {formatDate(o.date, lang)}</Typography>
                                 {isAdmin && <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, color: '#16a34a', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{(o.price * o.quantity).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</Typography>}
                               </Box></TableCell>
                               <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, }}>

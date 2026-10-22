@@ -45,8 +45,8 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                         <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
                         <TableCell sx={{ width: { xs: '100%', md: '34%' } }}>{t('username')}</TableCell>
                         <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '44%' }}>{t('email')}</TableCell>
-                        <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('role')}</TableCell>
-                        <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
+                        <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }}>{t('role')}</TableCell>
+                        <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }}>{t('actions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -61,7 +61,7 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                           <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                           <TableCell sx={{ maxWidth: { xs: 0, md: 'none' } }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: { xs: '100%', md: 'min(100%, 170px)' }, mx: 'auto', textAlign: 'left' }}>
-                              <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
+                              <Avatar sx={{ display: { xs: 'none', sm: 'flex' }, width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
                               <Box sx={{ minWidth: 0, flex: 1 }}>
                                 <Typography noWrap title={u.username} sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{u.username}</Typography>
                                 <Typography noWrap variant="caption" sx={{ display: { xs: 'block', md: 'none' }, color: '#64748b' }}>{u.email}</Typography>
@@ -69,22 +69,22 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                             </Box>
                           </TableCell>
                           <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Box sx={{ width: 'min(100%, 260px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
-                          <TableCell align="center">
+                          <TableCell align="center" sx={{ px: { xs: 0.5, md: 2 } }}>
                             <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'rgba(124,58,237,0.12)' : 'rgba(22,163,74,0.12)', color: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', border: `1px solid ${u.role === 'ADMIN' ? 'rgba(124,58,237,0.30)' : 'rgba(22,163,74,0.30)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>
-                          <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                          <TableCell align="right" sx={{ whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }}>
                             <Tooltip title={t('changeRole')}>
-                              <IconButton size="small" sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#059669' } }} onClick={() => { setSelectedUserId(u.id); setSelectedRole(u.role); setRoleDialogOpen(true); }}>
+                              <IconButton size="small" sx={{ color: 'var(--icon)', mr: { xs: 0, sm: 0.5 }, p: { xs: 0.5, sm: 0.75 }, '&:hover': { color: '#059669' } }} onClick={() => { setSelectedUserId(u.id); setSelectedRole(u.role); setRoleDialogOpen(true); }}>
                                 <AdminPanelSettingsIcon sx={{ fontSize: 19 }} />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title={t('resetPassword')}>
-                              <IconButton size="small" aria-label={t('resetPassword')} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#d97706' } }} onClick={() => openPwDialog({ mode: 'reset', userId: u.id, username: u.username })}>
+                              <IconButton size="small" aria-label={t('resetPassword')} sx={{ color: 'var(--icon)', mr: { xs: 0, sm: 0.5 }, p: { xs: 0.5, sm: 0.75 }, '&:hover': { color: '#d97706' } }} onClick={() => openPwDialog({ mode: 'reset', userId: u.id, username: u.username })}>
                                 <LockResetIcon sx={{ fontSize: 19 }} />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title={t('deleteUser')}>
-                              <IconButton size="small" sx={{ color: 'var(--icon)', '&:hover': { color: '#ef4444' } }} disabled={u.username === currentUser?.username} onClick={() => { setDeleteUserId(u.id); setDeleteUserDialogOpen(true); }}>
+                              <IconButton size="small" sx={{ color: 'var(--icon)', p: { xs: 0.5, sm: 0.75 }, '&:hover': { color: '#ef4444' } }} disabled={u.username === currentUser?.username} onClick={() => { setDeleteUserId(u.id); setDeleteUserDialogOpen(true); }}>
                                 <DeleteIcon sx={{ fontSize: 19 }} />
                               </IconButton>
                             </Tooltip>
