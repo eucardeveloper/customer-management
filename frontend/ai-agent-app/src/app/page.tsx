@@ -196,7 +196,7 @@ export default function Home() {
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Chip
-                label="Kunden-Agent"
+                label="Müşteri Ajanı"
                 size="small"
                 variant="outlined"
                 sx={{
@@ -206,7 +206,7 @@ export default function Home() {
                 }}
               />
               <Chip
-                label="Bestellungs-Agent"
+                label="Sipariş Ajanı"
                 size="small"
                 variant="outlined"
                 sx={{
