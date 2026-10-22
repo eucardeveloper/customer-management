@@ -1,6 +1,6 @@
 'use client';
 import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Divider, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
-import { type Order, ORDER_STATUSES, statusText } from '../model';
+import { ORDER_STATUSES, statusText } from '../model';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { TFn, Customer, OrderForm } from '../model';

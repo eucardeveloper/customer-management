@@ -39,12 +39,12 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                   <Tooltip title={t('refresh')}><IconButton size="small" onClick={fetchUsers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                 </Box>
                 <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 0 }}>
-                  <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: 760 }}>
+                  <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: { xs: 0, md: 760 } }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
                         <TableCell sx={{ width: '34%' }}>{t('username')}</TableCell>
-                        <TableCell sx={{ width: '44%' }}>{t('email')}</TableCell>
+                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '44%' }}>{t('email')}</TableCell>
                         <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('role')}</TableCell>
                         <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
                       </TableRow>
@@ -58,14 +58,17 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                       )}
                       {filteredUsers.map(u => (
                         <TableRow key={u.id}>
-                          <TableCell align="center"><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
+                          <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                           <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: 'min(100%, 170px)', mx: 'auto', textAlign: 'left' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: { xs: '100%', md: 'min(100%, 170px)' }, mx: 'auto', textAlign: 'left' }}>
                               <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
-                              <Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{u.username}</Typography>
+                              <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography noWrap title={u.username} sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{u.username}</Typography>
+                                <Typography noWrap variant="caption" sx={{ display: { xs: 'block', md: 'none' }, color: '#64748b' }}>{u.email}</Typography>
+                              </Box>
                             </Box>
                           </TableCell>
-                          <TableCell><Box sx={{ width: 'min(100%, 260px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
+                          <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Box sx={{ width: 'min(100%, 260px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
                           <TableCell align="center">
                             <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'rgba(124,58,237,0.12)' : 'rgba(22,163,74,0.12)', color: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', border: `1px solid ${u.role === 'ADMIN' ? 'rgba(124,58,237,0.30)' : 'rgba(22,163,74,0.30)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>

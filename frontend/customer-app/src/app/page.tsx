@@ -13,7 +13,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { sumRevenue, isPending, countByStatus, monthlyRevenue, dailyRevenue } from '@/lib/orderStats';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import type { ThemeOptions } from '@mui/material/styles';
 import { Box, AppBar, Toolbar, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Button, IconButton, Chip, Avatar, ThemeProvider, GlobalStyles, CssBaseline, Alert, Snackbar, Tooltip, Card, CardContent, SwipeableDrawer } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -538,9 +537,9 @@ export default function Home() {
                   <MenuIcon />
                 </IconButton>
               </Tooltip>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--text)' }}>{pageTitle}</Typography>
-                <Typography sx={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.2, mt: 0.3 }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="h6" noWrap sx={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--text)' }}>{pageTitle}</Typography>
+                <Typography noWrap sx={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.2, mt: 0.3 }}>
                   {tab === 'dashboard' && (isAdmin
                     ? `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')} · ${totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} ${t('totalRevenue').toLowerCase()}`
                     : `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')}`

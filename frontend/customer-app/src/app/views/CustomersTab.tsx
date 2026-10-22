@@ -54,14 +54,14 @@ export function CustomersTab({ t, isAdmin, loading, custSearch, setCustSearch, s
                 ) : (
                   <>
                     <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 0 }}>
-                      <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: 900 }}>
+                      <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: { xs: 0, md: 900 } }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
+                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
+                            <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
                             <TableCell sx={{ width: '30%' }}>{t('customer')}</TableCell>
-                            <TableCell sx={{ width: '34%' }}>{t('email')}</TableCell>
-                            <TableCell sx={{ width: '18%', whiteSpace: 'nowrap' }}>{t('phone')}</TableCell>
+                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '34%' }}>{t('email')}</TableCell>
+                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '18%', whiteSpace: 'nowrap' }}>{t('phone')}</TableCell>
                             {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
@@ -77,18 +77,26 @@ export function CustomersTab({ t, isAdmin, loading, custSearch, setCustSearch, s
                           )}
                           {filteredCustomers.slice(custPageSafe * custRowsPerPage, custPageSafe * custRowsPerPage + custRowsPerPage).map(c => (
                             <TableRow key={c.id}>
-                              <TableCell align="center"><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
-                              <TableCell align="center">{customerTypeChip(c, t)}</TableCell>
+                              <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
+                              <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{customerTypeChip(c, t)}</TableCell>
                               <TableCell sx={{ cursor: 'pointer' }} onClick={() => setDrawerCustomer(c)}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: 'min(100%, 230px)', mx: 'auto', textAlign: 'left' }}>
                                   <Avatar sx={{ width: 30, height: 30, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.72rem', fontWeight: 700 }}>
                                     {(c.firstName ?? '?')[0]}{(c.lastName ?? '')[0]}
                                   </Avatar>
-                                  <Typography noWrap sx={{ fontWeight: 600, fontSize: '0.875rem', '&:hover': { color: '#2563eb' } }}>{c.firstName} {c.lastName}</Typography>
+                                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                                    <Typography noWrap sx={{ fontWeight: 600, fontSize: '0.875rem', '&:hover': { color: '#2563eb' } }}>{c.firstName} {c.lastName}</Typography>
+                                    {/* Phones and tablets hide the e-mail, phone and type columns; they move under the name instead. */}
+                                    <Box sx={{ display: { xs: 'block', md: 'none' }, minWidth: 0 }}>
+                                      <Typography noWrap variant="caption" sx={{ display: 'block', color: '#64748b' }}>{c.email}</Typography>
+                                      <Typography noWrap variant="caption" sx={{ display: 'block', color: '#64748b' }}>{c.phone}</Typography>
+                                      <Box sx={{ display: { xs: 'block', sm: 'none' }, mt: 0.5 }}>{customerTypeChip(c, t)}</Box>
+                                    </Box>
+                                  </Box>
                                 </Box>
                               </TableCell>
-                              <TableCell><Box sx={{ width: 'min(100%, 260px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={c.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{c.email}</Typography></Box></TableCell>
-                              <TableCell sx={{ whiteSpace: 'nowrap' }}><Box sx={{ width: 'min(100%, 150px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{c.phone}</Typography></Box></TableCell>
+                              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Box sx={{ width: 'min(100%, 260px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={c.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{c.email}</Typography></Box></TableCell>
+                              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, whiteSpace: 'nowrap' }}><Box sx={{ width: 'min(100%, 150px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{c.phone}</Typography></Box></TableCell>
                               {isAdmin && (
                                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                                   <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEdit(c)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
