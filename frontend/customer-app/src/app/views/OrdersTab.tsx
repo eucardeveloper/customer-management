@@ -61,14 +61,14 @@ export function OrdersTab({ t, lang, isAdmin, loading, ordSearch, setOrdSearch, 
                         <TableHead>
                           <TableRow>
                             <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('status')}</TableCell>
+                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.75, md: 2 } }}>{t('status')}</TableCell>
                             <TableCell sx={{ width: { xs: '100%', md: '30%' } }}>{t('product')}</TableCell>
                             <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '26%' }}>{t('customer')}</TableCell>
                             {isAdmin && <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('unitPrice')}</TableCell>}
                             <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('qty')}</TableCell>
                             {isAdmin && <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('totalCol')}</TableCell>}
                             <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('date')}</TableCell>
-                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
+                            {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -84,7 +84,7 @@ export function OrdersTab({ t, lang, isAdmin, loading, ordSearch, setOrdSearch, 
                           {filteredOrders.slice(ordPageSafe * ordRowsPerPage, ordPageSafe * ordRowsPerPage + ordRowsPerPage).map(o => (
                             <TableRow key={o.id}>
                               <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Chip label={`#${o.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
-                              <TableCell align="center">
+                              <TableCell align="center" sx={{ px: { xs: 0.75, md: 2 } }}>
                                 {isAdmin ? (
                                   <FormControl size="small">
                                     <Select value={o.status ?? 'PENDING'} onChange={e => { e.stopPropagation(); updateOrderStatus(o.id, e.target.value); }}
@@ -95,7 +95,7 @@ export function OrdersTab({ t, lang, isAdmin, loading, ordSearch, setOrdSearch, 
                                   </FormControl>
                                 ) : statusChip(o.status ?? 'PENDING', t)}
                               </TableCell>
-                              <TableCell sx={{ maxWidth: { xs: 0, md: 'none' } }}><Box sx={{ width: { xs: '100%', md: 'min(100%, 200px)' }, mx: 'auto', textAlign: 'left' }}>
+                              <TableCell sx={{ maxWidth: { xs: 0, md: 'none' }, px: { xs: 1, md: 2 } }}><Box sx={{ width: { xs: '100%', md: 'min(100%, 200px)' }, mx: 'auto', textAlign: 'left' }}>
                                 <Typography title={o.productName} sx={{ fontWeight: 600, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, overflowWrap: 'break-word' }}>{o.productName}</Typography>
                                 {/* Customer, quantity and date columns are hidden below the desktop width; they move under the product. */}
                                 <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, color: '#64748b', lineHeight: 1.35, overflowWrap: 'break-word' }}>{getCustomerName(o.customerId)}</Typography>
@@ -119,7 +119,7 @@ export function OrdersTab({ t, lang, isAdmin, loading, ordSearch, setOrdSearch, 
                               )}
                               <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, whiteSpace: 'nowrap' }}><Typography noWrap sx={{ color: '#64748b', fontSize: '0.82rem' }}>{formatDate(o.date, lang)}</Typography></TableCell>
                               {isAdmin && (
-                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                                <TableCell align="right" sx={{ whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }}>
                                   <Tooltip title={t('edit')}><IconButton size="small" onClick={() => openEditOrder(o)} sx={{ color: 'var(--icon)', mr: 0.5, '&:hover': { color: '#2563eb' } }}><EditIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
                                   <Tooltip title={t('delete')}><IconButton size="small" onClick={() => openDeleteOrder(o.id)} sx={{ color: 'var(--icon)', '&:hover': { color: '#ef4444' } }}><DeleteIcon sx={{ fontSize: 19 }} /></IconButton></Tooltip>
                                 </TableCell>
