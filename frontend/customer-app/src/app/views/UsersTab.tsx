@@ -61,13 +61,13 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                           <TableCell align="center"><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: 'min(100%, 170px)', mx: 'auto', textAlign: 'left' }}>
-                              <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#059669' : '#2563eb', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
+                              <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
                               <Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{u.username}</Typography>
                             </Box>
                           </TableCell>
                           <TableCell><Box sx={{ width: 'min(100%, 260px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
                           <TableCell align="center">
-                            <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'var(--green-bg)' : 'var(--blue-bg)', color: u.role === 'ADMIN' ? '#059669' : '#2563eb', border: `1px solid ${u.role === 'ADMIN' ? 'var(--green-bd)' : 'var(--blue-bd)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
+                            <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'rgba(124,58,237,0.12)' : 'rgba(22,163,74,0.12)', color: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', border: `1px solid ${u.role === 'ADMIN' ? 'rgba(124,58,237,0.30)' : 'rgba(22,163,74,0.30)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
                           </TableCell>
                           <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                             <Tooltip title={t('changeRole')}>
