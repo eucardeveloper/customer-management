@@ -51,17 +51,17 @@ export function AnalyticsTab({ t, orders, customers, isAdmin, now, chartData, ch
                   };
                   const revF = fmtA(revTrendA, true), ordF = fmtA(orderTrendA, true), avgF = fmtA(avgTrendA, true), pndF = fmtA(pendTrendA, false);
                   const allAnalyticsCards = [
-                    { label: t('totalRevenue').toUpperCase(), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: revF, sparkColor: '#2563eb', spark: seriesOf(sumRevenue), adminOnly: true },
-                    { label: t('totalOrders').toUpperCase(), value: orders.length.toString(), f: ordF, sparkColor: '#10b981', spark: seriesOf(os => os.length), adminOnly: false },
-                    { label: t('avgOrderValue').toUpperCase(), value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: avgF, sparkColor: '#f59e0b', spark: seriesOf(os => os.length ? sumRevenue(os) / os.length : 0), adminOnly: true },
-                    { label: t('pendingOrders').toUpperCase(), value: orders.filter(isPending).length.toString(), f: pndF, sparkColor: '#ef4444', spark: seriesOf(os => os.filter(isPending).length), adminOnly: false },
+                    { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: revF, sparkColor: '#2563eb', spark: seriesOf(sumRevenue), adminOnly: true },
+                    { label: t('totalOrders'), value: orders.length.toString(), f: ordF, sparkColor: '#10b981', spark: seriesOf(os => os.length), adminOnly: false },
+                    { label: t('avgOrderValue'), value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: avgF, sparkColor: '#f59e0b', spark: seriesOf(os => os.length ? sumRevenue(os) / os.length : 0), adminOnly: true },
+                    { label: t('pendingOrders'), value: orders.filter(isPending).length.toString(), f: pndF, sparkColor: '#ef4444', spark: seriesOf(os => os.filter(isPending).length), adminOnly: false },
                   ];
                   const analyticsCards = allAnalyticsCards.filter(c => isAdmin || !c.adminOnly);
                   return (
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))', md: 'repeat(4,1fr)' }, gap: 2, flexShrink: 0 }}>
                       {analyticsCards.map((card) => (
                         <Paper key={card.label} elevation={0} sx={{ border: '1px solid var(--border)', borderRadius: 3, p: 2.5, overflow: 'hidden' }}>
-                          <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', mb: 0.5 }}>{card.label}</Typography>
+                          <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', mb: 0.5 }}>{card.label}</Typography>
                           <Typography sx={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--text)', mb: 0.5 }}>{card.value}</Typography>
                           <Typography sx={{ fontSize: '0.72rem', color: card.f.delta === null ? '#94a3b8' : card.f.good ? '#10b981' : '#ef4444', fontWeight: 600 }}>
                             {card.f.delta === null ? '' : card.f.delta >= 0 ? '↑ ' : '↓ '}{card.f.text}
