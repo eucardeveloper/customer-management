@@ -1,7 +1,8 @@
 name: E2E
 
 # Boots the whole compose stack (Kafka, three databases, gateway, frontends) and drives it with
-# Playwright: sign-in, role limits, session revocation, delete integrity. It takes several minutes, so
+# Playwright: sign-in, role limits, session revocation, delete integrity, adding a user. Then proves a
+# backup of the three databases can be restored. It takes several minutes, so
 # a newer push to the same branch cancels the run that is still going.
 on:
   push:
@@ -64,6 +65,10 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
           npx playwright test
+      - name: Backup and restore test (all three databases)
+        # Runs after the journey, on the data it left behind: dump, change a row in each database, restore,
+        # check every change is gone and every row count matches the backup.
+        run: ./restore-test.sh
       - name: Playwright report
         if: failure()
         uses: actions/upload-artifact@v7
