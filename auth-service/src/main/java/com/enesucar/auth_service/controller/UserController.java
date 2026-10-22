@@ -1,10 +1,12 @@
 package com.enesucar.auth_service.controller;
 
+import com.enesucar.auth_service.dto.CreateUserRequest;
 import com.enesucar.auth_service.dto.ResetPasswordRequest;
 import com.enesucar.auth_service.dto.UserResponse;
 import com.enesucar.auth_service.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +25,17 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    /**
+     * Adds an account with the chosen role. The admin page used to call public sign-up for this, which
+     * ignored the role, answered 403 when sign-up is off, and set the new user's session cookie in the
+     * admin's browser. This endpoint issues no session.
+     */
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> createUser(@RequestBody @Valid CreateUserRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
     }
 
     @DeleteMapping("/{id}")

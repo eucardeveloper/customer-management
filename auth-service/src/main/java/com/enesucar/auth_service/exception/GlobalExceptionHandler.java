@@ -2,6 +2,7 @@ package com.enesucar.auth_service.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -28,6 +29,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<Map<String, Object>> handleUserAlreadyExists(UserAlreadyExistsException ex) {
         return body(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    /**
+     * Two requests racing for one username or e-mail both pass the "already taken?" check; the unique
+     * constraint then decides, and the loser gets the same 409 as above instead of a 500.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicate(DataIntegrityViolationException ex) {
+        return body(HttpStatus.CONFLICT, "Username or email already taken");
     }
 
     @ExceptionHandler(InvalidPasswordException.class)

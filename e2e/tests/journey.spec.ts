@@ -181,6 +181,38 @@ test('a signed-in USER is refused with 403 (not 401) on admin-only calls', async
   expect((await request.get(`${API}/api/users`, { headers: auth })).status()).toBe(403);
 });
 
+test('an admin adds an ADMIN account from the Users page and stays signed in as themselves', async ({ page, request }) => {
+  const name = `e2e_admin_${Date.now() % 1000000}`;
+  created.push(name);
+
+  await signIn(page, ADMIN.user, ADMIN.pass);
+  await page.getByRole('button', { name: 'User Management' }).click();
+  await page.getByRole('button', { name: 'Add User' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Username').fill(name);
+  await dialog.getByLabel('Email').fill(`${name}@example.com`);
+  await dialog.getByLabel('Password').fill('E2e-Admin#2026');
+  await dialog.getByLabel('Role').click();
+  await page.getByRole('option', { name: 'ADMIN' }).click();
+  await dialog.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByText('User created.')).toBeVisible();
+
+  // the browser session still belongs to the admin, not to the account just created
+  const token = (await page.context().cookies()).find((c) => c.name === 'customer_session')!.value;
+  const auth = { Authorization: `Bearer ${token}` };
+  const session = await (await request.get(`${API}/api/auth/session`, { headers: auth })).json();
+  expect(session).toEqual({ username: ADMIN.user, role: 'ADMIN' });
+
+  // the account has the role that was chosen, and the page still lists users (an admin-only call)
+  const users: Array<{ id: number; username: string; role: string }> = await (await request.get(`${API}/api/users`, { headers: auth })).json();
+  const added = users.find((u) => u.username === name);
+  expect(added?.role).toBe('ADMIN');
+  await expect(page.getByRole('cell', { name: `${name}@example.com`, exact: true })).toBeVisible();
+
+  // removed here, not only in afterAll: the last-administrator test below needs exactly one admin
+  expect((await request.delete(`${API}/api/users/${added!.id}`, { headers: auth })).status()).toBe(204);
+});
+
 test('the last administrator cannot be demoted or deleted', async ({ request }) => {
   const login = await request.post(`${API}/api/auth/login`, {
     data: { username: ADMIN.user, password: ADMIN.pass },

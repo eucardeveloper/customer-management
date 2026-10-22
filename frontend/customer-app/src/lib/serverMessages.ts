@@ -11,6 +11,8 @@ const ENTRIES: Entry[] = [
   { match: /^Password is required$/i, en: 'Password is required', tr: 'Şifre gerekli', de: 'Passwort ist erforderlich' },
   { match: /^Email is required$/i, en: 'Email is required', tr: 'E-posta gerekli', de: 'E-Mail ist erforderlich' },
   { match: /^Password must be at least 8 characters$/i, en: 'Password must be at least 8 characters', tr: 'Şifre en az 8 karakter olmalı', de: 'Das Passwort muss mindestens 8 Zeichen lang sein' },
+  { match: /^Password must be 8-72 characters$/i, en: 'Password must be 8-72 characters', tr: 'Şifre 8-72 karakter olmalı', de: 'Das Passwort muss 8-72 Zeichen lang sein' },
+  { match: /^Username or email already taken$/i, en: 'Username or email already taken', tr: 'Bu kullanıcı adı veya e-posta zaten kullanılıyor', de: 'Benutzername oder E-Mail bereits vergeben' },
   { match: /^Invalid email format$/i, en: 'Invalid email format', tr: 'Geçersiz e-posta biçimi', de: 'Ungültiges E-Mail-Format' },
   { match: /^Username already taken/i, en: 'Username already taken', tr: 'Bu kullanıcı adı zaten alınmış', de: 'Benutzername bereits vergeben' },
   { match: /^Email already registered/i, en: 'Email already registered', tr: 'Bu e-posta zaten kayıtlı', de: 'E-Mail bereits registriert' },

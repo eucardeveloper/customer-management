@@ -187,4 +187,47 @@ class UserControllerTest {
                         .content("{\"newPassword\":\"brandNew123\"}"))
                 .andExpect(status().isForbidden());
     }
+
+    private static final String NEW_ADMIN = "{\"username\":\"second\",\"email\":\"second@test.com\",\"password\":\"Secret-123\",\"role\":\"ADMIN\"}";
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void createUser_shouldReturn201WithTheChosenRole_andNoSessionCookie() throws Exception {
+        when(userService.createUser(any())).thenReturn(new UserResponse(7L, "second", "second@test.com", Role.ADMIN));
+
+        mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON).content(NEW_ADMIN))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("ADMIN"))
+                // the admin who adds an account must stay signed in as themselves
+                .andExpect(header().doesNotExist("Set-Cookie"));
+        verify(userService).createUser(argThat(r -> "ADMIN".equals(r.getRole()) && "second".equals(r.getUsername())));
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void createUser_shouldReturn403_whenNotAdmin() throws Exception {
+        mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON).content(NEW_ADMIN))
+                .andExpect(status().isForbidden());
+        verify(userService, never()).createUser(any());
+    }
+
+    @Test
+    void createUser_shouldReturn401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON).content(NEW_ADMIN))
+                .andExpect(status().isUnauthorized());
+        verify(userService, never()).createUser(any());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void createUser_shouldReturn400_whenRoleOrPasswordMissing() throws Exception {
+        mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"second\",\"email\":\"second@test.com\",\"password\":\"Secret-123\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("role is required"));
+        mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"second\",\"email\":\"second@test.com\",\"password\":\"short\",\"role\":\"USER\"}"))
+                .andExpect(status().isBadRequest());
+        verify(userService, never()).createUser(any());
+    }
 }

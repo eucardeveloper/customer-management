@@ -90,7 +90,7 @@ class UserServiceTest {
     void updateRole_shouldRefuseDemotingTheLastAdmin() {
         user.setRole(Role.ADMIN);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.countByRole(Role.ADMIN)).thenReturn(1L);
+        when(userRepository.lockAdminIds()).thenReturn(List.of(1L));
 
         assertThatThrownBy(() -> userService.updateRole(1L, "USER")).isInstanceOf(LastAdminException.class);
 
@@ -102,7 +102,7 @@ class UserServiceTest {
     void updateRole_shouldAllowDemotingAnAdmin_whenAnotherAdminExists() {
         user.setRole(Role.ADMIN);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.countByRole(Role.ADMIN)).thenReturn(2L);
+        when(userRepository.lockAdminIds()).thenReturn(List.of(1L, 2L));
         when(userRepository.save(any(User.class))).thenReturn(user);
 
         userService.updateRole(1L, "USER");
@@ -112,9 +112,7 @@ class UserServiceTest {
 
     @Test
     void deleteUser_shouldRefuseDeletingTheLastAdmin() {
-        user.setRole(Role.ADMIN);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.countByRole(Role.ADMIN)).thenReturn(1L);
+        when(userRepository.lockAdminIds()).thenReturn(List.of(1L));
 
         assertThatThrownBy(() -> userService.deleteUser(1L)).isInstanceOf(LastAdminException.class);
 
@@ -123,13 +121,47 @@ class UserServiceTest {
 
     @Test
     void deleteUser_shouldAllowDeletingAnAdmin_whenAnotherAdminExists() {
-        user.setRole(Role.ADMIN);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.countByRole(Role.ADMIN)).thenReturn(2L);
+        when(userRepository.lockAdminIds()).thenReturn(List.of(1L, 2L));
 
         userService.deleteUser(1L);
 
         verify(userRepository).deleteById(1L);
+    }
+
+    @Test
+    void createUser_shouldKeepTheChosenRole_andHashThePassword() {
+        when(passwordEncoder.encode("Secret-123")).thenReturn("hashed");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserResponse result = userService.createUser(createRequest("newadmin", "new@test.com", "admin"));
+
+        assertThat(result.getRole()).isEqualTo(Role.ADMIN);
+        verify(userRepository).save(argThat(u -> u.getRole() == Role.ADMIN && "hashed".equals(u.getPassword())));
+    }
+
+    @Test
+    void createUser_shouldRefuseTakenUsernameOrEmail_andUnknownRole() {
+        when(userRepository.existsByUsername("taken")).thenReturn(true);
+        when(userRepository.existsByEmail("taken@test.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.createUser(createRequest("taken", "x@test.com", "USER")))
+                .isInstanceOf(com.enesucar.auth_service.exception.UserAlreadyExistsException.class)
+                .hasMessageStartingWith("Username already taken");
+        assertThatThrownBy(() -> userService.createUser(createRequest("free", "taken@test.com", "USER")))
+                .isInstanceOf(com.enesucar.auth_service.exception.UserAlreadyExistsException.class)
+                .hasMessageStartingWith("Email already registered");
+        assertThatThrownBy(() -> userService.createUser(createRequest("free", "x@test.com", "ROOT")))
+                .isInstanceOf(InvalidRoleException.class);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    private static com.enesucar.auth_service.dto.CreateUserRequest createRequest(String username, String email, String role) {
+        var r = new com.enesucar.auth_service.dto.CreateUserRequest();
+        r.setUsername(username);
+        r.setEmail(email);
+        r.setPassword("Secret-123");
+        r.setRole(role);
+        return r;
     }
 
     @Test
