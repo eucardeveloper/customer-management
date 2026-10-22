@@ -35,5 +35,5 @@ Legend: yes = allowed, no = refused with `403` (or the page is not offered), mas
 
 ## How this was checked
 
-- Automated: the Testcontainers and unit tests in each service; Playwright `e2e/` (login redirect, password change ends older sessions, USER refused with 403, last administrator, an admin adding an ADMIN account stays signed in as themselves).
+- Automated: the Testcontainers and unit tests in each service; Playwright `e2e/integrity.spec.ts` calls every endpoint above as ADMIN, USER and anonymous and compares the status codes (and price masking) with this table, so a change to a rule fails CI until this document is updated; Playwright `e2e/journey.spec.ts` (login redirect, password change ends older sessions, USER refused with 403, last administrator, an admin adding an ADMIN account stays signed in as themselves).
 - Manual: `docs/MANUAL-TEST-MATRIX.md` (rows R1 to R7 for roles) and `docs/UAT-GUIDE.md` in this repository.
