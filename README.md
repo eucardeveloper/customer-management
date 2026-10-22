@@ -16,8 +16,11 @@ A microservice CRM: customers, orders and users behind an API gateway, order eve
 | Why can't another container make up an identity? | `customer-service/.../config/GatewayHeaderAuthFilter.java` (shared secret, constant-time compare) |
 | How is brute force limited? | `auth-service/.../security/LoginAttemptLimiter.java` (database-backed, per username and per address) |
 | Who may do what, and where is it enforced? | [docs/ROLE-MATRIX.md](docs/ROLE-MATRIX.md) |
+| Can two admins demoting each other at once leave nobody in charge? | No: `auth-service/.../service/UserService.java` locks the admin rows; `LastAdminConcurrencyTest` races them 25 times on PostgreSQL |
+| Is a stuck event or a dead service noticed? | `monitoring/`: provisioned Grafana dashboard, alert rules with unit tests (`promtool test rules`, run in CI), outbox backlog gauges |
+| Can a backup actually be restored? | `restore-test.sh`: dumps all three databases, changes a row in each, restores, checks; runs in the E2E workflow |
 | How do I accept it myself, role by role? | [docs/UAT-GUIDE.md](docs/UAT-GUIDE.md) |
-| Why these trade-offs? | [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md) |
+| Why these trade-offs, and what was rejected? | [docs/adr/](docs/adr/README.md) (decision records) and [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md) |
 | What does it not do? | [Known limitations](#known-limitations) |
 
 ## Architecture
@@ -37,7 +40,7 @@ flowchart LR
     Ord -->|"order-events"| Kafka[["Kafka"]]
     Kafka --> Ord
     Kafka --> Cust
-    Prom["Prometheus :9090"] -.scrapes.-> Auth & Cust & Ord
+    Prom["Prometheus :9090"] -.scrapes.-> GW & Auth & Cust & Ord
     Grafana["Grafana :3002"] -.-> Prom
 ```
 
@@ -50,7 +53,7 @@ Four Spring Boot services (gateway, auth, customer, order), one PostgreSQL datab
 | Services | Spring Boot 4.0, Spring Security, JPA, Flyway |
 | Data | PostgreSQL 16, one database per service, Flyway migrations with seed data |
 | Messaging | Kafka (order-service produces `order-events`) |
-| Observability | Actuator + Micrometer, Prometheus, Grafana |
+| Observability | Actuator + Micrometer, Prometheus (alert rules), Grafana (provisioned dashboard) |
 | AI | OpenRouter, called only from a Next.js server route |
 
 ## Screenshots
@@ -84,13 +87,13 @@ docker compose up --build
 | AI agent UI | http://localhost:3001 (needs `N8N_WEBHOOK_URL` in `.env`; without it the UI answers 503) |
 | n8n | http://localhost:5678 |
 | Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3002 (admin / value of `GRAFANA_ADMIN_PASSWORD`) |
+| Grafana | http://localhost:3002 (admin / value of `GRAFANA_ADMIN_PASSWORD`); dashboard "Customer Management - overview" is provisioned |
 
 Only these entry points are published to the host. Databases, Kafka and the three backend services are reachable only inside the compose network, so nothing else on your machine can talk to them.
 
 ### Your data survives restarts
 
-Database data lives in a named Docker volume. `docker compose up -d` after a reboot or after `docker compose stop` / `down` brings everything back with all records intact; containers also restart automatically (`restart: unless-stopped`). The only command that deletes the data is `docker compose down -v` (or `docker volume rm`), so do not use `-v` unless you want a clean slate.
+Database data lives in a named Docker volume. `docker compose up -d` after a reboot or after `docker compose stop` / `down` brings everything back with all records intact; containers also restart automatically (`restart: unless-stopped`). The only command that deletes the data is `docker compose down -v` (or `docker volume rm`), so do not use `-v` unless you want a clean slate. Backups and the restore test: [docs/BACKUP-RESTORE.md](docs/BACKUP-RESTORE.md).
 
 Demo accounts (seeded by Flyway in auth-service):
 
@@ -104,8 +107,9 @@ These credentials are demo data. Change them before exposing the stack anywhere.
 ## Security model
 
 - **Gateway** validates the JWT on every request except login/register and forwards the verified user and role to the services; anonymous calls get `401`.
-- **Roles are enforced in the services**: reading customers and orders needs any signed-in user, creating/changing/deleting them needs ADMIN, and order prices are returned as `null` to non-admins, so the restriction holds for curl/Postman as well as for the UI. Public self-registration is off by default (`AUTH_REGISTRATION_ENABLED`, switched on by the local compose file) and always creates a USER. The services trust the gateway's identity headers only together with a shared secret (`GATEWAY_SHARED_SECRET`), so another container cannot invent an identity. `OrderApiAuthorizationTest` and `CustomerApiAuthorizationTest` run the real security chain.
-- **The last ADMIN** can neither be demoted nor deleted (`409`), so the system cannot be left without an administrator.
+- **Roles are enforced in the services**: reading customers and orders needs any signed-in user, creating/changing/deleting them needs ADMIN, and order prices are returned as `null` to non-admins, so the restriction holds for curl/Postman as well as for the UI. Public self-registration is off by default (`AUTH_REGISTRATION_ENABLED`, switched on by the local compose file) and always creates a USER. The services trust the gateway's identity headers only together with a shared secret (`GATEWAY_SHARED_SECRET`), so another container cannot invent an identity, and they refuse to start without that secret instead of trusting everyone. `OrderApiAuthorizationTest` and `CustomerApiAuthorizationTest` run the real security chain.
+- **The last ADMIN** can neither be demoted nor deleted (`409`), so the system cannot be left without an administrator; this also holds when two admins act at the same moment (the admin rows are locked, see [ADR 0005](docs/adr/0005-last-admin-invariant-under-concurrency.md)).
+- **Adding users**: an admin creates accounts with `POST /api/users` and chooses the role; this issues no session, so the admin stays signed in as themselves. Public sign-up (`/api/auth/register`) is a separate path that always creates a USER.
 - **Passwords** are hashed with BCrypt. The JWT secret has no default: `docker compose` refuses to start without `JWT_SECRET`.
 - **Network exposure**: only gateway, frontends, n8n, Prometheus and Grafana are published. DB and Kafka ports are internal.
 - **CORS** is limited to the two frontend origins (`CORS_ALLOWED_ORIGINS` to change).
@@ -121,6 +125,13 @@ These credentials are demo data. Change them before exposing the stack anywhere.
 - Stored data is passed as an untrusted `<DATA>` block and the model is told not to follow instructions inside it. This reduces prompt-injection risk; it does not remove it.
 - Limits: 20 messages per request, 2000 characters per user message, 30 s upstream timeout, 20 requests/min per user (in memory, per instance).
 - If an API key was ever committed or exposed to a browser bundle, treat it as leaked and rotate it.
+
+## Observability
+
+- **What is scraped**: auth, customer and order services on `/actuator/prometheus`, and the gateway on a separate management port (`9091`) that is not published, because on `8080` the actuator would be answered before any route or the JWT filter. Only `health` and `prometheus` are open without a session on the auth-service; the others need one.
+- **Dashboard** (provisioned from `monitoring/grafana/`): targets up, requests per second and 5xx share per service, gateway p50/p95 latency, gateway answers by status (401/403/429/503 show sessions ending, role refusals and sign-in throttling), outbox backlog, JVM heap.
+- **Alerts** (`monitoring/alerts.yml`): `ServiceDown`, `OrderEventsNotReachingKafka` (oldest unpublished order event older than 60 s for 2 min), `HighServerErrorRate` (> 5% 5xx for 5 min). Each rule has a unit test in `monitoring/alerts.test.yml`, run by the CI job "monitoring" together with `promtool check config`. There is no Alertmanager in this stack, so firing alerts show under *Alerts* in the Prometheus UI and are not sent anywhere.
+- **Outbox gauges** (`order-service/.../kafka/OutboxMetrics.java`): `outbox_events_pending` and `outbox_oldest_pending_age_seconds`. Checked against the running stack: with Kafka stopped, a new order showed `pending=1` and a growing age; after Kafka came back both returned to 0.
 
 ## Order events and idempotency
 
@@ -141,7 +152,15 @@ cd frontend/customer-app && npm ci && npm run lint && npx tsc --noEmit && npm te
 cd frontend/ai-agent-app && npm ci && npm run lint && npm test && npm run build
 ```
 
-The two Testcontainers test classes in order-service run the real Flyway chain on PostgreSQL with Hibernate in `validate` mode. They check that a redelivered consumer record is handled once (no broker involved) and that creating an order writes its outbox event in the same transaction, with nothing left behind when the create fails. They need Docker running and fail with a clear error when it is not, rather than being skipped, so the reported test count is always the real one. The other service tests use H2.
+The Testcontainers test classes run the real Flyway chain on PostgreSQL with Hibernate in `validate` mode. In order-service they check that a redelivered consumer record is handled once (no broker involved) and that creating an order writes its outbox event in the same transaction, with nothing left behind when the create fails. In auth-service `LastAdminConcurrencyTest` lets two admins demote or delete each other in parallel, 25 rounds each, and checks that exactly one change wins every time (without the row lock it failed in the first round). They need Docker running and fail with a clear error when it is not, rather than being skipped, so the reported test count is always the real one. The other service tests use H2.
+
+```bash
+# monitoring config and alert rule tests (what the CI job "monitoring" runs)
+docker run --rm -v "$PWD/monitoring:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.15.0 test rules /etc/prometheus/alerts.test.yml
+
+# backup and restore of all three databases, against a running stack
+./restore-test.sh
+```
 
 ## API summary
 
@@ -153,7 +172,7 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 | Customers | `GET/POST /api/customers`, `PUT/DELETE /api/customers/{id}` | read: any user, write: ADMIN |
 | Orders | `GET/POST /api/orders`, `PUT/DELETE /api/orders/{id}` | read: any user, write: ADMIN |
 | Auth (signed in) | `GET /api/auth/session` (is this token still valid; who am I), `POST /api/auth/password` (change own password; needs the current one, throttled; ends all sessions) | any signed-in user |
-| Users | `GET /api/users`, `PATCH /api/users/{id}/role`, `PUT /api/users/{id}/password` (admin reset), `DELETE /api/users/{id}` | ADMIN |
+| Users | `GET /api/users`, `POST /api/users` (add an account with a chosen role; no session is issued), `PATCH /api/users/{id}/role`, `PUT /api/users/{id}/password` (admin reset), `DELETE /api/users/{id}` | ADMIN |
 
 ## Known limitations
 
@@ -161,10 +180,12 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 - **Login throttling is stored in the database** (5 failures per username in 15 minutes, then `429` with `Retry-After`), so it survives restarts and is shared by all instances. A second, looser limit counts failures per client address (30 in 15 minutes, `app.login.max-failures-per-ip`), so one source cannot spread guesses over many usernames; the address is the right-most public entry of `X-Forwarded-For` (forged left entries are ignored). It still lets someone lock a known username out for a short time.
 - **Demo defaults are for local use only.** The compose file uses development database passwords, seeded demo accounts, and publishes n8n, Prometheus and Grafana on the host's loopback address only (127.0.0.1). Change all of them and drop the extra ports before exposing the stack anywhere.
 - **`npm audit --omit=dev` reports 2 moderate findings** (`uuid` < 11.1.1, pulled in by `exceljs`; advisory GHSA-w5hq-g745-h8pq: missing bounds check in uuid v3/v5/v6 when a caller supplies its own output buffer). ExcelJS does not call it that way and runs only in the browser on the user's own export data, so it is not exploitable here. The suggested `npm audit fix --force` would downgrade `exceljs` to 3.4.0 and break the export, so it is accepted until `exceljs` ships a release with a patched `uuid`.
-- Tests: backend unit/controller tests per service, Testcontainers tests on real PostgreSQL (migrations vs. entities, idempotent consumer, outbox), frontend unit tests for the API client, auth helpers, percentages, trend badges and the order statistics behind the dashboard (`npm test`; there are no DOM/component tests, the UI itself is exercised by the Playwright journey), and a Playwright journey in `e2e/` that boots the whole compose stack and runs in GitHub Actions on every push and pull request (`e2e` workflow; locally see `e2e/README.md`).
+- Tests: backend unit/controller tests per service, Testcontainers tests on real PostgreSQL (migrations vs. entities, idempotent consumer, outbox), frontend unit tests for the API client, auth helpers, percentages, trend badges and the order statistics behind the dashboard (`npm test`; there are no DOM/component tests, the UI itself is exercised by the Playwright journey), and a Playwright journey in `e2e/` that boots the whole compose stack and runs in GitHub Actions on every push to `main` and every pull request to `main` (`e2e` workflow, also startable by hand; locally see `e2e/README.md`). Pushes to other branches run only the Frontend workflow.
 - The in-memory AI rate limiter is per process; behind several instances it would need a shared store.
 - **Transactional outbox (order-service).** An order and its event are written in one database transaction (`outbox_event` table); a scheduled relay publishes pending rows to Kafka and marks them published only after the broker acknowledged them, so a crash can no longer lose the event. Delivery is at-least-once (a crash after the broker accepted but before the commit publishes the row again) and the consumer is idempotent: events carry a business `eventId` (JSON payload) and are recognised by it even if published twice at different offsets; plain-text messages fall back to offset-based detection. Order creation, update and deletion each emit an event (`ORDER_CREATED`, `ORDER_UPDATED`, `ORDER_DELETED`) in the same transaction as the change.
 - **Cross-service integrity is enforced by service calls, not by a database.** Deleting a customer is refused with `409` while the order-service still lists orders for them; creating or re-assigning an order is refused with `400` if the customer does not exist. If the other service cannot be reached the change is refused with `503` (fail closed). Two services with separate databases cannot share a transaction, so the race (an order created in the instant between the check and the delete) is closed with a claim instead: a delete first marks the customer `deletion_pending_since`, which makes it read as unknown to the order-service, and only then looks for orders; the order-service re-checks the customer after committing an order and undoes the order if the customer is gone or claimed. Either the delete sees the order or the order sees the delete. The order-service tests prove the undo against a real PostgreSQL.
+- **n8n shares the customer database.** The optional n8n container stores its own tables in `customer_db` and connects as its `postgres` superuser, so it could read customer data. It is part of the local demo only (the AI assistant in the dashboard does not use it); a real setup would give it its own database or its default SQLite store. Not changed here because moving it would orphan workflows already saved in existing local volumes.
+- **Inside the compose network, metrics and health are open.** `/actuator/health` (with details) and `/actuator/prometheus` of the backends answer without a session. They are not routed by the gateway and not published to the host; anything on the internal network can read them.
 - **One database role per service does both jobs.** Each service connects as the `postgres` superuser of its own database, and the same account runs the Flyway migrations and the application queries. Every database is private to its service and not reachable from the host network except in the local compose file, but a production setup would use a migration owner and a separate least-privilege runtime role.
 - The reference setup is `docker compose`. No cloud deployment is configured in this repository; a hosted demo is a separate deployment of the same images; the checklist is in [docs/DEPLOY-RAILWAY.md](docs/DEPLOY-RAILWAY.md).
 

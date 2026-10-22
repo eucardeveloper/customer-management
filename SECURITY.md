@@ -6,7 +6,9 @@ This is a portfolio project, not a production system. What it does, and what it 
 - Session in an HttpOnly, `SameSite=Strict` cookie (30 min); `Origin` check on cookie-authenticated writes; CORS allowlist.
 - Server-side session revocation (`token_version`, `jti` list), checked by the gateway; fail-closed when the auth-service cannot answer.
 - Login throttling in the database: per username (5 / 15 min) and per client address (30 / 15 min).
-- Role checks inside the services (ADMIN writes, USER read-only without prices); services trust identity headers only together with a gateway shared secret.
+- Role checks inside the services (ADMIN writes, USER read-only without prices); services trust identity headers only together with a gateway shared secret and refuse to start without it.
+- "There is always an administrator" holds under concurrent role changes and deletions (row lock, tested in parallel on PostgreSQL).
+- Metrics: the gateway's actuator is on an unpublished management port; on the auth-service only health and Prometheus metrics are open without a session.
 - Public sign-up is off by default; hosted deployments replace the admin password at start-up.
 - Non-root containers, no published ports for databases/Kafka/backends, security headers on the frontends, generic error messages for failed sign-in.
 - Flyway-only schema changes (`ddl-auto=validate`), input validation, `npm audit` and Dependabot in CI.

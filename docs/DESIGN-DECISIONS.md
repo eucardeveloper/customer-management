@@ -1,12 +1,16 @@
 # Design decisions — Customer Management platform
 
+The reasoning behind the security and consistency rows, with the alternatives that were rejected, is in the decision records: [docs/adr/](adr/README.md).
+
 Why it is built as four services: this project is a deliberate learning and portfolio exercise in distributed-system problems (identity across services, session revocation, a reliable event after a database write, consistency across two databases). For a real product of this size a modular monolith would be the simpler and cheaper choice; the costs of the split are listed under "Known limitations".
 
 | Concern | Decision | Why / trade-off |
 |---|---|---|
 | Single entry point | Only the gateway (8080) and the two frontends are published; services, databases and Kafka have no host ports | Smaller attack surface; every request must pass JWT validation. |
-| Identity propagation | The gateway validates the session with the auth-service and forwards `X-Auth-User` / `X-Auth-Role` plus a shared secret (`X-Gateway-Secret`). The customer and order services only trust those headers when the secret matches (constant-time compare) | The network boundary is no longer the only protection: another container cannot make up an identity. Trade-off: one shared secret to manage; services do not verify the JWT themselves. |
+| Identity propagation | The gateway validates the session with the auth-service and forwards `X-Auth-User` / `X-Auth-Role` plus a shared secret (`X-Gateway-Secret`). The customer and order services only trust those headers when the secret matches (constant-time compare) and refuse to start without a secret | The network boundary is no longer the only protection: another container cannot make up an identity. Trade-off: one shared secret to manage; services do not verify the JWT themselves. |
 | Authorization in services | `GET` needs authentication; `POST/PUT/PATCH/DELETE` on orders and customers need ADMIN; non-admins get `price = null` | Enforced server-side, not just hidden in the UI. Covered by `OrderApiAuthorizationTest` and `CustomerApiAuthorizationTest`. |
+| Last administrator | Role changes and user deletions lock all admin rows (`SELECT ... FOR UPDATE`, id order) before deciding | Two admins demoting each other at once cannot both pass the "another admin exists" check. Trade-off: those changes are serialised. ([ADR 0005](adr/0005-last-admin-invariant-under-concurrency.md)) |
+| Adding users | Admins use `POST /api/users` (role chosen, no session issued); public sign-up stays a separate, USER-only path | Sign-up sets the new account's session cookie, so using it from the admin page switched the admin's browser to the new account and ignored the role. |
 | Anonymous requests | `HttpStatusEntryPoint(401)` | Distinguishes "not logged in" from "forbidden" (403 only for a signed-in user without the role). |
 | Browser session | HttpOnly, `SameSite=Strict` cookie, 30 min lifetime (`JWT_EXPIRATION`); the gateway checks `Origin` on cookie-authenticated writes and CORS uses an allowlist | The token is unreadable from scripts. Trade-off: no refresh token, so the user signs in again after 30 min. |
 | Session revocation | `token_version` per user (password or role change ends all sessions), `jti` revoke list on logout; the gateway asks the auth-service and caches a positive answer for 10 s; if the auth-service cannot answer the gateway refuses (401/503) | A revoked session lives at most ~10 s. Trade-off: the auth-service is a dependency of every request. |
@@ -17,6 +21,7 @@ Why it is built as four services: this project is a deliberate learning and port
 | Cross-service integrity | Deleting a customer first claims it (`deletion_pending_since`; the customer reads as unknown to the order-service while the claim is fresh), then asks the order-service (409 if orders exist), then deletes. Creating or re-assigning an order checks the customer before saving and again after the commit; if the customer is gone or claimed, the order is undone. An unreachable peer answers 503 | No distributed transaction, so the two sides are made to see each other instead: either the delete finds the new order and is refused, or the order's re-check finds the customer gone and undoes it. A claim older than 30 s is ignored, so a crash never hides a customer for good. |
 | Timeouts | Gateway connect timeout 3 s, response timeout 15 s; service-to-service calls 2 s / 3 s | A slow service cannot hang a request indefinitely. |
 | Secrets | `JWT_SECRET` and `GATEWAY_SHARED_SECRET` are required (`${...:?...}`); `.env.example` provided; no secret is committed | Compose refuses to start without them. |
+| Observability | Metrics from all four Spring services (gateway on an unpublished management port); provisioned Grafana dashboard; alert rules with `promtool` unit tests in CI; outbox backlog gauges | A stuck event or a dead service is visible without reading logs. Trade-off: no Alertmanager, alerts are shown in the Prometheus UI only. |
 | Persistence | Named volumes for all databases, Kafka, Zookeeper, Prometheus; `restart: unless-stopped` | Data survives a reboot. |
 
 ## Known limitations
