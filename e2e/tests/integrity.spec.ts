@@ -76,7 +76,8 @@ test.describe('role matrix', () => {
 
   // One browser-like context per identity: each keeps its own session cookie, so "anonymous" really carries none.
   async function as(playwright: Playwright, username?: string, password?: string): Promise<APIRequestContext> {
-    const ctx = await playwright.request.newContext();
+    // a browser always sends Origin with a cookie-authenticated write; the gateway refuses writes without it
+    const ctx = await playwright.request.newContext({ extraHTTPHeaders: ORIGIN });
     if (username) {
       const res = await ctx.post(`${API}/api/auth/login`, { data: { username, password }, headers: ORIGIN });
       expect(res.ok(), `sign-in as ${username}`).toBeTruthy();
