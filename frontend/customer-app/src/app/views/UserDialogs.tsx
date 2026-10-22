@@ -35,9 +35,9 @@ export function UserDialogs({ t, deleteUserDialogOpen, setDeleteUserDialogOpen, 
         <Dialog open={addUserDialogOpen} onClose={() => setAddUserDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem', pb: 1 }}>{t('addUser')}</DialogTitle>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '8px !important' }}>
-            <TextField label={t('username')} fullWidth size="small" value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} />
-            <TextField label={t('email')} fullWidth size="small" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
-            <TextField label={t('password')} type="password" fullWidth size="small" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+            <TextField label={t('username')} autoComplete="off" fullWidth size="small" value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} />
+            <TextField label={t('email')} autoComplete="off" fullWidth size="small" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+            <TextField label={t('password')} type="password" autoComplete="new-password" fullWidth size="small" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
             <TextField label={t('role')} select fullWidth size="small" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
               <MenuItem value="USER">USER</MenuItem>
               <MenuItem value="ADMIN">ADMIN</MenuItem>
