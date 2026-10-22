@@ -1,0 +1,61 @@
+# Unit tests for alerts.yml:  promtool test rules alerts.test.yml
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 15s
+
+tests:
+  - name: a target that stops answering raises ServiceDown after one minute, a healthy one never does
+    interval: 15s
+    input_series:
+      - series: 'up{job="order-service", instance="order-backend:8082"}'
+        values: '1 1 0 0 0 0 0 0'
+      - series: 'up{job="auth-service", instance="auth-backend:8083"}'
+        values: '1 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 30s
+        alertname: ServiceDown
+        exp_alerts: []
+      - eval_time: 105s
+        alertname: ServiceDown
+        exp_alerts:
+          - exp_labels: { severity: critical, job: order-service, instance: "order-backend:8082" }
+            exp_annotations:
+              summary: "order-service cannot be scraped"
+              description: "Prometheus has not reached order-backend:8082 for a minute: the service is down or its metrics endpoint refuses the scrape."
+
+  - name: an outbox event waiting longer than a minute for two minutes raises OrderEventsNotReachingKafka
+    interval: 1m
+    input_series:
+      - series: 'outbox_oldest_pending_age_seconds{job="order-service", instance="order-backend:8082"}'
+        values: '0 0 90 150 210 270'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: OrderEventsNotReachingKafka
+        exp_alerts: []
+      - eval_time: 4m
+        alertname: OrderEventsNotReachingKafka
+        exp_alerts:
+          - exp_labels: { severity: warning, job: order-service, instance: "order-backend:8082" }
+            exp_annotations:
+              summary: "Order events are waiting in the outbox"
+              description: "The oldest unpublished order event has waited 3m 30s; Kafka is not acknowledging."
+
+  - name: 10% of requests failing with 5xx for five minutes raises HighServerErrorRate; 1% does not
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="customer-service", status="200"}'
+        values: '0+90x10'
+      - series: 'http_server_requests_seconds_count{job="customer-service", status="500"}'
+        values: '0+10x10'
+      - series: 'http_server_requests_seconds_count{job="order-service", status="200"}'
+        values: '0+99x10'
+      - series: 'http_server_requests_seconds_count{job="order-service", status="500"}'
+        values: '0+1x10'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HighServerErrorRate
+        exp_alerts:
+          - exp_labels: { severity: warning, job: customer-service }
+            exp_annotations:
+              summary: "customer-service answers more than 5% of requests with 5xx"

@@ -1,0 +1,31 @@
+groups:
+  - name: customer-management
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} cannot be scraped"
+          description: "Prometheus has not reached {{ $labels.instance }} for a minute: the service is down or its metrics endpoint refuses the scrape."
+
+      # The outbox never loses an order event, but it can hold it back: the broker is down or unreachable.
+      - alert: OrderEventsNotReachingKafka
+        expr: outbox_oldest_pending_age_seconds > 60
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Order events are waiting in the outbox"
+          description: "The oldest unpublished order event has waited {{ $value | humanizeDuration }}; Kafka is not acknowledging."
+
+      - alert: HighServerErrorRate
+        expr: |
+          sum by (job) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            / sum by (job) (rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} answers more than 5% of requests with 5xx"

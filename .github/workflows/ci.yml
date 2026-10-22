@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   auth-service:
@@ -82,3 +83,18 @@ jobs:
       - name: Run Order Service Tests
         run: mvn test --no-transfer-progress
         working-directory: order-service
+
+  monitoring:
+    name: Prometheus config and alert rule tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: promtool check config, then unit-test the alert rules
+        # same image and version as docker-compose.yml
+        run: |
+          docker run --rm -v "$PWD/monitoring:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.15.0 \
+            check config /etc/prometheus/prometheus.yml
+          docker run --rm -v "$PWD/monitoring:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.15.0 \
+            test rules /etc/prometheus/alerts.test.yml
+      - name: Grafana dashboard is valid JSON
+        run: python3 -m json.tool monitoring/grafana/dashboards/overview.json > /dev/null

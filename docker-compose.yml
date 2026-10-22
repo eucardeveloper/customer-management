@@ -1,5 +1,6 @@
 # Only the entry points a browser needs are published to the host:
 #   gateway 8080, frontends 3000/3001, n8n 5678, prometheus 9090, grafana 3002.
+# The gateway's metrics port (9091) is reachable only by Prometheus inside the network.
 # Databases, Kafka and the three backends are reachable only inside the compose network.
 services:
   zookeeper:
@@ -216,7 +217,8 @@ services:
     ports:
       - "127.0.0.1:9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     depends_on:
       - auth-backend
@@ -236,6 +238,9 @@ services:
       - prometheus
     volumes:
       - grafana-data:/var/lib/grafana
+      # datasource and the overview dashboard are provisioned, so Grafana is not empty on first start
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
 volumes:
   zookeeper-data:
   zookeeper-log:

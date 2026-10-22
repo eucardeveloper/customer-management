@@ -39,6 +39,9 @@ public class SecurityConfig {
                         // Spring forwards sendError (403, 404...) to /error. Without this the forward is judged
                         // as anonymous and every 403 turns into an empty 401 on a real server.
                         .requestMatchers("/error").permitAll()
+                        // Prometheus scrapes without a token; the gateway has no route to /actuator, so this
+                        // is reachable only inside the network. Other actuator endpoints stay closed.
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/prometheus").permitAll()
                         .requestMatchers("/api/auth/password", "/api/auth/session").authenticated()
                         .requestMatchers("/api/auth/**", "/swagger-ui/**",
                                 "/swagger-ui.html", "/v3/api-docs/**").permitAll()
