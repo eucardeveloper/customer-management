@@ -43,7 +43,7 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                        <TableCell sx={{ width: '34%' }}>{t('username')}</TableCell>
+                        <TableCell sx={{ width: { xs: '100%', md: '34%' } }}>{t('username')}</TableCell>
                         <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '44%' }}>{t('email')}</TableCell>
                         <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('role')}</TableCell>
                         <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
@@ -59,7 +59,7 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                       {filteredUsers.map(u => (
                         <TableRow key={u.id}>
                           <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Chip label={`#${u.id}`} size="small" sx={{ bgcolor: 'var(--surface-2)', color: '#64748b', fontSize: '0.68rem', height: 20 }} /></TableCell>
-                          <TableCell>
+                          <TableCell sx={{ maxWidth: { xs: 0, md: 'none' } }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: { xs: '100%', md: 'min(100%, 170px)' }, mx: 'auto', textAlign: 'left' }}>
                               <Avatar sx={{ width: 30, height: 30, bgcolor: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', fontSize: '0.75rem', fontWeight: 700 }}>{u.username.charAt(0).toUpperCase()}</Avatar>
                               <Box sx={{ minWidth: 0, flex: 1 }}>

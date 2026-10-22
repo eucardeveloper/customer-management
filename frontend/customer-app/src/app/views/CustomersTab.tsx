@@ -59,7 +59,7 @@ export function CustomersTab({ t, isAdmin, loading, custSearch, setCustSearch, s
                           <TableRow>
                             <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
                             <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
-                            <TableCell sx={{ width: '30%' }}>{t('customer')}</TableCell>
+                            <TableCell sx={{ width: { xs: '100%', md: '30%' } }}>{t('customer')}</TableCell>
                             <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '34%' }}>{t('email')}</TableCell>
                             <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '18%', whiteSpace: 'nowrap' }}>{t('phone')}</TableCell>
                             {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
@@ -79,13 +79,13 @@ export function CustomersTab({ t, isAdmin, loading, custSearch, setCustSearch, s
                             <TableRow key={c.id}>
                               <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>#{c.id}</Typography></TableCell>
                               <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{customerTypeChip(c, t)}</TableCell>
-                              <TableCell sx={{ cursor: 'pointer' }} onClick={() => setDrawerCustomer(c)}>
+                              <TableCell sx={{ cursor: 'pointer', maxWidth: { xs: 0, md: 'none' } }} onClick={() => setDrawerCustomer(c)}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: 'min(100%, 230px)', mx: 'auto', textAlign: 'left' }}>
                                   <Avatar sx={{ width: 30, height: 30, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.72rem', fontWeight: 700 }}>
                                     {(c.firstName ?? '?')[0]}{(c.lastName ?? '')[0]}
                                   </Avatar>
                                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                                    <Typography noWrap sx={{ fontWeight: 600, fontSize: '0.875rem', '&:hover': { color: '#2563eb' } }}>{c.firstName} {c.lastName}</Typography>
+                                    <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, overflowWrap: 'break-word', '&:hover': { color: '#2563eb' } }}>{c.firstName} {c.lastName}</Typography>
                                     {/* Phones and tablets hide the e-mail, phone and type columns; they move under the name instead. */}
                                     <Box sx={{ display: { xs: 'block', md: 'none' }, minWidth: 0 }}>
                                       <Typography noWrap variant="caption" sx={{ display: 'block', color: '#64748b' }}>{c.email}</Typography>
