@@ -70,7 +70,7 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                           </TableCell>
                           <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, }}><Box sx={{ width: 'min(100%, 260px)', mx: 'auto', textAlign: 'left' }}><Typography noWrap title={u.email} sx={{ color: '#64748b', fontSize: '0.85rem' }}>{u.email}</Typography></Box></TableCell>
                           <TableCell align="center" sx={{ px: { xs: 0.5, md: 2 } }}>
-                            <Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'rgba(124,58,237,0.12)' : 'rgba(22,163,74,0.12)', color: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', border: `1px solid ${u.role === 'ADMIN' ? 'rgba(124,58,237,0.30)' : 'rgba(22,163,74,0.30)'}`, fontWeight: 700, fontSize: '0.68rem' }} />
+                            <Box sx={{ width: 'min(100%, 70px)', mx: 'auto', textAlign: 'left' }}><Chip label={u.role} size="small" sx={{ bgcolor: u.role === 'ADMIN' ? 'rgba(124,58,237,0.12)' : 'rgba(22,163,74,0.12)', color: u.role === 'ADMIN' ? '#7c3aed' : '#16a34a', border: `1px solid ${u.role === 'ADMIN' ? 'rgba(124,58,237,0.30)' : 'rgba(22,163,74,0.30)'}`, fontWeight: 700, fontSize: '0.68rem' }} /></Box>
                           </TableCell>
                           <TableCell align="right" sx={{ whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }}>
                             <Tooltip title={t('changeRole')}>
