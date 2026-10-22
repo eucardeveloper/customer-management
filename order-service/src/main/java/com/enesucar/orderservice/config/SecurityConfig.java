@@ -30,13 +30,14 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                           @Value("${gateway.shared-secret:}") String gatewaySecret) throws Exception {
+                                           @Value("${gateway.shared-secret:}") String gatewaySecret,
+                                           @Value("${gateway.allow-unsigned-headers:false}") boolean allowUnsignedHeaders) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 // Anonymous requests answer 401 (Spring's default would be 403)
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(new GatewayHeaderAuthFilter(gatewaySecret), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(GatewayHeaderAuthFilter.create(gatewaySecret, allowUnsignedHeaders), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/actuator/**",

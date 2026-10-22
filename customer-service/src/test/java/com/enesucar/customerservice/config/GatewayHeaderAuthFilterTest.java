@@ -50,4 +50,15 @@ class GatewayHeaderAuthFilterTest {
         new GatewayHeaderAuthFilter().doFilter(request(null), new MockHttpServletResponse(), chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
     }
+
+    @Test
+    void theServiceRefusesToStartWithoutASecret() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> GatewayHeaderAuthFilter.create("", false))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("GATEWAY_SHARED_SECRET");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> GatewayHeaderAuthFilter.create(null, false))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(GatewayHeaderAuthFilter.create("s3cret", false)).isNotNull();
+        assertThat(GatewayHeaderAuthFilter.create("", true)).isNotNull(); // tests only
+    }
 }

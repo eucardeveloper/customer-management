@@ -21,8 +21,8 @@ import java.util.List;
  *
  * When a shared secret is configured ({@code gateway.shared-secret}) the headers are only honoured if
  * the request also carries it in X-Gateway-Secret, so another container on the network cannot invent
- * an identity. The comparison is constant-time. Without a secret (local tests) the headers are trusted
- * as before, so the service must then only be reachable through the API Gateway.
+ * an identity. The comparison is constant-time. A service started without a secret refuses to start
+ * (see {@link #create}); only tests opt out with {@code gateway.allow-unsigned-headers=true}.
  */
 public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
 
@@ -36,6 +36,18 @@ public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
 
     public GatewayHeaderAuthFilter(String sharedSecret) {
         this.sharedSecret = sharedSecret == null ? "" : sharedSecret;
+    }
+
+    /**
+     * The filter the application uses. A missing secret is a deployment mistake that would let anyone who
+     * can reach the service claim to be an ADMIN, so it stops the start-up instead of failing open.
+     */
+    public static GatewayHeaderAuthFilter create(String sharedSecret, boolean allowUnsignedHeaders) {
+        if ((sharedSecret == null || sharedSecret.isBlank()) && !allowUnsignedHeaders) {
+            throw new IllegalStateException("GATEWAY_SHARED_SECRET is not set. Without it any caller on the network could "
+                    + "claim to be an ADMIN. Set it to the gateway's value (tests only: gateway.allow-unsigned-headers=true).");
+        }
+        return new GatewayHeaderAuthFilter(sharedSecret);
     }
 
     private boolean fromGateway(HttpServletRequest request) {
