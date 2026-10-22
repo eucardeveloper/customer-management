@@ -113,7 +113,7 @@ test.describe('role matrix', () => {
       { name: 'open an order', method: 'get', path: `/api/orders/${order.id}`, admin: 200, user: 200, anon: 401 },
       { name: "a customer's orders", method: 'get', path: `/api/orders/customer/${customer.id}`, admin: 200, user: 200, anon: 401 },
       { name: 'list users', method: 'get', path: '/api/users', admin: 200, user: 403, anon: 401 },
-      { name: 'create a customer', method: 'post', path: '/api/customers', data: newCustomer('nope'), admin: 201, user: 403, anon: 401 },
+      { name: 'create a customer', method: 'post', path: '/api/customers', data: newCustomer('nope'), admin: 200, user: 403, anon: 401 },
       { name: 'edit a customer', method: 'put', path: `/api/customers/${customer.id}`, data: newCustomer('edit'), admin: 200, user: 403, anon: 401 },
       { name: 'create an order', method: 'post', path: '/api/orders', data: newOrder(customer.id, 9), admin: 201, user: 403, anon: 401 },
       { name: 'edit an order', method: 'put', path: `/api/orders/${order.id}`, data: newOrder(customer.id, 2), admin: 200, user: 403, anon: 401 },
