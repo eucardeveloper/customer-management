@@ -50,7 +50,7 @@ Four Spring Boot services (gateway, auth, customer, order), one PostgreSQL datab
 |-----------|-----------|
 | Frontend | Next.js 16 (App Router), React, MUI 9, TypeScript |
 | Gateway | Spring Cloud Gateway (WebFlux), JWT check, upstream timeouts, restricted CORS |
-| Services | Spring Boot 4.0, Spring Security, JPA, Flyway |
+| Services | Spring Boot 4.1, Spring Security, JPA, Flyway |
 | Data | PostgreSQL 16, one database per service, Flyway migrations with seed data |
 | Messaging | Kafka (order-service produces `order-events`) |
 | Observability | Actuator + Micrometer, Prometheus (alert rules), Grafana (provisioned dashboard) |
