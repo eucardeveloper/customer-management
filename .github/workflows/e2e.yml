@@ -65,6 +65,17 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
           npx playwright test
+      - name: Show why a test failed
+        # The run log cannot be read without signing in; annotations can, so each failure is printed as one.
+        if: failure()
+        working-directory: e2e
+        run: |
+          node -e "
+          const fs=require('fs');
+          if(!fs.existsSync('test-results/results.json')){console.log('::error::no Playwright results file');process.exit(0)}
+          const r=JSON.parse(fs.readFileSync('test-results/results.json','utf8'));
+          const walk=(s)=>{for(const t of (s.specs||[]))for(const x of t.tests)for(const res of x.results)if(res.status!=='passed'&&res.status!=='skipped'){const m=((res.error&&res.error.message)||'').replace(/\\x1b\\[[0-9;]*m/g,'').slice(0,900).replace(/\n/g,'%0A');console.log('::error title='+t.title.slice(0,80)+'::'+m)} for(const c of (s.suites||[]))walk(c)};
+          for(const s of r.suites)walk(s);"
       - name: Backup and restore test (all three databases)
         # Runs after the journey, on the data it left behind: dump, change a row in each database, restore,
         # check every change is gone and every row count matches the backup.
