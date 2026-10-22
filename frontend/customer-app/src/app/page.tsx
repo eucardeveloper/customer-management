@@ -192,14 +192,19 @@ export default function Home() {
     }
   };
 
+  const serverMsg = (e: unknown, fallback: string) => {
+    const m = e instanceof Error ? e.message : '';
+    return m && !m.startsWith('HTTP') ? translateServerMessage(lang, m) : fallback;
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
-    // Customers and orders live in separate services, so the customer service cannot see orders:
-    // never leave orphan orders behind (they would still count towards revenue).
+    // Quick pre-check against the orders already loaded, to save a round trip. It is not the guard:
+    // the customer service enforces the rule itself (claims the customer, asks the order service, 409 if orders exist).
     const linkedOrders = orders.filter(o => o.customerId === deleteId).length;
     if (linkedOrders > 0) { showSnackbar(`${t('customerHasOrders')} (${linkedOrders})`, 'error'); setDeleteDialogOpen(false); return; }
     try { await api.delete(`/api/customers/${deleteId}`); showSnackbar(t('deleted'), 'success'); setDeleteDialogOpen(false); fetchCustomers(); }
-    catch { showSnackbar(t('deleteFailed'), 'error'); }
+    catch (e) { showSnackbar(serverMsg(e, t('deleteFailed')), 'error'); }
   };
 
   const handleSaveOrder = async () => {
@@ -252,7 +257,7 @@ export default function Home() {
   const handleDeleteUser = async () => {
     if (!deleteUserId) return;
     try { await api.delete(`/api/users/${deleteUserId}`); showSnackbar(t('userDeleted'), 'success'); setDeleteUserDialogOpen(false); fetchUsers(); }
-    catch { showSnackbar(t('deleteFailed'), 'error'); }
+    catch (e) { showSnackbar(serverMsg(e, t('deleteFailed')), 'error'); }
   };
 
   const handleAddUser = async () => {
@@ -269,7 +274,7 @@ export default function Home() {
   const handleUpdateRole = async () => {
     if (!selectedUserId) return;
     try { await api.patch(`/api/users/${selectedUserId}/role`, { role: selectedRole }); showSnackbar(t('roleUpdated'), 'success'); setRoleDialogOpen(false); fetchUsers(); }
-    catch { showSnackbar(t('roleUpdateFailed'), 'error'); }
+    catch (e) { showSnackbar(serverMsg(e, t('roleUpdateFailed')), 'error'); }
   };
 
   const openAdd = () => { setEditCustomer(emptyCustomer); setIsEditing(false); setCustomerType('individual'); setFormErrors({}); setDialogOpen(true); };

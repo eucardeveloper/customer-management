@@ -12,6 +12,7 @@ import com.enesucar.auth_service.security.ClientIp;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -29,7 +30,7 @@ public class AuthController {
      * Public sign-up gives every visitor read access to the CRM data, so it is off unless switched on
      * (docker compose turns it on for the local demo; a hosted deployment leaves it off).
      */
-    @org.springframework.beans.factory.annotation.Value("${auth.registration.enabled:false}")
+    @Value("${auth.registration.enabled:false}")
     private boolean registrationEnabled;
 
     @PostMapping("/register")

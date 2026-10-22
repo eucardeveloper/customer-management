@@ -1,4 +1,4 @@
-# Customer Management System
+# Customer Management: event-driven CRM microservices (Kafka outbox, idempotent consumers)
 
 [![CI](https://github.com/eucardeveloper/customer-management/actions/workflows/ci.yml/badge.svg)](https://github.com/eucardeveloper/customer-management/actions/workflows/ci.yml) [![Frontend](https://github.com/eucardeveloper/customer-management/actions/workflows/frontend.yml/badge.svg)](https://github.com/eucardeveloper/customer-management/actions/workflows/frontend.yml) [![E2E](https://github.com/eucardeveloper/customer-management/actions/workflows/e2e.yml/badge.svg)](https://github.com/eucardeveloper/customer-management/actions/workflows/e2e.yml)
 

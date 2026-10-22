@@ -53,3 +53,4 @@ e2e/mobile-shots/
 
 # local backups
 backups/
+e2e/test-results/

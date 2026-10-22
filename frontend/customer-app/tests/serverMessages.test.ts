@@ -13,4 +13,6 @@ test('known backend messages are translated per language', () => {
 
 test('unknown messages pass through unchanged', () => {
   assert.equal(translateServerMessage('de', 'Something unexpected'), 'Something unexpected');
+  assert.equal(translateServerMessage('tr', 'The last administrator cannot be demoted or deleted'), 'Son yönetici silinemez veya rolü düşürülemez');
+  assert.equal(translateServerMessage('en', 'Customer 7 still has orders; delete or reassign them first'), 'This customer still has orders; delete or reassign them first');
 });

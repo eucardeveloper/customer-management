@@ -35,7 +35,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-	public ResponseEntity<CustomerResponseDTO> updateCustomer(@PathVariable Long id, @RequestBody @Valid CustomerRequestDTO request) {
+    public ResponseEntity<CustomerResponseDTO> updateCustomer(@PathVariable Long id, @RequestBody @Valid CustomerRequestDTO request) {
     return ResponseEntity.ok(customerService.updateCustomer(id, request));
 }
 

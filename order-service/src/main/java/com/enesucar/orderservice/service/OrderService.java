@@ -17,6 +17,7 @@ import com.enesucar.orderservice.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 @Service
 public class OrderService {
@@ -108,7 +109,7 @@ public class OrderService {
         Order current = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + id));
         Long previousCustomerId = current.getCustomerId();
-        boolean customerChanged = !java.util.Objects.equals(previousCustomerId, request.getCustomerId());
+        boolean customerChanged = !Objects.equals(previousCustomerId, request.getCustomerId());
         if (customerChanged) {
             requireCustomer(request.getCustomerId());
         }

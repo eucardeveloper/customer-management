@@ -35,6 +35,8 @@ const ENTRIES: Entry[] = [
   { match: /^Quantity is required$/i, en: 'Quantity is required', tr: 'Adet gerekli', de: 'Menge ist erforderlich' },
   { match: /^Quantity must be at least 1$/i, en: 'Quantity must be at least 1', tr: 'Adet en az 1 olmalı', de: 'Die Menge muss mindestens 1 betragen' },
   { match: /^Status must be/i, en: 'Invalid order status', tr: 'Geçersiz sipariş durumu', de: 'Ungültiger Bestellstatus' },
+  { match: /^The last administrator cannot be demoted or deleted$/i, en: 'The last administrator cannot be demoted or deleted', tr: 'Son yönetici silinemez veya rolü düşürülemez', de: 'Der letzte Administrator kann weder gelöscht noch herabgestuft werden' },
+  { match: /^Customer .* still has orders/i, en: 'This customer still has orders; delete or reassign them first', tr: 'Bu müşterinin hâlâ siparişleri var; önce siparişleri silin veya başka müşteriye aktarın', de: 'Dieser Kunde hat noch Bestellungen; bitte zuerst löschen oder neu zuordnen' },
   { match: /^Unknown role/i, en: 'Unknown role', tr: 'Bilinmeyen rol', de: 'Unbekannte Rolle' },
   { match: /^role is required$/i, en: 'Role is required', tr: 'Rol gerekli', de: 'Rolle ist erforderlich' },
   { match: /^Invalid request$/i, en: 'Invalid request', tr: 'Geçersiz istek', de: 'Ungültige Anfrage' },
