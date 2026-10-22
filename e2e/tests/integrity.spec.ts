@@ -92,7 +92,10 @@ test.describe('role matrix', () => {
     // a throw-away USER
     const userName = `e2e_matrix_${Date.now() % 1000000}`;
     const userPass = 'E2e-Pass#2026';
-    expect((await anon.post(`${API}/api/auth/register`, { data: { username: userName, email: `${userName}@example.com`, password: userPass }, headers: ORIGIN })).ok()).toBeTruthy();
+    // sign-up answers with a session cookie, so it gets a context of its own: `anon` must stay without one
+    const signup = await as(playwright);
+    expect((await signup.post(`${API}/api/auth/register`, { data: { username: userName, email: `${userName}@example.com`, password: userPass } })).ok()).toBeTruthy();
+    await signup.dispose();
     const user = await as(playwright, userName, userPass);
 
     // throw-away data the calls below may change or delete
