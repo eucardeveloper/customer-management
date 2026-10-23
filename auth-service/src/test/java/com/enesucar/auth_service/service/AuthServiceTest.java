@@ -121,7 +121,7 @@ class AuthServiceTest {
                 .isEqualTo(Role.USER);
 
         // The token must also be minted with USER, not an elevated claim.
-        verify(jwtUtil).generateToken("testuser", "USER", 0);
+        verify(jwtUtil).generateToken(eq("testuser"), eq("USER"), eq(0), any());
         verify(jwtUtil, never()).generateToken(anyString(), eq("ADMIN"), anyInt(), any());
     }
 
