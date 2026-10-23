@@ -230,3 +230,45 @@ test('the last administrator cannot be demoted or deleted', async ({ request }) 
   const remove = await request.delete(`${API}/api/users/${admins[0].id}`, { headers: auth });
   expect(remove.status()).toBe(409);
 });
+
+test('demoting or deleting an account ends its sessions, and a new account with the same name does not inherit them', async ({ request }) => {
+  const tokenFor = async (user: string, pass: string) => {
+    const res = await request.post(`${API}/api/auth/login`, {
+      data: { username: user, password: pass },
+      headers: { Origin: 'http://localhost:3000' },
+    });
+    expect(res.ok(), `sign-in as ${user}`).toBeTruthy();
+    const cookie = (await res.headersArray()).find((h) => h.name.toLowerCase() === 'set-cookie')!.value;
+    return { Authorization: `Bearer ${cookie.match(/customer_session=([^;]+)/)![1]}` };
+  };
+  const adminAuth = await tokenFor(ADMIN.user, ADMIN.pass);
+  const name = `e2e_rev_${Date.now() % 1000000}`;
+  const pass = 'E2e-Revoke#2026';
+  created.push(name);
+  const create = (role: string) =>
+    request.post(`${API}/api/users`, { headers: adminAuth, data: { username: name, password: pass, email: `${name}@example.com`, role } });
+  // the gateway caches a positive answer for up to ~10 s, so every "stops working" check polls
+  const status = (auth: { Authorization: string }, path: string) => async () => (await request.get(`${API}${path}`, { headers: auth })).status();
+
+  // an ADMIN account signs in and may list users
+  const made = await create('ADMIN');
+  expect(made.status()).toBe(201);
+  const account: { id: number } = await made.json();
+  const adminToken = await tokenFor(name, pass);
+  expect(await status(adminToken, '/api/users')()).toBe(200);
+
+  // demoted to USER: the old administrator token stops working, a fresh sign-in has USER rights only
+  const demote = await request.patch(`${API}/api/users/${account.id}/role`, { headers: adminAuth, data: { role: 'USER' } });
+  expect(demote.status()).toBe(200);
+  await expect.poll(status(adminToken, '/api/users'), { timeout: 20_000, intervals: [1000] }).not.toBe(200);
+  const userToken = await tokenFor(name, pass);
+  expect(await status(userToken, '/api/customers')()).toBe(200);
+  expect(await status(userToken, '/api/users')()).toBe(403);
+
+  // deleted: the session ends, and an account created later with the same name does not inherit it
+  expect((await request.delete(`${API}/api/users/${account.id}`, { headers: adminAuth })).status()).toBe(204);
+  await expect.poll(status(userToken, '/api/customers'), { timeout: 20_000, intervals: [1000] }).toBe(401);
+  expect((await create('USER')).status()).toBe(201);
+  expect(await status(userToken, '/api/customers')()).toBe(401);
+  expect(await status(adminToken, '/api/users')()).not.toBe(200);
+});

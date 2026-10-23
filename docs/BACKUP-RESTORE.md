@@ -4,6 +4,7 @@
 |---|---|---|
 | Code | `git push` to GitHub | the repository |
 | Databases (auth, customer, order) | `backup.bat` runs `pg_dump -Fc` in each `*-db` container | `backups\<timestamp>\*.dump` (git-ignored) |
+| n8n (`n8n_db` and the `n8n-data` files with its encryption key) | `backup.bat` dumps `n8n_db` and tars `/home/node/.n8n` | `backups\<timestamp>\n8n_db.dump`, `n8n-files.tgz` |
 | Secrets (`.env`) | not in git by design; keep a copy yourself | your password manager |
 
 ## Back up

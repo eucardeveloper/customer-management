@@ -17,7 +17,7 @@ One Railway service per row, each from its own folder (Dockerfile):
 | customer-frontend | `frontend/customer-app` | gateway |
 | ai-agent-frontend (optional) | `frontend/ai-agent-app` | an n8n webhook |
 
-Plus three PostgreSQL databases and one Kafka broker. Kafka is the heaviest part: a managed Kafka (or Redpanda) service is simpler than running ZooKeeper plus Kafka.
+Plus three PostgreSQL databases and one Kafka broker. Kafka is the heaviest part: a managed Kafka (or Redpanda) service is simpler than running your own Kafka.
 
 ## 2. Variables
 

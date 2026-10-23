@@ -273,4 +273,40 @@ class OrderServiceTest {
         orderService.updateOrder(1L, requestDTO);
         verify(customerClient, never()).exists(any());
     }
+
+    private Order orderOf(long customerId) {
+        Order o = new Order();
+        o.setId(1L);
+        o.setCustomerId(customerId);
+        o.setProductName("Laptop");
+        o.setPrice(new BigDecimal("1500.00"));
+        o.setQuantity(1);
+        return o;
+    }
+
+    @Test
+    void updateOrder_movesTheOrderBack_whenTheNewCustomerIsDeletedDuringTheChange() {
+        requestDTO.setCustomerId(77L);
+        when(customerClient.exists(77L)).thenReturn(true, false); // there when checked, gone when confirmed
+        Order stillOnTheDeletedCustomer = orderOf(77L);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order), Optional.of(stillOnTheDeletedCustomer));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertThatThrownBy(() -> orderService.updateOrder(1L, requestDTO)).isInstanceOf(UnknownCustomerException.class);
+
+        assertThat(stillOnTheDeletedCustomer.getCustomerId()).isEqualTo(10L);
+    }
+
+    @Test
+    void updateOrder_leavesALaterChangeAlone_whenUndoingAReassignment() {
+        requestDTO.setCustomerId(77L);
+        when(customerClient.exists(77L)).thenReturn(true, false);
+        Order changedMeanwhile = orderOf(55L); // somebody moved it to a third customer in the meantime
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order), Optional.of(changedMeanwhile));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertThatThrownBy(() -> orderService.updateOrder(1L, requestDTO)).isInstanceOf(UnknownCustomerException.class);
+
+        assertThat(changedMeanwhile.getCustomerId()).isEqualTo(55L);
+    }
 }

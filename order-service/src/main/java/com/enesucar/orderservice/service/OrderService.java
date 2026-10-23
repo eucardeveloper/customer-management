@@ -124,14 +124,15 @@ public class OrderService {
             return persisted;
         });
         if (customerChanged) {
-            confirmCustomerOrUndo(saved.getCustomerId(), () -> undoReassign(id, previousCustomerId));
+            confirmCustomerOrUndo(saved.getCustomerId(), () -> undoReassign(id, previousCustomerId, saved.getCustomerId()));
         }
         return toResponse(saved);
     }
 
-    private void undoReassign(Long orderId, Long previousCustomerId) {
+    /** Moves the order back only while it still points at the deleted customer; a later edit by someone else is left alone. */
+    private void undoReassign(Long orderId, Long previousCustomerId, Long newCustomerId) {
         tx.executeWithoutResult(status -> {
-            orderRepository.findById(orderId).ifPresent(o -> {
+            orderRepository.findById(orderId).filter(o -> Objects.equals(o.getCustomerId(), newCustomerId)).ifPresent(o -> {
                 o.setCustomerId(previousCustomerId);
                 orderRepository.save(o);
                 outbox.save(new OutboxEvent("order-events", OrderEvent.updated(orderId).toJson()));

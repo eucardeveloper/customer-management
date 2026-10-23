@@ -13,7 +13,8 @@ public class BigDecimalSerializer extends JsonSerializer<BigDecimal> {
         if (value == null) {
             gen.writeNull();
         } else {
-            gen.writeNumber(value.stripTrailingZeros().toPlainString());
+            // Money is shown with two decimals, as the request validation accepts (@Digits fraction = 2).
+            gen.writeNumber(value.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
         }
     }
 }

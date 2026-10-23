@@ -22,7 +22,7 @@ Why it is built as four services: this project is a deliberate learning and port
 | Timeouts | Gateway connect timeout 3 s, response timeout 15 s; service-to-service calls 2 s / 3 s | A slow service cannot hang a request indefinitely. |
 | Secrets | `JWT_SECRET` and `GATEWAY_SHARED_SECRET` are required (`${...:?...}`); `.env.example` provided; no secret is committed | Compose refuses to start without them. |
 | Observability | Metrics from all four Spring services (gateway on an unpublished management port); provisioned Grafana dashboard; alert rules with `promtool` unit tests in CI; outbox backlog gauges | A stuck event or a dead service is visible without reading logs. Trade-off: no Alertmanager, alerts are shown in the Prometheus UI only. |
-| Persistence | Named volumes for all databases, Kafka, Zookeeper, Prometheus; `restart: unless-stopped` | Data survives a reboot. |
+| Persistence | Named volumes for all databases, Kafka, Prometheus; `restart: unless-stopped` | Data survives a reboot. |
 
 ## Known limitations
 - Stolen session cookie: valid until it expires (30 min), the user signs out (the token is revoked on the server), or the account's `token_version` changes (password change, admin reset, role change). There is no refresh token on purpose: a refresh would let a thief extend a stolen session, so a session simply ends after 30 min and the user is sent back to the sign-in page with a notice.
