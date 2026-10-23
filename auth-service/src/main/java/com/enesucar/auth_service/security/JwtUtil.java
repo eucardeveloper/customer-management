@@ -28,11 +28,21 @@ public class JwtUtil {
     }
 
     public String generateToken(String username, String role, int tokenVersion) {
+        return generateToken(username, role, tokenVersion, null);
+    }
+
+    /**
+     * {@code userId} ties the token to one account row. A user name can be reused after the account is
+     * deleted and created again (the version then starts at 0 again); the id cannot, so an old token
+     * never signs in as the new account.
+     */
+    public String generateToken(String username, String role, int tokenVersion, Long userId) {
         return Jwts.builder()
                 .id(java.util.UUID.randomUUID().toString())
                 .subject(username)
                 .claim("role", role)
                 .claim("ver", tokenVersion)
+                .claim("uid", userId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
@@ -51,6 +61,12 @@ public class JwtUtil {
     public int extractTokenVersion(String token) {
         Integer v = getClaims(token).get("ver", Integer.class);
         return v == null ? 0 : v;
+    }
+
+    /** Id of the account the token was issued for, or null for a token without one. */
+    public Long extractUserId(String token) {
+        Number n = getClaims(token).get("uid", Number.class);
+        return n == null ? null : n.longValue();
     }
 
     /** Unique id of this token (null for tokens issued before ids existed). */

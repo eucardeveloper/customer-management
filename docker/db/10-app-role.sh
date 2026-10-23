@@ -25,6 +25,8 @@ SELECT format('ALTER ROLE %I LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATERO
 
 -- Nobody but the owner may create objects in the schema.
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+-- Only the owner and the runtime role may connect to this database (not every role on the server).
+SELECT format('REVOKE CONNECT ON DATABASE %I FROM PUBLIC', :'db') \gexec
 SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'db', :'app_user') \gexec
 SELECT format('GRANT USAGE ON SCHEMA public TO %I', :'app_user') \gexec
 

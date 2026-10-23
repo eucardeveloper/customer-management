@@ -74,6 +74,35 @@ public class LoginAttemptLimiter {
         }
     }
 
+    /**
+     * Counts one attempt for the username and refuses it when that exceeds the limit.
+     *
+     * <p>The attempt is written first (committed on its own) and only then are the attempts counted, so
+     * parallel requests cannot all pass a "count, then write" gap: of any set of attempts that are
+     * allowed, the last one to be written already sees all the others. An attempt that is refused removes
+     * its own row again, so a refused request does not extend the lock. A successful sign-in clears all
+     * rows of the key via {@link #reset}; a wrong password simply leaves its row in place.
+     */
+    public void reserveAttempt(String username) {
+        reserve(key(username), maxFailures);
+    }
+
+    private void reserve(String throttleKey, int max) {
+        LoginFailure mine = failures.save(new LoginFailure(throttleKey, now()));
+        LocalDateTime now = now();
+        List<LoginFailure> others = failures
+                .findByThrottleKeyAndAttemptedAtAfterOrderByAttemptedAtAsc(throttleKey, now.minus(window))
+                .stream()
+                .filter(f -> !f.getId().equals(mine.getId()))
+                .toList();
+        if (others.size() >= max) {
+            failures.deleteById(mine.getId());
+            LocalDateTime unlock = others.get(others.size() - max).getAttemptedAt().plus(window);
+            long retry = Duration.between(now, unlock).getSeconds();
+            throw new TooManyLoginAttemptsException(Math.max(1, retry));
+        }
+    }
+
     private void check(String throttleKey, int max) {
         LocalDateTime now = now();
         List<LoginFailure> recent = failures

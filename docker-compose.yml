@@ -75,9 +75,12 @@ services:
       # Restricted role the service runs as (rows only); created by docker/db/10-app-role.sh on first start.
       RUNTIME_DB_USER: customer_app
       RUNTIME_DB_PASSWORD: ${DB_RUNTIME_PASSWORD:-runtime-db-123}
+      # n8n gets its own database and role on this server (docker/db/20-n8n-db.sh)
+      N8N_DB_PASSWORD: ${N8N_DB_PASSWORD:-n8n-db-123}
     volumes:
       - customer-db-data:/var/lib/postgresql/data
       - ./docker/db/10-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+      - ./docker/db/20-n8n-db.sh:/docker-entrypoint-initdb.d/20-n8n-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -221,9 +224,10 @@ services:
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: customer-db
       DB_POSTGRESDB_PORT: 5432
-      DB_POSTGRESDB_DATABASE: customer_db
-      DB_POSTGRESDB_USER: postgres
-      DB_POSTGRESDB_PASSWORD: ${APP_DB_PASSWORD:-postgres123}
+      # Own database and role, not customer_db and the postgres superuser (see docker/db/20-n8n-db.sh).
+      DB_POSTGRESDB_DATABASE: n8n_db
+      DB_POSTGRESDB_USER: n8n_app
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:-n8n-db-123}
     depends_on:
       customer-db:
         condition: service_healthy

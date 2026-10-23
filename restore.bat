@@ -12,7 +12,8 @@ docker compose stop auth-backend customer-backend order-backend api-gateway
 docker compose up -d auth-db customer-db order-db
 for %%P in (auth customer order) do (
   echo Restoring %%P_db ...
-  docker exec -i %%P-db pg_restore -U postgres -d %%P_db --clean --if-exists --no-owner < "%DIR%\%%P_db.dump"
+  docker exec -i %%P-db pg_restore -U postgres -d %%P_db --clean --if-exists --no-owner --exit-on-error < "%DIR%\%%P_db.dump"
+  if errorlevel 1 (echo ERROR: restoring %%P_db failed - stopping. Check the message above before starting the services. & goto :end)
 )
 docker compose up -d
 echo Restore finished. Wait about a minute, then open http://localhost:3000 and check the data.

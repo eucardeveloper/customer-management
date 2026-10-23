@@ -92,6 +92,10 @@ jobs:
             if q "DROP TABLE $t" 2>/dev/null; then echo "$p: runtime role could drop a table"; exit 1; fi
             if q "ALTER TABLE $t ADD COLUMN x int" 2>/dev/null; then echo "$p: runtime role could alter a table"; exit 1; fi
           done
+          # n8n has its own database and role; it cannot reach the customer data.
+          n8n() { docker compose exec -T -e PGPASSWORD=n8n-db-123 customer-db psql -v ON_ERROR_STOP=1 -U n8n_app "$@" -tA; }
+          [ "$(n8n -d n8n_db -c 'SELECT current_database()')" = "n8n_db" ]
+          if n8n -d customer_db -c 'SELECT 1' 2>/dev/null; then echo "n8n_app could connect to customer_db"; exit 1; fi
           echo "least-privilege roles verified"
       - name: Playwright report
         if: failure()

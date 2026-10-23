@@ -38,7 +38,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // role change bumps the version and ends every older session.
                 int tokenVersion = jwtUtil.extractTokenVersion(token);
                 var account = userRepository.findByUsername(username);
-                if (account.isEmpty() || account.get().getTokenVersion() != tokenVersion) {
+                Long tokenUid = jwtUtil.extractUserId(token);
+                if (account.isEmpty() || account.get().getTokenVersion() != tokenVersion
+                        || tokenUid == null || !tokenUid.equals(account.get().getId())) {
                     filterChain.doFilter(request, response);
                     return;
                 }

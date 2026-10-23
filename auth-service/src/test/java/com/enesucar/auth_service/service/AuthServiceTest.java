@@ -82,7 +82,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("test@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(user);
-        when(jwtUtil.generateToken("testuser", "USER", 0)).thenReturn("jwt-token");
+        when(jwtUtil.generateToken(eq("testuser"), eq("USER"), eq(0), any())).thenReturn("jwt-token");
 
         AuthResponse response = authService.register(registerRequest);
 
@@ -110,7 +110,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("test@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(user);
-        when(jwtUtil.generateToken("testuser", "USER", 0)).thenReturn("jwt-token");
+        when(jwtUtil.generateToken(eq("testuser"), eq("USER"), eq(0), any())).thenReturn("jwt-token");
 
         authService.register(registerRequest);
 
@@ -122,7 +122,7 @@ class AuthServiceTest {
 
         // The token must also be minted with USER, not an elevated claim.
         verify(jwtUtil).generateToken("testuser", "USER", 0);
-        verify(jwtUtil, never()).generateToken(anyString(), eq("ADMIN"), anyInt());
+        verify(jwtUtil, never()).generateToken(anyString(), eq("ADMIN"), anyInt(), any());
     }
 
     @Test
@@ -153,7 +153,7 @@ class AuthServiceTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(null);
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-        when(jwtUtil.generateToken("testuser", "USER", 0)).thenReturn("jwt-token");
+        when(jwtUtil.generateToken(eq("testuser"), eq("USER"), eq(0), any())).thenReturn("jwt-token");
 
         AuthResponse response = authService.login(loginRequest);
 
@@ -180,7 +180,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(loginRequest))
                 .isInstanceOf(BadCredentialsException.class);
 
-        verify(loginAttemptLimiter).recordFailure("testuser");
+        verify(loginAttemptLimiter).reserveAttempt("testuser");
         verify(loginAttemptLimiter, never()).reset(any());
     }
 
@@ -189,17 +189,16 @@ class AuthServiceTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(null);
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-        when(jwtUtil.generateToken("testuser", "USER", 0)).thenReturn("jwt-token");
+        when(jwtUtil.generateToken(eq("testuser"), eq("USER"), eq(0), any())).thenReturn("jwt-token");
 
         authService.login(loginRequest);
 
         verify(loginAttemptLimiter).reset("testuser");
-        verify(loginAttemptLimiter, never()).recordFailure(any());
     }
 
     @Test
     void login_shouldNotTouchAuthentication_whenAccountIsLockedOut() {
-        doThrow(new TooManyLoginAttemptsException(120)).when(loginAttemptLimiter).checkAllowed("testuser");
+        doThrow(new TooManyLoginAttemptsException(120)).when(loginAttemptLimiter).reserveAttempt("testuser");
 
         assertThatThrownBy(() -> authService.login(loginRequest))
                 .isInstanceOf(TooManyLoginAttemptsException.class);
@@ -216,7 +215,7 @@ class AuthServiceTest {
                 .isInstanceOf(BadCredentialsException.class);
 
         verify(loginAttemptLimiter).recordFailureIp("203.0.113.9");
-        verify(loginAttemptLimiter).recordFailure("testuser");
+        verify(loginAttemptLimiter).reserveAttempt("testuser");
     }
 
     @Test
@@ -261,7 +260,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.changePassword("testuser", pwRequest("wrong", "newPass456")))
                 .isInstanceOf(com.enesucar.auth_service.exception.InvalidPasswordException.class);
 
-        verify(loginAttemptLimiter).recordFailure("pwchange:testuser");
+        verify(loginAttemptLimiter).reserveAttempt("pwchange:testuser");
         verify(userRepository, never()).save(any());
     }
 
@@ -278,7 +277,7 @@ class AuthServiceTest {
 
     @Test
     void changePassword_shouldBeBlocked_whenThrottled() {
-        doThrow(new TooManyLoginAttemptsException(600)).when(loginAttemptLimiter).checkAllowed("pwchange:testuser");
+        doThrow(new TooManyLoginAttemptsException(600)).when(loginAttemptLimiter).reserveAttempt("pwchange:testuser");
 
         assertThatThrownBy(() -> authService.changePassword("testuser", pwRequest("a", "newPass456")))
                 .isInstanceOf(TooManyLoginAttemptsException.class);

@@ -84,6 +84,25 @@ class LoginAttemptLimiterTest {
     }
 
     @Test
+    void reservedAttemptsAreCountedAndTheOneAboveTheLimitIsRefused() {
+        var limiter = limiter();
+        for (int i = 0; i < 3; i++) limiter.reserveAttempt("ali");
+
+        assertThatThrownBy(() -> limiter.reserveAttempt("ali")).isInstanceOf(TooManyLoginAttemptsException.class);
+        // the refused attempt removed its own row: a later attempt after the window is allowed again
+        assertThat(repository.count()).isEqualTo(3);
+    }
+
+    @Test
+    void aSuccessfulSignInClearsReservedAttempts() {
+        var limiter = limiter();
+        for (int i = 0; i < 3; i++) limiter.reserveAttempt("ali");
+        limiter.reset("ali");
+
+        assertThatCode(() -> limiter.reserveAttempt("ali")).doesNotThrowAnyException();
+    }
+
+    @Test
     void successfulSignInClearsTheCounter() {
         var limiter = limiter();
         for (int i = 0; i < 3; i++) limiter.recordFailure("ali");

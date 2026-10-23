@@ -57,7 +57,7 @@ class JwtAuthenticationFilterTest {
     @Test
     void acceptsToken_whenVersionMatches() throws Exception {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(account(2, Role.USER)));
-        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER", 2)), new MockHttpServletResponse(), chain);
+        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER", 2, 1L)), new MockHttpServletResponse(), chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
         assertThat(SecurityContextHolder.getContext().getAuthentication().getName()).isEqualTo("alice");
     }
@@ -65,7 +65,7 @@ class JwtAuthenticationFilterTest {
     @Test
     void rejectsToken_whenPasswordWasChangedSinceIssue() throws Exception {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(account(3, Role.USER)));
-        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER", 2)), new MockHttpServletResponse(), chain);
+        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER", 2, 1L)), new MockHttpServletResponse(), chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(chain).doFilter(any(), any());
     }
@@ -73,14 +73,14 @@ class JwtAuthenticationFilterTest {
     @Test
     void rejectsToken_whenUserNoLongerExists() throws Exception {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.empty());
-        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER", 0)), new MockHttpServletResponse(), chain);
+        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER", 0, 1L)), new MockHttpServletResponse(), chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
     void usesRoleFromDatabase_notFromToken() throws Exception {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(account(0, Role.USER)));
-        filter.doFilter(bearer(jwtUtil.generateToken("alice", "ADMIN", 0)), new MockHttpServletResponse(), chain);
+        filter.doFilter(bearer(jwtUtil.generateToken("alice", "ADMIN", 0, 1L)), new MockHttpServletResponse(), chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
                 .extracting(Object::toString).containsExactly("ROLE_USER");
     }
@@ -88,14 +88,35 @@ class JwtAuthenticationFilterTest {
     @Test
     void legacyTokenWithoutVersion_countsAsVersionZero() throws Exception {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(account(0, Role.USER)));
-        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER")), new MockHttpServletResponse(), chain);
+        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER", 0, 1L)), new MockHttpServletResponse(), chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
+
+    @Test
+    void rejectsToken_ofADeletedAccount_whenTheSameNameIsRegisteredAgain() throws Exception {
+        // same user name and same version 0, but a different account row (id 2 instead of 1)
+        User recreated = User.builder().id(2L).username("alice").email("a@a.com").password("x")
+                .role(Role.USER).tokenVersion(0).build();
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(recreated));
+
+        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER", 0, 1L)), new MockHttpServletResponse(), chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void rejectsToken_withoutAnAccountId() throws Exception {
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(account(0, Role.USER)));
+
+        filter.doFilter(bearer(jwtUtil.generateToken("alice", "USER", 0)), new MockHttpServletResponse(), chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
     void rejectsToken_whenItWasRevokedByLogout() throws Exception {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(account(0, Role.USER)));
-        String token = jwtUtil.generateToken("alice", "USER", 0);
+        String token = jwtUtil.generateToken("alice", "USER", 0, 1L);
         when(revokedTokens.existsById(jwtUtil.extractTokenId(token))).thenReturn(true);
 
         filter.doFilter(bearer(token), new MockHttpServletResponse(), chain);
@@ -105,8 +126,8 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void everyIssuedTokenHasItsOwnId() {
-        String a = jwtUtil.generateToken("alice", "USER", 0);
-        String b = jwtUtil.generateToken("alice", "USER", 0);
+        String a = jwtUtil.generateToken("alice", "USER", 0, 1L);
+        String b = jwtUtil.generateToken("alice", "USER", 0, 1L);
         assertThat(jwtUtil.extractTokenId(a)).isNotBlank().isNotEqualTo(jwtUtil.extractTokenId(b));
     }
 }

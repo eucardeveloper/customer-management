@@ -32,6 +32,8 @@ Use Railway private networking (`<service>.railway.internal`) between backends. 
 | customer-frontend | build args `NEXT_PUBLIC_API_URL=` (empty), `API_PROXY_TARGET=http://api-gateway.railway.internal:8080`, `NEXT_PUBLIC_SHOW_DEMO_LOGIN=true` and `NEXT_PUBLIC_DEMO_ADMIN_HINT=false`; runtime `API_INTERNAL_URL` (same URL), `OPENROUTER_API_KEY` |
 | ai-agent-frontend | `N8N_WEBHOOK_URL` |
 
+Database users: the compose setup runs each service as a restricted role (`auth_app`, `customer_app`, `order_app`: rows only) and migrates the schema as the owner. On Railway the same split needs two sets of credentials per service: set `SPRING_DATASOURCE_*` / `PGUSER` / `PGPASSWORD` to a role that has only SELECT, INSERT, UPDATE and DELETE (see `docker/db/10-app-role.sh`), and `SPRING_FLYWAY_USER` / `SPRING_FLYWAY_PASSWORD` to the database owner. Without the two Flyway variables the migrations run as the runtime user and need schema rights.
+
 `JWT_SECRET` and `GATEWAY_SHARED_SECRET`: a fresh `openssl rand -hex 32` each, never the local ones. The customer and order services only trust the identity headers when the gateway's secret comes with them, so even a reachable backend cannot be talked to with made-up identities.
 
 ## 3. Why the frontend proxies `/api`

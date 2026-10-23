@@ -50,7 +50,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getTokenVersion());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getTokenVersion(), user.getId());
         return new AuthResponse(token, user.getUsername(), user.getRole().name());
     }
 
@@ -61,13 +61,14 @@ public class AuthService {
     /** {@code clientIp} may be null (no address known); then only the per-username limit applies. */
     public AuthResponse login(LoginRequest request, String clientIp) {
         loginAttemptLimiter.checkAllowedIp(clientIp);
-        loginAttemptLimiter.checkAllowed(request.getUsername());
+        // Counts this attempt before the password is checked, in one step: parallel guesses cannot all slip
+        // past a "check, then record" gap. A successful sign-in clears the counter again.
+        loginAttemptLimiter.reserveAttempt(request.getUsername());
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
         } catch (AuthenticationException ex) {
-            loginAttemptLimiter.recordFailure(request.getUsername());
             loginAttemptLimiter.recordFailureIp(clientIp);
             throw ex;
         }
@@ -77,7 +78,7 @@ public class AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BadCredentialsException("Invalid username or password"));
 
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getTokenVersion());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getTokenVersion(), user.getId());
         return new AuthResponse(token, user.getUsername(), user.getRole().name());
     }
 
@@ -87,13 +88,12 @@ public class AuthService {
      */
     public void changePassword(String username, ChangePasswordRequest request) {
         String throttleKey = "pwchange:" + username;
-        loginAttemptLimiter.checkAllowed(throttleKey);
+        loginAttemptLimiter.reserveAttempt(throttleKey);
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            loginAttemptLimiter.recordFailure(throttleKey);
             throw new InvalidPasswordException("Current password is incorrect");
         }
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
