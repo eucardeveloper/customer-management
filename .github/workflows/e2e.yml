@@ -80,6 +80,19 @@ jobs:
         # Runs after the journey, on the data it left behind: dump, change a row in each database, restore,
         # check every change is gone and every row count matches the backup.
         run: ./restore-test.sh
+      - name: Runtime database roles are restricted
+        # After the restore too: the services run as *_app (rows only), the owner built and restored the schema.
+        run: |
+          for p in auth customer order; do
+            t=$(case $p in auth) echo users;; customer) echo customer;; order) echo orders;; esac)
+            q() { docker compose exec -T -e PGPASSWORD=runtime-db-123 "$p-db" psql -v ON_ERROR_STOP=1 -U "${p}_app" -d "${p}_db" -tA -c "$1"; }
+            [ "$(q 'SELECT rolsuper OR rolcreatedb OR rolcreaterole FROM pg_roles WHERE rolname = current_user')" = "f" ]
+            [ "$(q "SELECT count(*) > 0 FROM $t")" = "t" ]
+            if q 'CREATE TABLE should_fail(id int)' 2>/dev/null; then echo "$p: runtime role could create a table"; exit 1; fi
+            if q "DROP TABLE $t" 2>/dev/null; then echo "$p: runtime role could drop a table"; exit 1; fi
+            if q "ALTER TABLE $t ADD COLUMN x int" 2>/dev/null; then echo "$p: runtime role could alter a table"; exit 1; fi
+          done
+          echo "least-privilege roles verified"
       - name: Playwright report
         if: failure()
         uses: actions/upload-artifact@v7

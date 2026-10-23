@@ -52,8 +52,12 @@ services:
       POSTGRES_DB: auth_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
+      # Restricted role the service runs as (rows only); created by docker/db/10-app-role.sh on first start.
+      RUNTIME_DB_USER: auth_app
+      RUNTIME_DB_PASSWORD: ${DB_RUNTIME_PASSWORD:-runtime-db-123}
     volumes:
       - auth-db-data:/var/lib/postgresql/data
+      - ./docker/db/10-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -68,8 +72,12 @@ services:
       POSTGRES_DB: customer_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-postgres123}
+      # Restricted role the service runs as (rows only); created by docker/db/10-app-role.sh on first start.
+      RUNTIME_DB_USER: customer_app
+      RUNTIME_DB_PASSWORD: ${DB_RUNTIME_PASSWORD:-runtime-db-123}
     volumes:
       - customer-db-data:/var/lib/postgresql/data
+      - ./docker/db/10-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -84,8 +92,12 @@ services:
       POSTGRES_DB: order_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-postgres123}
+      # Restricted role the service runs as (rows only); created by docker/db/10-app-role.sh on first start.
+      RUNTIME_DB_USER: order_app
+      RUNTIME_DB_PASSWORD: ${DB_RUNTIME_PASSWORD:-runtime-db-123}
     volumes:
       - order-db-data:/var/lib/postgresql/data
+      - ./docker/db/10-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -101,8 +113,11 @@ services:
         condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
+      # Runs as the restricted role; Flyway migrates the schema as the database owner.
+      SPRING_DATASOURCE_USERNAME: auth_app
+      SPRING_DATASOURCE_PASSWORD: ${DB_RUNTIME_PASSWORD:-runtime-db-123}
+      SPRING_FLYWAY_USER: postgres
+      SPRING_FLYWAY_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (copy .env.example)}
       JWT_EXPIRATION: 1800000
       AUTH_COOKIE_SECURE: "false"   # local http; set true behind HTTPS
@@ -121,8 +136,11 @@ services:
       GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:?Set GATEWAY_SHARED_SECRET in .env (copy .env.example)}
       PORT: 8081
       DATABASE_URL: jdbc:postgresql://customer-db:5432/customer_db
-      PGUSER: postgres
-      PGPASSWORD: ${APP_DB_PASSWORD:-postgres123}
+      # Runs as the restricted role; Flyway migrates the schema as the database owner.
+      PGUSER: customer_app
+      PGPASSWORD: ${DB_RUNTIME_PASSWORD:-runtime-db-123}
+      SPRING_FLYWAY_USER: postgres
+      SPRING_FLYWAY_PASSWORD: ${APP_DB_PASSWORD:-postgres123}
       KAFKACLUSTER_BROKERS: kafka:29092
 
   order-backend:
@@ -138,8 +156,11 @@ services:
       GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:?Set GATEWAY_SHARED_SECRET in .env (copy .env.example)}
       PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/order_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: ${APP_DB_PASSWORD:-postgres123}
+      # Runs as the restricted role; Flyway migrates the schema as the database owner.
+      SPRING_DATASOURCE_USERNAME: order_app
+      SPRING_DATASOURCE_PASSWORD: ${DB_RUNTIME_PASSWORD:-runtime-db-123}
+      SPRING_FLYWAY_USER: postgres
+      SPRING_FLYWAY_PASSWORD: ${APP_DB_PASSWORD:-postgres123}
       KAFKA_URL: kafka:29092
 
   api-gateway:
