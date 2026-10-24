@@ -21,7 +21,7 @@ class OutboxMetricsTest {
 
     @Test
     void reportsHowManyEventsWaitAndHowLongTheOldestHasWaited() {
-        when(outbox.countByPublishedAtIsNull()).thenReturn(3L);
+        when(outbox.countPending()).thenReturn(3L);
         when(outbox.oldestUnpublishedCreatedAt()).thenReturn(LocalDateTime.of(2026, 10, 22, 11, 58, 0));
         new OutboxMetrics(outbox, registry, clock);
 
@@ -31,7 +31,7 @@ class OutboxMetricsTest {
 
     @Test
     void nothingWaitingMeansZeroAge() {
-        when(outbox.countByPublishedAtIsNull()).thenReturn(0L);
+        when(outbox.countPending()).thenReturn(0L);
         when(outbox.oldestUnpublishedCreatedAt()).thenReturn(null);
         new OutboxMetrics(outbox, registry, clock);
 
