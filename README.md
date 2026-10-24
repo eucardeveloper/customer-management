@@ -194,6 +194,13 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 - **Prices are shown with two decimals**; the column keeps more digits for old rows, new input is limited to two (`@Digits`).
 - The reference setup is `docker compose`. No cloud deployment is configured in this repository; a hosted demo is a separate deployment of the same images; the checklist is in [docs/DEPLOY-RAILWAY.md](docs/DEPLOY-RAILWAY.md).
 
+## How this was built
+
+- **Tool.** Claude (Anthropic's coding assistant) wrote most of the code, tests and documentation in this repository. Commits it produced carry a `Co-Authored-By: Claude` trailer.
+- **The author's part.** Setting the goal and the scope, choosing what to build next, deciding the domain rules and trade-offs, reviewing what came back, running the application and the manual checks, and merging. Nothing reaches `main` except through a pull request that passes CI.
+- **What is independent of who wrote it.** The automated tests, the CI pipeline (including the dependency vulnerability scan), the architecture decision records and the "Known limitations" list are there so that every claim in this README can be checked rather than believed.
+- **What this section does not claim.** It does not claim that every line was typed by hand, and it does not claim that AI-written code needs no review. It claims that the author is accountable for what is published here.
+
 ## License
 
 MIT, see [LICENSE](LICENSE).
