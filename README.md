@@ -84,7 +84,7 @@ docker compose up --build
 |------|-----|
 | Dashboard | http://localhost:3000 |
 | API gateway | http://localhost:8080 |
-| AI agent UI | http://localhost:3001 (needs `N8N_WEBHOOK_URL` in `.env`; without it the UI answers 503) |
+| AI agent UI | http://localhost:3001 (needs `N8N_WEBHOOK_URL` in `.env`; without it the UI answers 503; import the workflow first: [`docker/n8n/README.md`](docker/n8n/README.md)) |
 | n8n | http://localhost:5678 |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3002 (admin / value of `GRAFANA_ADMIN_PASSWORD`); dashboard "Customer Management - overview" is provisioned |
