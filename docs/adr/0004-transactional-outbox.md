@@ -24,4 +24,4 @@ After an order is saved, an `ORDER_*` event must reach Kafka. Saving and then se
 ## Consequences
 - Duplicates are possible and tolerated by the consumer.
 - Events can be delayed while Kafka is down; the alert makes that visible instead of silent.
-- The consumers currently only log; the plumbing is real, a business effect would plug into `OrderConsumer.handle`.
+- The order-service's consumer only logs. The customer-service consumer maintains an order projection (customer to orders) used as a fallback hint when a delete cannot reach the order-service; it is idempotent by nature (upsert/delete) and can lag.
