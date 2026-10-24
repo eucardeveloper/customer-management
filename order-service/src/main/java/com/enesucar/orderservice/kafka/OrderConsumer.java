@@ -20,9 +20,9 @@ import java.time.LocalDateTime;
  * race on the primary key and exactly one commits. The state survives restarts (the previous
  * in-memory Set did not).
  *
- * The event payload is currently only a notification string ("Order created: id"), so the
- * handling step is a log line; any real side effect belongs inside handle() and is covered
- * by the same guarantee because it shares the transaction.
+ * This service only logs what it consumes: it already knows its own orders. The consumer that does
+ * real work with these events is the customer-service's order projection. Any side effect added to
+ * handle() is covered by the same guarantee because it shares the transaction.
  */
 @Component
 public class OrderConsumer {

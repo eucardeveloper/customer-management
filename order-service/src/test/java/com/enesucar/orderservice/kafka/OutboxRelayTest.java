@@ -53,8 +53,8 @@ class OutboxRelayTest {
 
     @Test
     void jsonEventsAreKeyedByOrderSoOneOrdersEventsStayInOrder() throws Exception {
-        OutboxEvent created = new OutboxEvent("order-events", OrderEvent.created(7).toJson());
-        OutboxEvent updated = new OutboxEvent("order-events", OrderEvent.updated(7).toJson());
+        OutboxEvent created = new OutboxEvent("order-events", OrderEvent.created(7, 1L).toJson());
+        OutboxEvent updated = new OutboxEvent("order-events", OrderEvent.updated(7, 1L).toJson());
         when(outbox.lockNextUnpublished(anyInt())).thenReturn(List.of(created, updated));
 
         relay.publishPending();

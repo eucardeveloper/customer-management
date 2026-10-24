@@ -6,7 +6,9 @@ import com.enesucar.customerservice.dto.CustomerResponseDTO;
 import com.enesucar.customerservice.entity.Customer;
 import com.enesucar.customerservice.exception.CustomerHasOrdersException;
 import com.enesucar.customerservice.exception.DeletionInProgressException;
+import com.enesucar.customerservice.exception.OrderServiceUnavailableException;
 import com.enesucar.customerservice.exception.ResourceNotFoundException;
+import com.enesucar.customerservice.repository.OrderProjectionRepository;
 import com.enesucar.customerservice.repository.CustomerRepository;
 import org.springframework.stereotype.Service;
 
@@ -26,10 +28,13 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final OrderClient orderClient;
+    private final OrderProjectionRepository orderProjection;
 
-    public CustomerService(CustomerRepository customerRepository, OrderClient orderClient) {
+    public CustomerService(CustomerRepository customerRepository, OrderClient orderClient,
+                           OrderProjectionRepository orderProjection) {
         this.customerRepository = customerRepository;
         this.orderClient = orderClient;
+        this.orderProjection = orderProjection;
     }
 
     public List<CustomerResponseDTO> getAllCustomers() {
@@ -97,7 +102,7 @@ public class CustomerService {
         }
         boolean deleted = false;
         try {
-            if (orderClient.hasOrders(id)) {
+            if (hasOrders(id)) {
                 throw new CustomerHasOrdersException(id);
             }
             customerRepository.deleteById(id);
@@ -106,6 +111,23 @@ public class CustomerService {
             if (!deleted) {
                 customerRepository.releaseDeletionClaim(id);
             }
+        }
+    }
+
+    /**
+     * The order-service is the authority. Only when it cannot be asked does the order projection (built from
+     * its events) speak: a customer it knows to have orders is refused with the real reason instead of a
+     * generic "service unavailable". An empty projection proves nothing (it may be behind), so the delete
+     * still fails closed.
+     */
+    private boolean hasOrders(Long customerId) {
+        try {
+            return orderClient.hasOrders(customerId);
+        } catch (OrderServiceUnavailableException e) {
+            if (orderProjection.existsByCustomerId(customerId)) {
+                return true;
+            }
+            throw e;
         }
     }
 

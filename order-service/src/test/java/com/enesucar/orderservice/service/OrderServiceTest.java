@@ -159,19 +159,19 @@ class OrderServiceTest {
 
     @Test
     void deleteOrder_shouldWriteAnOrderDeletedEvent() {
-        when(orderRepository.existsById(1L)).thenReturn(true);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
         orderService.deleteOrder(1L);
         var captor = org.mockito.ArgumentCaptor.forClass(OutboxEvent.class);
         verify(outbox).save(captor.capture());
         var event = com.enesucar.orderservice.kafka.OrderEvent.parse(captor.getValue().getPayload()).orElseThrow();
         assertThat(event.type()).isEqualTo("ORDER_DELETED");
         assertThat(event.orderId()).isEqualTo(1L);
+        assertThat(event.customerId()).as("the delete event names the customer the order belonged to").isEqualTo(10L);
     }
 
     @Test
     void failedUpdateAndDeleteWriteNoEvent() {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
-        when(orderRepository.existsById(99L)).thenReturn(false);
         assertThatThrownBy(() -> orderService.updateOrder(99L, requestDTO)).isInstanceOf(ResourceNotFoundException.class);
         assertThatThrownBy(() -> orderService.deleteOrder(99L)).isInstanceOf(ResourceNotFoundException.class);
         verify(outbox, never()).save(any());
@@ -188,7 +188,7 @@ class OrderServiceTest {
 
     @Test
     void deleteOrder_shouldDelete_whenExists() {
-        when(orderRepository.existsById(1L)).thenReturn(true);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
         doNothing().when(orderRepository).deleteById(1L);
         orderService.deleteOrder(1L);
         verify(orderRepository).deleteById(1L);
@@ -196,7 +196,7 @@ class OrderServiceTest {
 
     @Test
     void deleteOrder_shouldThrowException_whenNotFound() {
-        when(orderRepository.existsById(99L)).thenReturn(false);
+        when(orderRepository.findById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> orderService.deleteOrder(99L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Order not found with ID: 99");
