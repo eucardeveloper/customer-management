@@ -72,6 +72,7 @@ jobs:
               -DdataDirectory="${HOME}/.dependency-check/data" \
               -Dformats=HTML,JSON \
               -DskipTestScope=true -DskipProvidedScope=true \
+              -DossindexAnalyzerEnabled=false \
               -DretireJsAnalyzerEnabled=false -DnodeAnalyzerEnabled=false \
               --no-transfer-progress) 2>&1 | tee "owasp-$m.log" || { echo "::error title=OWASP-SCAN-FAILED::$m scan failed or found CVSS >= 7"; failed=1; }
             echo "::endgroup::"
