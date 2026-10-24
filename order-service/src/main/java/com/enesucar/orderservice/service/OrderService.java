@@ -85,17 +85,17 @@ public class OrderService {
             order.setStatus(request.getStatus() != null ? request.getStatus() : "PENDING");
             Order persisted = orderRepository.save(order);
             // Written in the same transaction as the order: either both exist or neither does.
-            outbox.save(new OutboxEvent("order-events", OrderEvent.created(persisted.getId()).toJson()));
+            outbox.save(new OutboxEvent("order-events", OrderEvent.created(persisted.getId(), persisted.getCustomerId()).toJson()));
             return persisted;
         });
-        confirmCustomerOrUndo(saved.getCustomerId(), () -> undoCreate(saved.getId()));
+        confirmCustomerOrUndo(saved.getCustomerId(), () -> undoCreate(saved.getId(), saved.getCustomerId()));
         return toResponse(saved);
     }
 
-    private void undoCreate(Long orderId) {
+    private void undoCreate(Long orderId, Long customerId) {
         tx.executeWithoutResult(status -> {
             orderRepository.deleteById(orderId);
-            outbox.save(new OutboxEvent("order-events", OrderEvent.deleted(orderId).toJson()));
+            outbox.save(new OutboxEvent("order-events", OrderEvent.deleted(orderId, customerId).toJson()));
         });
         logger.warn("Order {} undone: its customer was deleted while the order was being created", orderId);
     }
@@ -120,7 +120,7 @@ public class OrderService {
             current.setQuantity(request.getQuantity());
             if (request.getStatus() != null) current.setStatus(request.getStatus());
             Order persisted = orderRepository.save(current);
-            outbox.save(new OutboxEvent("order-events", OrderEvent.updated(id).toJson()));
+            outbox.save(new OutboxEvent("order-events", OrderEvent.updated(id, persisted.getCustomerId()).toJson()));
             return persisted;
         });
         if (customerChanged) {
@@ -135,7 +135,7 @@ public class OrderService {
             orderRepository.findById(orderId).filter(o -> Objects.equals(o.getCustomerId(), newCustomerId)).ifPresent(o -> {
                 o.setCustomerId(previousCustomerId);
                 orderRepository.save(o);
-                outbox.save(new OutboxEvent("order-events", OrderEvent.updated(orderId).toJson()));
+                outbox.save(new OutboxEvent("order-events", OrderEvent.updated(orderId, previousCustomerId).toJson()));
             });
         });
         logger.warn("Order {} moved back to customer {}: the new customer was deleted during the change", orderId, previousCustomerId);
@@ -143,11 +143,10 @@ public class OrderService {
 
     @Transactional
     public void deleteOrder(Long id) {
-        if (!orderRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Order not found with ID: " + id);
-        }
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + id));
         orderRepository.deleteById(id);
-        outbox.save(new OutboxEvent("order-events", OrderEvent.deleted(id).toJson()));
+        outbox.save(new OutboxEvent("order-events", OrderEvent.deleted(id, order.getCustomerId()).toJson()));
     }
     private OrderResponseDTO toResponse(Order order) {
         OrderResponseDTO response = new OrderResponseDTO();

@@ -34,6 +34,9 @@ class CustomerServiceTest {
     @Mock
     private OrderClient orderClient;
 
+    @Mock
+    private com.enesucar.customerservice.repository.OrderProjectionRepository orderProjection;
+
     @InjectMocks
     private CustomerService customerService;
 
@@ -157,6 +160,37 @@ class CustomerServiceTest {
                 .isInstanceOf(OrderServiceUnavailableException.class);
         verify(customerRepository, never()).deleteById(any());
         verify(customerRepository).releaseDeletionClaim(1L);
+    }
+
+    @Test
+    void deleteCustomer_shouldRefuseWithTheRealReason_whenOrderServiceIsDownButTheProjectionKnowsOrders() {
+        when(customerRepository.existsById(1L)).thenReturn(true);
+        when(customerRepository.claimForDeletion(eq(1L), any(), any())).thenReturn(1);
+        when(orderClient.hasOrders(1L)).thenThrow(new OrderServiceUnavailableException(new RuntimeException("down")));
+        when(orderProjection.existsByCustomerId(1L)).thenReturn(true);
+        assertThatThrownBy(() -> customerService.deleteCustomer(1L)).isInstanceOf(CustomerHasOrdersException.class);
+        verify(customerRepository, never()).deleteById(any());
+        verify(customerRepository).releaseDeletionClaim(1L);
+    }
+
+    @Test
+    void deleteCustomer_shouldStillFailClosed_whenOrderServiceIsDownAndTheProjectionKnowsNothing() {
+        when(customerRepository.existsById(1L)).thenReturn(true);
+        when(customerRepository.claimForDeletion(eq(1L), any(), any())).thenReturn(1);
+        when(orderClient.hasOrders(1L)).thenThrow(new OrderServiceUnavailableException(new RuntimeException("down")));
+        when(orderProjection.existsByCustomerId(1L)).thenReturn(false);
+        assertThatThrownBy(() -> customerService.deleteCustomer(1L)).isInstanceOf(OrderServiceUnavailableException.class);
+        verify(customerRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteCustomer_shouldTrustTheOrderServiceOverTheProjection_whenItAnswers() {
+        when(customerRepository.existsById(1L)).thenReturn(true);
+        when(customerRepository.claimForDeletion(eq(1L), any(), any())).thenReturn(1);
+        when(orderClient.hasOrders(1L)).thenReturn(false);
+        customerService.deleteCustomer(1L);
+        verify(orderProjection, never()).existsByCustomerId(any());
+        verify(customerRepository).deleteById(1L);
     }
 
     @Test

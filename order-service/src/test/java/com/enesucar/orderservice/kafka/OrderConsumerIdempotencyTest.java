@@ -63,7 +63,7 @@ class OrderConsumerIdempotencyTest {
     @Test
     void sameBusinessEventAtDifferentOffsetsIsHandledOnce() {
         long before = processedEvents.count();
-        String json = OrderEvent.created(55).toJson();
+        String json = OrderEvent.created(55, 1L).toJson();
 
         consumer.consume(new ConsumerRecord<>("order-events", 0, 200L, null, json));
         consumer.consume(new ConsumerRecord<>("order-events", 0, 201L, null, json)); // relay published it again

@@ -9,21 +9,25 @@ import java.util.UUID;
  * The message published on "order-events". It carries its own business id, so a consumer can recognise
  * the same event even when it arrives twice at different Kafka offsets (for example when the outbox
  * relay publishes a row again after a crash).
+ *
+ * <p>{@code customerId} is the customer the order belongs to <i>after</i> the change. It lets a consumer in
+ * another service keep a read model of "which orders belong to which customer" without calling back.
+ * Events published before the field existed have none ({@code null}); consumers must tolerate that.
  */
-public record OrderEvent(String eventId, String type, long orderId) {
+public record OrderEvent(String eventId, String type, long orderId, Long customerId) {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    public static OrderEvent created(long orderId) {
-        return new OrderEvent(UUID.randomUUID().toString(), "ORDER_CREATED", orderId);
+    public static OrderEvent created(long orderId, Long customerId) {
+        return new OrderEvent(UUID.randomUUID().toString(), "ORDER_CREATED", orderId, customerId);
     }
 
-    public static OrderEvent updated(long orderId) {
-        return new OrderEvent(UUID.randomUUID().toString(), "ORDER_UPDATED", orderId);
+    public static OrderEvent updated(long orderId, Long customerId) {
+        return new OrderEvent(UUID.randomUUID().toString(), "ORDER_UPDATED", orderId, customerId);
     }
 
-    public static OrderEvent deleted(long orderId) {
-        return new OrderEvent(UUID.randomUUID().toString(), "ORDER_DELETED", orderId);
+    public static OrderEvent deleted(long orderId, Long customerId) {
+        return new OrderEvent(UUID.randomUUID().toString(), "ORDER_DELETED", orderId, customerId);
     }
 
     public String toJson() {
