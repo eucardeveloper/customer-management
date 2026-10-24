@@ -25,8 +25,11 @@ public class OutboxMetrics {
     }
 
     OutboxMetrics(OutboxEventRepository outbox, MeterRegistry registry, Clock clock) {
-        Gauge.builder("outbox.events.pending", outbox, OutboxEventRepository::countByPublishedAtIsNull)
+        Gauge.builder("outbox.events.pending", outbox, OutboxEventRepository::countPending)
                 .description("Order events written to the outbox but not yet acknowledged by Kafka")
+                .register(registry);
+        Gauge.builder("outbox.events.parked", outbox, OutboxEventRepository::countByParkedAtIsNotNull)
+                .description("Order events given up on after permanent publish failures (needs attention)")
                 .register(registry);
         Gauge.builder("outbox.oldest.pending.age", outbox, r -> ageSeconds(r.oldestUnpublishedCreatedAt(), clock))
                 .description("Seconds the oldest unpublished outbox event has been waiting (0 when none)")

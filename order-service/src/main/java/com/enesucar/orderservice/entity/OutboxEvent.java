@@ -25,6 +25,15 @@ public class OutboxEvent {
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
+    @Column(nullable = false)
+    private int attempts;
+
+    @Column(name = "parked_at")
+    private LocalDateTime parkedAt;
+
+    @Column(name = "last_error", length = 500)
+    private String lastError;
+
     protected OutboxEvent() {
     }
 
@@ -40,4 +49,17 @@ public class OutboxEvent {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getPublishedAt() { return publishedAt; }
     public void markPublished() { this.publishedAt = LocalDateTime.now(); }
+
+    public int getAttempts() { return attempts; }
+    public LocalDateTime getParkedAt() { return parkedAt; }
+    public String getLastError() { return lastError; }
+
+    /** Records one permanent failure (an error that retrying cannot fix). */
+    public void recordPermanentFailure(String error) {
+        this.attempts++;
+        this.lastError = error == null ? null : error.substring(0, Math.min(error.length(), 500));
+    }
+
+    /** Takes the event out of the queue: kept for inspection, never retried. */
+    public void park() { this.parkedAt = LocalDateTime.now(); }
 }

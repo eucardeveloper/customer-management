@@ -76,7 +76,7 @@ class OutboxIntegrationTest {
         assertThat(pending).anyMatch(e -> OrderEvent.parse(e.getPayload()).map(ev -> ev.orderId() == created.getId()).orElse(false)
                 && e.getTopic().equals("order-events") && e.getPublishedAt() == null);
         // the monitoring queries behind the outbox gauges see it as waiting
-        assertThat(outbox.countByPublishedAtIsNull()).isGreaterThanOrEqualTo(1);
+        assertThat(outbox.countPending()).isGreaterThanOrEqualTo(1);
         assertThat(outbox.oldestUnpublishedCreatedAt()).isNotNull();
     }
 

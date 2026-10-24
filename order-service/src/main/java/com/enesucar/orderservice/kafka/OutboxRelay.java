@@ -2,6 +2,9 @@ package com.enesucar.orderservice.kafka;
 
 import com.enesucar.orderservice.entity.OutboxEvent;
 import com.enesucar.orderservice.repository.OutboxEventRepository;
+import org.apache.kafka.common.errors.InvalidTopicException;
+import org.apache.kafka.common.errors.RecordTooLargeException;
+import org.apache.kafka.common.errors.SerializationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,6 +25,8 @@ import java.util.List;
 public class OutboxRelay {
 
     static final int BATCH_SIZE = 50;
+    /** Permanent failures tolerated before an event is parked (transient ones, e.g. broker down, never count). */
+    static final int MAX_PERMANENT_ATTEMPTS = 3;
     private static final Logger logger = LoggerFactory.getLogger(OutboxRelay.class);
 
     private final OutboxEventRepository outbox;
@@ -46,11 +51,40 @@ public class OutboxRelay {
                     producer.publish(event.getTopic(), event.getPayload());
                 }
             } catch (Exception e) {
-                logger.warn("Outbox event {} not published yet, will retry: {}", event.getId(), e.toString());
+                if (isPermanent(e)) {
+                    // Retrying cannot help (e.g. message too large): count it and, after a few tries, park the
+                    // event so it stops blocking every event behind it.
+                    event.recordPermanentFailure(e.toString());
+                    if (event.getAttempts() >= MAX_PERMANENT_ATTEMPTS) {
+                        event.park();
+                        logger.error("Outbox event {} parked after {} permanent failures: {}",
+                                event.getId(), event.getAttempts(), e.toString());
+                        continue;
+                    }
+                    logger.warn("Outbox event {} failed permanently ({} of {}): {}",
+                            event.getId(), event.getAttempts(), MAX_PERMANENT_ATTEMPTS, e.toString());
+                } else {
+                    logger.warn("Outbox event {} not published yet, will retry: {}", event.getId(), e.toString());
+                }
                 // Keep order: stop here, the row (and the ones behind it) stay unpublished.
                 break;
             }
             event.markPublished();
         }
+    }
+
+    /** True when the error is in the event itself, so sending it again can never succeed. */
+    static boolean isPermanent(Throwable error) {
+        for (Throwable t = error; t != null; t = t.getCause()) {
+            if (t instanceof RecordTooLargeException
+                    || t instanceof InvalidTopicException
+                    || t instanceof SerializationException) {
+                return true;
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        return false;
     }
 }
