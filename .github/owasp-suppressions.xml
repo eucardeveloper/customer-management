@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OWASP Dependency-Check false-positive suppressions.
+  Every entry says why the finding does not apply and when it was reviewed.
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+  <suppress>
+    <notes>False positive: CVE-2026-42154 is a denial of service in the Prometheus SERVER's remote-read
+    endpoint (crafted snappy payload). micrometer-registry-prometheus is only the client-side exporter
+    and has no remote-read endpoint. Reviewed 2026-10-24.</notes>
+    <gav regex="true">^io\.micrometer:micrometer-registry-prometheus:.*$</gav>
+    <cve>CVE-2026-42154</cve>
+  </suppress>
+  <suppress>
+    <notes>False positive: CVE-2025-7962 is an SMTP injection in Eclipse Angus Mail / Jakarta Mail
+    (the SMTP sender). angus-activation is the separate MIME-type activation library, and no service
+    here sends e-mail. Reviewed 2026-10-24.</notes>
+    <gav regex="true">^.*:angus-activation:.*$</gav>
+    <cve>CVE-2025-7962</cve>
+  </suppress>
+  <suppress>
+    <notes>False positive: CVE-2025-15104 is a server-side request forgery in the Nu Html Checker
+    (validator.nu, an HTML validation service). The scanner matched it only on the word "validator".
+    hibernate-validator is the Jakarta Bean Validation implementation and has no relation to it.
+    Reviewed 2026-10-24.</notes>
+    <gav regex="true">^org\.hibernate\.validator:hibernate-validator:.*$</gav>
+    <cve>CVE-2025-15104</cve>
+  </suppress>
+  <suppress>
+    <notes>Not applicable: CVE-2026-41115 (CVSS 4.3, below the build threshold) concerns how the Kafka BROKER
+    authorizes the CONSUMER_GROUP_DESCRIBE API (DESCRIBE instead of READ on the group), which matters only
+    where group ACLs are configured. kafka-clients is the client library, and this project's broker runs
+    without an authorizer or ACLs (see docker-compose.yml). Reviewed 2026-10-24.</notes>
+    <gav regex="true">^org\.apache\.kafka:kafka-clients:.*$</gav>
+    <cve>CVE-2026-41115</cve>
+  </suppress>
+</suppressions>

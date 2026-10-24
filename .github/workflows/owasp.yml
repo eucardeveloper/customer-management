@@ -1,0 +1,129 @@
+# OWASP Dependency Check — runs weekly, not on every push
+name: OWASP Weekly Scan
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # Every Monday 08:00 UTC
+  workflow_dispatch:        # Manual trigger from GitHub UI
+
+env:
+  JAVA_VERSION: "21"
+  JAVA_DISTRIBUTION: "temurin"
+
+jobs:
+  owasp-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Get week number for cache key
+        id: date
+        run: echo "week=$(date +%Y-W%V)" >> $GITHUB_OUTPUT
+
+      # Restore and save are separate so a long first download is kept even when the scan step
+      # is stopped by its time limit: the next run resumes from the saved database instead of
+      # starting over (the combined cache action only saves after a fully successful job).
+      - name: Restore NVD database
+        id: nvd-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.dependency-check/data
+          key: nvd-cache-v12-${{ runner.os }}-${{ steps.date.outputs.week }}
+          restore-keys: nvd-cache-v12-${{ runner.os }}-
+
+      - name: Check NVD API key
+        id: key
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::error title=OWASP-NOT-RUN::NVD_API_KEY secret is not set, so no dependency scan ran. Without the key the NVD download takes hours. Add the secret (free key from nvd.nist.gov) under Settings > Secrets and variables > Actions. This run is red on purpose: a skipped scan must not look like a clean one."
+            exit 1
+          else
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run OWASP dependency check (all four services)
+        id: scan
+        if: steps.key.outputs.has_key == 'true'
+        continue-on-error: true
+        timeout-minutes: 120
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          # One shared NVD database: the first module downloads it, the other three reuse it.
+          failed=0
+          for m in apigateway auth-service customer-service order-service; do
+            echo "::group::$m"
+            (cd "$m" && mvn -B org.owasp:dependency-check-maven:12.1.0:check \
+              -DfailBuildOnCVSS=7 \
+              -DsuppressionFile="$GITHUB_WORKSPACE/.github/owasp-suppressions.xml" \
+              -DnvdApiKey="${NVD_API_KEY}" \
+              -DdataDirectory="${HOME}/.dependency-check/data" \
+              -Dformats=HTML,JSON \
+              -DskipTestScope=true -DskipProvidedScope=true \
+              -DossindexAnalyzerEnabled=false \
+              -DretireJsAnalyzerEnabled=false -DnodeAnalyzerEnabled=false \
+              --no-transfer-progress) 2>&1 | tee "owasp-$m.log" || { echo "::error title=OWASP-SCAN-FAILED::$m scan failed or found CVSS >= 7"; failed=1; }
+            echo "::endgroup::"
+          done
+          exit $failed
+
+      - name: Summarise findings
+        if: always() && steps.key.outputs.has_key == 'true'
+        run: |
+          python3 - <<'PY'
+          import json, os
+          lines = []
+          for m in ("apigateway", "auth-service", "customer-service", "order-service"):
+              p = m + "/target/dependency-check-report.json"
+              if not os.path.exists(p):
+                  lines.append("%s: NO REPORT (scan did not finish)" % m)
+                  continue
+              rows = []
+              for d in json.load(open(p)).get("dependencies", []):
+                  for v in d.get("vulnerabilities", []) or []:
+                      score = 0.0
+                      for k in ("cvssv3", "cvssv2", "cvssv4"):
+                          if v.get(k):
+                              score = max(score, float(v[k].get("baseScore", 0)))
+                      rows.append((score, v.get("name", "?"), d.get("fileName", "?")))
+              rows.sort(reverse=True)
+              high = [r for r in rows if r[0] >= 7]
+              lines.append("%s: findings %d, CVSS >= 7: %d" % (m, len(rows), len(high)))
+              lines += ["  %.1f %s in %s" % r for r in rows[:15]]
+          open(os.environ["GITHUB_STEP_SUMMARY"], "a").write("\n".join(lines) + "\n")
+          print("::notice title=OWASP::" + "%0A".join(lines))
+          PY
+      - name: Report scan outcome
+        if: always() && steps.key.outputs.has_key == 'true'
+        run: |
+          echo "::notice title=OWASP-OUTCOME::scan step outcome=${{ steps.scan.outcome }}"
+          if [ "${{ steps.scan.outcome }}" != "success" ]; then
+            echo "::error title=OWASP-SCAN-NOT-GREEN::the scan step did not succeed (outcome=${{ steps.scan.outcome }})"
+            exit 1
+          fi
+
+      - name: Upload OWASP report
+        if: always() && steps.key.outputs.has_key == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-report
+          path: "*/target/dependency-check-report.html"
+          retention-days: 14
+
+      - name: Save NVD database
+        if: always() && steps.key.outputs.has_key == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.dependency-check/data
+          key: nvd-cache-v12-${{ runner.os }}-${{ steps.date.outputs.week }}-${{ github.run_id }}
