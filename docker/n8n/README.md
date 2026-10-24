@@ -15,8 +15,10 @@ It contains **no secrets and no credential ids**. After importing, pick or creat
      user `n8n_app`, password = `N8N_DB_PASSWORD` from `.env`.
    - **Custom Auth** (node "Gateway Girişi"): JSON `{"body": {"username": "<user>", "password": "<password>"}}`.
      Use a dedicated ADMIN account created in the user management screen, not a shared one.
-3. **Publish** the workflow, open the chat trigger node, copy its *Production URL*, and put it into `.env`
-   as `N8N_WEBHOOK_URL=...` (a webhook URL is a credential; never commit it).
+3. **Publish** the workflow, open the chat trigger node, copy its *Chat URL* (`http://localhost:5678/webhook/<id>/chat`), and put it into `.env`
+   as `N8N_WEBHOOK_URL=...` (a webhook URL is a credential; never commit it). Replace `localhost` with `n8n`:
+   the AI agent UI runs in its own container, where `localhost` is the container itself, so the value must be
+   `http://n8n:5678/webhook/<id>/chat`.
 4. `docker compose up -d --force-recreate ai-agent-frontend`, then try http://localhost:3001.
 
 ## How it authenticates
