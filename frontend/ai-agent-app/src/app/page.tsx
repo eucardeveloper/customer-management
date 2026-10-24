@@ -75,9 +75,9 @@ interface Message {
 
 const SUGGESTIONS = [
   'Tüm müşterileri listele',
-  "Enes Uçar'ın siparişleri",
+  "Fatma Kaya'nın siparişleri",
   'Yeni müşteri ekle',
-  "Hans Müller'i güncelle",
+  "Ahmet Yılmaz'ın telefonunu güncelle",
 ];
 
 export default function Home() {
