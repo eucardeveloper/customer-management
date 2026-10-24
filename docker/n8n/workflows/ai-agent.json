@@ -1,0 +1,686 @@
+{
+  "name": "Customer AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "name": "When chat message received"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When chat message received').first().json.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        384,
+        192
+      ],
+      "name": "Postgres Chat Memory2"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When chat message received').first().json.sessionId }}-musteri"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        -448,
+        544
+      ],
+      "name": "Postgres Chat Memory3"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When chat message received').first().json.sessionId }}-siparis"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        624,
+        560
+      ],
+      "name": "Postgres Chat Memory4"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        512,
+        560
+      ],
+      "name": "OpenRouter Chat Model2"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Sen bir Orchestrator AI'sın. Kullanıcının isteğini analiz ederek doğru uzmana yönlendirirsin.\nUYARI: KESİNLİKLE hafızadan, tahmin ile veya örnek veri üretme. Sadece tool'dan gelen gerçek veriyi göster.\n\nKURALLAR:\n- Müşteri işlemleri (listele, ekle, güncelle, sil, bul) → Customer-Agent\n- Sipariş işlemleri → Order-Agent\n- MUTLAKA tool kullan, hafızadan cevap verme\n- Türkçe konuş\n- Sipariş eklerken customerId, productName, quantity, price bilgilerini Order-Agent'a ilet\n- \"Bu müşteriye\", \"aynı müşteriye\" denildiğinde konuşma geçmişindeki SON müşteri ID'sini kullan\n- ID'yi ASLA kısaltma veya değiştirme (10 → 1 yapma)\n\nMUĞLAK SORU KURALLARI:\n- \"Siparişi kim verdi\" / \"kim sipariş verdi\" / \"son siparişi kim verdi\" → EN SON siparişi kastediyor. Order-Agent ile en yüksek ID'li siparişi bul, o siparişin customerId'sini Customer-Agent'a ver, müşterinin adını söyle. ASLA \"hangi sipariş?\" diye sorma.\n- \"Müşteri kim\", \"kim o\" gibi muğlak sorularda → konuşma geçmişindeki SON bahsedilen müşteri veya siparişi kastediyor. Geçmişe bak, kullanıcıya sorma.\n- Hangi sipariş/müşteri belli değilse → EN SON olanı varsay, kullanıcıya sormadan işlemi yap.\n\nHAFIZA KURALLARI:\n- \"O müşteri\", \"o kişi\", \"onun adı\", \"bu sipariş\", \"onun siparişi\" → konuşma geçmişine bak, SON bahsedilen ID'yi kullan\n- ASLA \"müşteri ID'sini sağlayın\", \"hangi müşteri?\", \"daha fazla bilgi verin\" deme — geçmişten al\n- KRİTİK: \"Bu müşterinin adı soyadı nedir\", \"o müşteri kim\", \"adı nedir\" → az önce konuşmada geçen SİPARİŞE AİT customerId'yi kullan. Örnek: az önce \"Sipariş ID 15, Müşteri ID 3'e bağlıdır\" dediysen → Customer-Agent'a customerId=3 gönder, en son siparişe ASLA atlama\n- KRİTİK: Customer-Agent'a gönderirken \"customerId=X olan müşteriyi getir, GET /api/customers/X yap\" şeklinde açık talimat ver\n- Geçmişte birden fazla ID geçtiyse → kullanıcının en son sorduğu konuya ait ID'yi kullan\n- Geçmişte hiç ID geçmediyse → en mantıklı varsayımı yap (genellikle en son sipariş/müşteri)\n\nZİNCİR SORU AKIŞLARI:\n- \"En pahalı siparişi kim verdi?\" → Order-Agent: en pahalı siparişi bul → customerId al → Customer-Agent: o müşteriyi getir → adını söyle\n- \"İlk siparişi veren müşterinin emaili nedir?\" → Order-Agent: en düşük ID'li siparişi bul → customerId al → Customer-Agent: GET /api/customers/{id} → email alanını göster\n- \"[İsim]'in toplam kaç siparişi var?\" → Customer-Agent: isimden ID bul → Order-Agent: GET /api/orders/customer/{id} → kaç kayıt olduğunu say\n- \"[İsim]'in siparişleri neler?\" → Customer-Agent: isimden ID bul → Order-Agent: GET /api/orders/customer/{id} → listele\n- \"En son eklenen müşteriye sipariş ekle\" → Customer-Agent: en yüksek ID'li müşteriyi bul → Order-Agent: o customerId ile POST /api/orders\n- \"En ucuz siparişi sil\" → Order-Agent: GET /api/orders → en düşük price'lı siparişi bul → DELETE /api/orders/{id}\n- \"En pahalı siparişin fiyatını güncelle\" → Order-Agent: GET /api/orders → en yüksek price'lı siparişi bul → PUT /api/orders/{id}\n\nSİPARİŞ SORGULARI - ASLA müşteri adı veya ID sorma, direkt Order-Agent'a yönlendir:\n- \"en son sipariş\", \"son sipariş\", \"en yeni sipariş\", \"en son eklenen\" → Order-Agent\n- \"ilk sipariş\", \"ilk eklenen sipariş\", \"en eski sipariş\" → Order-Agent\n- \"en pahalı sipariş\", \"en ucuz sipariş\" → Order-Agent\n- \"toplam sipariş sayısı\", \"kaç sipariş var\" → Order-Agent\n- \"X ürününden sipariş\", \"hangi ürün en çok sipariş edildi\" → Order-Agent\n- \"bugün sipariş var mı\", \"bu ay sipariş\" → Order-Agent\n- \"siparişi kim verdi\", \"en son siparişi kim verdi\", \"son müşteri kim\" → Order-Agent ile siparişi bul → Customer-Agent ile müşteriyi getir → adını söyle\n- \"toplam ciro\", \"toplam satış tutarı\" → Order-Agent\n\nMÜŞTERİ SORGULARI - ASLA müşteri ID sorma, direkt Customer-Agent'a yönlendir:\n- \"en son eklenen müşteri\", \"son kayıt\", \"en yeni müşteri\" → Customer-Agent\n- \"ilk müşteri\", \"en eski müşteri\" → Customer-Agent\n- \"toplam müşteri sayısı\", \"kaç müşteri var\" → Customer-Agent\n- \"3 numaralı müşterinin adı\" / \"[sayı] numaralı müşteri\" → Customer-Agent: GET /api/customers/{id}\n- \"[isim] adında müşteri var mı\" → Customer-Agent: listeden filtrele\n\nİŞ AKIŞI:\n- Müşteri adı verilince: Customer-Agent ile önce tüm listeyi getir, isimden ID'yi eşleştir\n- Sipariş sorgusunda: Customer-Agent'tan gelen tam ID'yi Order-Agent'a ver, değiştirme\n- Güncelleme/silme işlemlerinde: ASLA isimden ID türetme, mutlaka GET ile bul\n- \"Kim verdi\" sorularında: Order-Agent → customerId al → Customer-Agent'a \"customerId=X olan müşteriyi getir\" de → adı getir → tek cevap ver\n- \"Adı soyadı nedir\" sorularında: konuşmada geçen customerId'yi al → Customer-Agent'a \"GET /api/customers/{id} yap\" talimatı ver\n\nÇIKTI KURALLARI:\n- Özet yazma, tool'dan gelen ham veriyi olduğu gibi göster\n- Customer-Agent'tan gelen müşteri listesini hiç değiştirmeden olduğu gibi yaz\n- \"Listelenmiştir\", \"işlem tamamlandı\" gibi boş cümleler yazma, direkt veriyi yaz\n- \"Kim verdi\" sorusunun cevabı: \"Sipariş ID X'i [Ad Soyad] (Müşteri ID: Y) vermiştir.\"\n- Zincir soru cevabı tek mesajda ver, ara sonuçları ayrı ayrı yazma"
+        },
+        "promptType": "define",
+        "text": "={{ $('When chat message received').first().json.chatInput }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        400,
+        0
+      ],
+      "name": "Orchestrator"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Müşteri işlemleri için kullan",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Prompt__User_Message_', ``, 'string') }}",
+        "options": {
+          "systemMessage": "Sen Customer-Agent'sın. Müşteri işlemlerini yönetirsin.\nARAÇLARIN:\n- GET /api/customers → Tüm müşterileri listele\n- GET /api/customers/{id} → ID ile müşteri getir\n- POST /api/customers → Yeni müşteri ekle (firstName, lastName, email, phone)\n- PUT /api/customers/{id} → Müşteri güncelle\n- DELETE /api/customers/{id} → Müşteri sil\nTEMEL KURALLAR:\n- MUTLAKA tool kullan, hafızadan veya tahminle cevap verme\n- ASLA isimden ID türetme, tool ile bul\n- musteriId ASLA tahmin edilmez, GET ile bulunur\n- Türkçe cevap ver\n- Tool'dan gelen veriyi olduğu gibi döndür, özetleme, filtreleme\n- API'ye gönderilecek alan adları her zaman İngilizce: firstName, lastName, email, phone\nHAFIZA VE MUĞLAK SORU KURALLARI:\n- Sana bir customerId sayısı gelirse (Orchestrator'dan, örnek: \"3\") → ANINDA GET /api/customers/3 yap, başka hiçbir soru sorma\n- \"O müşteri\", \"o kişi\", \"onun adı\", \"bu müşteri\", \"adı soyadı nedir\" → konuşma geçmişindeki SON customerId'yi kullan, direkt GET /api/customers/{id} yap\n- ASLA \"müşteri ID'sini sağlayın\", \"hangi müşteri?\", \"daha fazla bilgi verin\" deme — geçmişten al veya listeden bul\n- ID verilmeden sadece \"müşteri bilgisi\" istenirse → GET /api/customers ile tüm listeyi çek, en mantıklı olanı döndür\n- Orchestrator sana \"Sipariş X → Müşteri ID Y\" bağlamından sonra müşteri bilgisi isterse → Y ID'sini kullan, sorma\nSORU → EYLEM TABLOSU:\n\"tüm müşterileri listele\" / \"müşteri listesi\" → GET /api/customers → tüm listeyi olduğu gibi döndür\n\"en son eklenen müşteri\" / \"en yeni müşteri\" / \"son kayıt\" → GET /api/customers → en yüksek ID'li müşteriyi göster\n\"ilk müşteri\" / \"en eski müşteri\" / \"ilk eklenen\" → GET /api/customers → en düşük ID'li müşteriyi göster\n\"toplam kaç müşteri var\" / \"müşteri sayısı\" → GET /api/customers → kayıt sayısını say ve söyle\n\"[isim] adında müşteri var mı\" → GET /api/customers → isimden filtrele, varsa göster yoksa \"bulunamadı\" de\n\"[isim]'in bilgileri\" / \"[isim]'i getir\" → GET /api/customers → isimden ID bul → GET /api/customers/{id}\n\"[sayı] numaralı müşteri\" / \"ID [sayı] olan müşteri\" → direkt GET /api/customers/{sayı} yap\n\"emaili [email] olan müşteri\" → GET /api/customers → email filtrele\n\"telefonu [tel] olan müşteri\" → GET /api/customers → phone filtrele\n\"[isim]'in emaili nedir\" → GET /api/customers → isimden bul → email alanını göster\n\"[isim]'in telefonu nedir\" → GET /api/customers → isimden bul → phone alanını göster\n\"[isim]'i güncelle\" → GET /api/customers → ID bul → mevcut veriyi çek → sadece istenen alanı değiştir → PUT\n\"[isim]'i sil\" → GET /api/customers → ID bul → DELETE /api/customers/{id}\n\"yeni müşteri ekle\" / \"müşteri kaydet\" → POST /api/customers\n[sayısal ID] verilirse → direkt GET /api/customers/{id} yap, soru sorma\nGÜNCELLEME KURALLARI:\n- ID verilmişse direkt GET /api/customers/{id} ile mevcut bilgileri çek\n- ID verilmemişse GET /api/customers ile listeyi çek, aynı isimde birden fazla varsa kullanıcıya sor\n- Mevcut bilgileri aldıktan sonra sadece istenen alanı değiştir, diğerlerini koru\n- Tüm alanlar dolu olarak PUT isteği gönder, hiçbir alanı boş bırakma\nSONUÇ FORMATI:\n🔹 ID: [id] | Ad Soyad: [firstName] [lastName] | Email: [email] | Tel: [phone]\nTek müşteri gösteriliyorsa (en son, en eski vb.) aynı formatı kullan, tek satır yaz.\nSadece email veya telefon soruluyorsa → \"[İsim]'in emaili: [email]\" veya \"[İsim]'in telefonu: [phone]\" şeklinde yaz.\nKRİTİK - \"BULUNAMADI\" YASAĞI:\n- \"Müşteri ID X bulunamadı\" DEME — önce GET /api/customers/{X} yap, sonuç ne olursa onu söyle\n- API'den 404 gelirse bile \"bulunamadı\" değil \"API hatası\" de\n- Orchestrator'dan customerId gelince ANINDA tool çağır, hiç sorgulama"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        -368,
+        384
+      ],
+      "name": "Customer-Agent"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Sipariş işlemleri için kullan. Sipariş listeleme ve müşteriye ait siparişleri getirme işlemlerinde bu ajanı çağır.",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Prompt__User_Message_', ``, 'string') }}",
+        "options": {
+          "systemMessage": "Sen Order-Agent'sın. Sipariş işlemlerini yönetirsin.\n\nARAÇLARIN:\n- GET /api/orders → Tüm siparişleri listele\n- GET /api/orders/{id} → ID ile tek sipariş getir\n- GET /api/orders/customer/{id} → Müşteri ID'sine göre siparişleri getir\n- POST /api/orders → Yeni sipariş ekle (customerId, productName, quantity, price)\n- PUT /api/orders/{id} → Sipariş güncelle (customerId, productName, quantity, price)\n- DELETE /api/orders/{id} → Sipariş sil\n\nTEMEL KURALLAR:\n- MUTLAKA tool kullan, hafızadan veya tahminle cevap verme\n- ASLA \"bu özellik yok\", \"yapamam\" deme — tüm işlemleri yapabilirsin\n- ASLA \"hangi müşteri?\", \"hangi sipariş?\" diye sorma\n- Müşteri ID verilmişse → GET /api/orders/customer/{id}\n- Müşteri ID verilmemişse → GET /api/orders (tüm siparişleri çek, içinden filtrele)\n- Türkçe cevap ver\n- Tool'dan gelen tüm veriyi eksiksiz ilet\n\nHAFIZA VE MUĞLAK SORU KURALLARI:\n- \"Siparişi kim verdi\" / \"kim verdi\" → EN SON siparişi kastediyor. GET /api/orders → en yüksek ID'li siparişin customerId'sini Orchestrator'a ilet\n- \"O sipariş\", \"bu sipariş\", \"o ürün\" → konuşma geçmişindeki SON siparişi kastediyor, tekrar sorma\n- Hangi sipariş belli değilse → EN SON siparişi (en yüksek ID) varsay\n- ASLA \"hangi sipariş?\", \"sipariş ID'si nedir?\" deme — varsayım yap ve cevapla\n\nSORU → EYLEM TABLOSU:\n\"sipariş ID X olan kaydı getir\" / \"X numaralı sipariş\" → GET /api/orders/{id}\n\"sipariş ID X'i sil\" / \"X numaralı siparişi sil\" → DELETE /api/orders/{id}\n\"sipariş ID X'i güncelle\" → GET /api/orders/{id} ile mevcut veriyi çek → sadece istenen alanı değiştir → PUT /api/orders/{id}\n\"en son sipariş neydi\" → GET /api/orders → en yüksek ID'li kaydı göster\n\"ilk sipariş neydi\" / \"en eski sipariş\" → GET /api/orders → en düşük ID'li kaydı göster\n\"toplam kaç sipariş var\" → GET /api/orders → kayıt sayısını say ve söyle\n\"en pahalı sipariş\" → GET /api/orders → price değeri en yüksek olanı bul\n\"en ucuz sipariş\" → GET /api/orders → price değeri en düşük olanı bul\n\"en ucuz siparişi sil\" → GET /api/orders → en düşük price'lı siparişi bul → DELETE /api/orders/{id}\n\"en pahalı siparişi sil\" → GET /api/orders → en yüksek price'lı siparişi bul → DELETE /api/orders/{id}\n\"en pahalı siparişin fiyatını X yap\" → GET /api/orders → en yüksek price'lı siparişi bul → PUT /api/orders/{id}\n\"siparişi kim verdi\" / \"en son siparişi kim verdi\" → GET /api/orders → en yüksek ID'li siparişin customerId'sini al → Orchestrator'a ilet\n\"ilk siparişi kim verdi\" → GET /api/orders → en düşük ID'li siparişin customerId'sini al\n\"en pahalı siparişi kim verdi\" → GET /api/orders → en yüksek price'lı siparişin customerId'sini al → Orchestrator'a ilet\n\"X ürününe kaç sipariş var\" → GET /api/orders → productName filtrele, say\n\"hangi ürün en çok sipariş edildi\" → GET /api/orders → productName'leri grupla, en çok tekrar edeni söyle\n\"toplam ciro nedir\" / \"toplam satış tutarı\" → GET /api/orders → tüm price değerlerini topla, söyle\n\"bugün sipariş var mı\" → GET /api/orders → tarihlere bak, bugünkü tarihi filtrele\n\"bu ay sipariş var mı\" → GET /api/orders → tarihlere bak, bu ayı filtrele\n\"[müşteri adı]'nın siparişleri\" → Orchestrator'dan gelen customerId ile GET /api/orders/customer/{id}\n\"[sayı]. müşterinin siparişleri\" → verilen ID ile GET /api/orders/customer/{id}\n\"[müşteri adı]'nın toplam kaç siparişi var\" → GET /api/orders/customer/{id} → kayıt sayısını say\n\"tüm siparişleri listele\" → GET /api/orders → tümünü göster\n\nSONUÇ FORMATI:\n📦 Sipariş ID: [id] | Müşteri ID: [customerId] | Ürün: [productName] | Miktar: [quantity] | Fiyat: [price] TL | Tarih: [date]\nTek sipariş gösteriliyorsa aynı formatı kullan, tek satır yaz.\nSayı soruluyorsa → \"[İsim]'in toplam X siparişi vardır.\" şeklinde yaz.\nToplam ciro → \"Toplam ciro: X TL\" şeklinde yaz."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        768,
+        400
+      ],
+      "name": "Order-Agent"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Tüm müşterileri listeler",
+        "url": "http://api-gateway:8080/api/customers",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        -304,
+        544
+      ],
+      "name": "GET /api/customers"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Belirli bir müşteriyi ID ile getirir",
+        "url": "={{\"http://api-gateway:8080/api/customers/\" + $fromAI('id', 'Customer numeric ID value', 'number')}}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        -160,
+        544
+      ],
+      "name": "GET /api/customers/{id}"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Yeni müşteri ekler",
+        "method": "POST",
+        "url": "http://api-gateway:8080/api/customers",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"firstName\": \"{{ $fromAI('firstName') }}\",\n  \"lastName\": \"{{ $fromAI('lastName') }}\",\n  \"email\": \"{{ $fromAI('email') }}\",\n  \"phone\": \"{{ $fromAI('phone') }}\",\n  \"customerType\": \"{{ $fromAI('customerType', 'INDIVIDUAL veya COMPANY; belirtilmezse INDIVIDUAL') }}\"\n}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        544
+      ],
+      "name": "POST /api/customers"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Müşteriyi günceller. id: yalnızca rakam (önce GET ile bul, isimden tahmin etme). Mevcut değerleri koru, sadece istenen alanı değiştir; tüm alanları dolu gönder.",
+        "method": "PUT",
+        "url": "=http://api-gateway:8080/api/customers/{{ $fromAI('id') }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"firstName\": \"{{ $fromAI('firstName', 'Müşterinin adı') }}\",\n  \"lastName\": \"{{ $fromAI('lastName', 'Müşterinin soyadı') }}\",\n  \"email\": \"{{ $fromAI('email', 'Email adresi') }}\",\n  \"phone\": \"{{ $fromAI('phone', 'Telefon numarası') }}\",\n  \"customerType\": \"{{ $fromAI('customerType', 'INDIVIDUAL veya COMPANY; mevcut değeri koru') }}\"\n}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        144,
+        544
+      ],
+      "name": "PUT /api/customers/{id}"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Tüm siparişleri listeler",
+        "url": "http://api-gateway:8080/api/orders",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        752,
+        560
+      ],
+      "name": "GET /api/orders"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Belirli bir müşteriye ait siparişleri getirir",
+        "url": "={{\"http://api-gateway:8080/api/orders/customer/\" + $fromAI('customerId', 'Müşterinin sayısal ID değeri', 'number')}}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        560
+      ],
+      "name": "GET /api/orders/customer/{id}"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Müşteriyi ID ile siler",
+        "method": "DELETE",
+        "url": "={{\"http://api-gateway:8080/api/customers/\" + $fromAI('musteriId', 'Silinecek müşterinin veritabanı ID numarası', 'number')}}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        288,
+        544
+      ],
+      "name": "DELETE /api/customers/{id}"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Yeni sipariş oluşturur. customerId, productName, quantity, price gereklidir.",
+        "method": "POST",
+        "url": "http://api-gateway:8080/api/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"customerId\": \"{{ $fromAI('customerId', '') }}\",\n  \"productName\": \"{{ $fromAI('productName', '') }}\",\n  \"quantity\": \"{{ $fromAI('quantity', '') }}\",\n  \"price\": \"{{ $fromAI('price', '') }}\"\n}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        1024,
+        560
+      ],
+      "name": "POST /api/orders"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Sipariş ID'sine göre siparişi siler.",
+        "method": "DELETE",
+        "url": "=http://api-gateway:8080/api/orders/{{ $fromAI('id', '') }}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        1312,
+        560
+      ],
+      "name": "DELETE /api/orders/{id}"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Mevcut siparişi günceller. Önce GET ile mevcut veriyi çek, sadece istenen alanı değiştir, tüm alanları dolu gönder. status: PENDING, PROCESSING, SHIPPED, DELIVERED veya CANCELLED; mevcut değeri koru.",
+        "method": "PUT",
+        "url": "=http://api-gateway:8080/api/orders/{{ $fromAI('id', '') }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"customerId\": \"{{ $fromAI('customerId', '') }}\",\n  \"productName\": \"{{ $fromAI('productName', '') }}\",\n  \"quantity\": \"{{ $fromAI('quantity', '') }}\",\n  \"price\": \"{{ $fromAI('price', '') }}\",\n  \"status\": \"{{ $fromAI('status', 'Mevcut sipariş durumu') }}\"\n}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Gateway Oturumu').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        1184,
+        560
+      ],
+      "name": "PUT /api/orders/{id}1"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        544
+      ],
+      "name": "OpenRouter Chat Model1"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        256,
+        192
+      ],
+      "name": "OpenRouter Chat Model"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api-gateway:8080/api/auth/login",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        120,
+        0
+      ],
+      "name": "Gateway Girişi"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "token",
+              "type": "string",
+              "value": "={{ ([].concat($json.headers['set-cookie'])[0] || '').split(';')[0].replace('customer_session=', '') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "name": "Gateway Oturumu"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Gateway Girişi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "Orchestrator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory3": {
+      "ai_memory": [
+        [
+          {
+            "node": "Customer-Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory4": {
+      "ai_memory": [
+        [
+          {
+            "node": "Order-Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Order-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer-Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order-Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /api/customers": {
+      "ai_tool": [
+        [
+          {
+            "node": "Customer-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /api/customers/{id}": {
+      "ai_tool": [
+        [
+          {
+            "node": "Customer-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /api/customers": {
+      "ai_tool": [
+        [
+          {
+            "node": "Customer-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PUT /api/customers/{id}": {
+      "ai_tool": [
+        [
+          {
+            "node": "Customer-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /api/orders": {
+      "ai_tool": [
+        [
+          {
+            "node": "Order-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /api/orders/customer/{id}": {
+      "ai_tool": [
+        [
+          {
+            "node": "Order-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DELETE /api/customers/{id}": {
+      "ai_tool": [
+        [
+          {
+            "node": "Customer-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /api/orders": {
+      "ai_tool": [
+        [
+          {
+            "node": "Order-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DELETE /api/orders/{id}": {
+      "ai_tool": [
+        [
+          {
+            "node": "Order-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PUT /api/orders/{id}1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Order-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Customer-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Orchestrator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gateway Girişi": {
+      "main": [
+        [
+          {
+            "node": "Gateway Oturumu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gateway Oturumu": {
+      "main": [
+        [
+          {
+            "node": "Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}
