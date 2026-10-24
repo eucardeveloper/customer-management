@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OWASP Dependency-Check false-positive suppressions.
+  Every entry must say why the finding does not apply and when it was reviewed.
+  Empty on purpose until a scan produces a reviewed false positive.
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+</suppressions>
