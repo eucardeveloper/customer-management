@@ -46,6 +46,7 @@ import { UsersTab } from './views/UsersTab';
 import { CustomerDialogs } from './views/CustomerDialogs';
 import { OrderDialogs } from './views/OrderDialogs';
 import { UserDialogs } from './views/UserDialogs';
+import { orderMatchesSearch } from '../lib/orderSearch';
 
 export default function Home() {
   const [tab, setTab] = useState<'dashboard' | 'customers' | 'orders' | 'ai' | 'analytics' | 'users'>('dashboard');
@@ -292,12 +293,12 @@ export default function Home() {
   };
 
   const filteredCustomers = [...customers].sort((x, y) => (x.id ?? 0) - (y.id ?? 0)).filter(c => { const q = custSearch.toLowerCase(); if (!q) return true; return `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q); });
-  const filteredOrders = [...orders].sort((x, y) => (y.id ?? 0) - (x.id ?? 0)).filter(o => { const q = ordSearch.toLowerCase(); if (!q) return true; return (o.productName ?? '').toLowerCase().includes(q) || String(o.customerId ?? '').includes(q) || (o.status ?? '').toLowerCase().includes(q); });
+  const getCustomerName = (id: number) => { const c = customers.find(c => c.id === id); return c ? `${c.firstName} ${c.lastName}` : `ID: ${id}`; };
+  const filteredOrders = [...orders].sort((x, y) => (y.id ?? 0) - (x.id ?? 0)).filter(o => orderMatchesSearch(o, ordSearch, getCustomerName(o.customerId), statusText(o.status ?? 'PENDING', t)));
   // Keep the page index valid when rows disappear (delete / search), otherwise the table shows an empty page
   const custPageSafe = Math.min(custPage, Math.max(0, Math.ceil(filteredCustomers.length / custRowsPerPage) - 1));
   const ordPageSafe = Math.min(ordPage, Math.max(0, Math.ceil(filteredOrders.length / ordRowsPerPage) - 1));
   const filteredUsers = users.filter(u => { const q = userSearch.toLowerCase(); if (!q) return true; return u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q); });
-  const getCustomerName = (id: number) => { const c = customers.find(c => c.id === id); return c ? `${c.firstName} ${c.lastName}` : `ID: ${id}`; };
 
   const exportExcel = async (type: 'customers' | 'orders') => {
     const stamp = new Date().toISOString().slice(0, 10);
