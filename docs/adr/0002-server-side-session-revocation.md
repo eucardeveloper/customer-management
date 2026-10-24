@@ -24,5 +24,21 @@ must end existing sessions, otherwise "change your password" does not lock out s
 
 ## Consequences
 - A revoked session keeps working for at most 10 s (the cache). Logout from the browser clears the cache entry at once.
-- The auth-service is on the path of every request; if it is down, everything answers 503.
+- The auth-service is on the path of every request that is not answered from the cache (at most one call per token per 10 s per gateway instance); if it is down, requests whose cache entry has expired answer 503, and so does every new sign-in.
 - A token stolen while the user stays signed in is valid until it expires (30 min) or the version changes.
+
+## Limits of this design, and what would replace it
+This is sized for one gateway and one auth-service instance. Said plainly, so it is not found by a reviewer first:
+- **The auth-service is a dependency of the gateway.** There is no second copy and no fallback; the gateway
+  fails closed. A real deployment would run several auth-service instances behind the same address.
+- **The cache lives in each gateway process.** With several gateway instances each keeps its own 10 s window, so
+  the worst-case delay for a revocation stays 10 s, but the number of calls to the auth-service grows with the
+  instance count. Concurrent first requests with the same token are not coalesced into one call.
+- **The cache is dropped completely when it reaches 10,000 entries** (simple and bounded, not an LRU). Under that
+  many distinct active sessions the check would fall back to one call per request for a moment.
+- **What scales better:** services verify the JWT signature locally and only a small list of revoked sessions
+  (`jti` and `token_version` bumps) is pushed to or polled by the gateways, e.g. over Kafka. That removes the
+  per-session call but adds a second mechanism to keep correct. It was not built because nothing here needs it
+  and the measured cost of the current design is one cached lookup per token per 10 s.
+- **A measurement that would justify the change:** the auth-service session endpoint's latency or error rate
+  showing up as the gateway's bottleneck in the existing Prometheus metrics.
