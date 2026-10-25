@@ -2,7 +2,7 @@
 
 `workflows/ai-agent.json` is the workflow behind the AI agent UI (`frontend/ai-agent-app`, port 3001):
 a chat trigger, an Orchestrator agent, and two tool agents (Customer-Agent, Order-Agent) that call
-the gateway (`http://api-gateway:8080`) with the OpenRouter model `google/gemini-2.5-flash`.
+the gateway (`http://api-gateway:8080`) with the OpenRouter model `google/gemini-2.5-pro`.
 
 It contains **no secrets and no credential ids**. After importing, pick or create the credentials below.
 
