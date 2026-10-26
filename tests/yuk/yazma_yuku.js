@@ -208,8 +208,11 @@ export function yaris(veri) {
   const musteri = http.post(`${URL}/api/customers`, musteriGovde(etiket), h);
   if (musteri.status !== 200) return;
   const mid = musteri.json("id");
+  // Yarışı kaybeden sipariş isteği, tasarım gereği 400 ("müşteri yok") alır ve geri alınır (sunucu günlüğünde
+  // "Order N undone"); bu bir hata değil beklenen sonuçtur, yalnızca 5xx / ağ hatası "başarısız" sayılır.
+  const hYaris = Object.assign({}, h, { responseCallback: http.expectedStatuses(201, 400, 404, 409) });
   const [siparis, silme] = http.batch([
-    ["POST", `${URL}/api/orders`, siparisGovde(mid), h],
+    ["POST", `${URL}/api/orders`, siparisGovde(mid), hYaris],
     ["DELETE", `${URL}/api/customers/${mid}`, null, h],
   ]);
   // İkisi birden başarılı olamaz: sipariş kaydedildiyse müşteri silinemez (409), silindiyse sipariş geri alınır (404).
