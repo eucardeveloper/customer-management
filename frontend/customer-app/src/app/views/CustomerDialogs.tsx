@@ -8,6 +8,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import type { TFn, Order } from '../model';
 import type { Lang } from '../translations';
+import { customerFullName } from '../../lib/customerName';
 
 interface CustomerDialogsProps {
   t: TFn;
@@ -95,7 +96,7 @@ export function CustomerDialogs({ t, lang, isAdmin, orders, dialogOpen, setDialo
                       {(drawerCustomer.firstName ?? '?')[0]}{(drawerCustomer.lastName ?? '')[0]}
                     </Avatar>
                     <Box>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem' }}>{drawerCustomer.firstName} {drawerCustomer.lastName}</Typography>
+                      <Typography sx={{ fontWeight: 700, fontSize: '1rem' }}>{customerFullName(drawerCustomer)}</Typography>
                       <Box sx={{ mt: 0.5 }}>{customerTypeChip(drawerCustomer, t)}</Box>
                     </Box>
                   </Box>

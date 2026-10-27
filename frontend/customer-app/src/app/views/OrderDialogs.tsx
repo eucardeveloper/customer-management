@@ -4,6 +4,7 @@ import { ORDER_STATUSES, statusText } from '../model';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { TFn, Customer, OrderForm } from '../model';
+import { customerFullName } from '../../lib/customerName';
 
 interface OrderDialogsProps {
   t: TFn;
@@ -32,7 +33,7 @@ export function OrderDialogs({ t, customers, orderDialogOpen, setOrderDialogOpen
               <FormControl size="small" fullWidth>
                 <InputLabel>{t('customer')}</InputLabel>
                 <Select value={editOrder.customerId} label={t('customer')} onChange={e => setEditOrder({ ...editOrder, customerId: e.target.value })}>
-                  {customers.map(c => <MenuItem key={c.id} value={c.id.toString()}>{c.firstName} {c.lastName}</MenuItem>)}
+                  {customers.map(c => <MenuItem key={c.id} value={c.id.toString()}>{customerFullName(c)}</MenuItem>)}
                 </Select>
               </FormControl>
               <TextField label={t('productName')} fullWidth size="small" value={editOrder.productName} onChange={e => setEditOrder({ ...editOrder, productName: e.target.value })} />

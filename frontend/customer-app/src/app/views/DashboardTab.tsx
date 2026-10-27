@@ -17,6 +17,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import type { TFn, TabKey, Customer } from '../model';
 import type { Lang } from '../translations';
+import { customerFullName } from '../../lib/customerName';
 
 interface DashboardTabProps {
   t: TFn;
@@ -190,7 +191,7 @@ export function DashboardTab({ t, lang, dateLocale, orders, customers, isAdmin, 
                               </Box>
                               <Avatar sx={{ width: 28, height: 28, bgcolor: 'var(--blue-bg)', color: 'var(--blue-tx)', fontSize: '0.7rem', fontWeight: 700 }}>{(c!.firstName ?? '?')[0]}</Avatar>
                               <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                                <Typography sx={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c!.firstName} {c!.lastName}</Typography>
+                                <Typography sx={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{customerFullName(c!)}</Typography>
                                 <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{(() => { const n = orders.filter(o => o.customerId === c!.id).length; return `${n} ${n === 1 ? t('orderSingular') : t('orders')}`; })()}</Typography>
                               </Box>
                               {isAdmin && (

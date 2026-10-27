@@ -11,6 +11,7 @@ import { customerTypeChip } from '../model';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { TFn, Customer } from '../model';
+import { customerFullName } from '../../lib/customerName';
 
 interface CustomersTabProps {
   t: TFn;
@@ -85,7 +86,7 @@ export function CustomersTab({ t, isAdmin, loading, custSearch, setCustSearch, s
                                     {(c.firstName ?? '?')[0]}{(c.lastName ?? '')[0]}
                                   </Avatar>
                                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                                    <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, overflowWrap: 'break-word', '&:hover': { color: '#2563eb' } }}>{c.firstName} {c.lastName}</Typography>
+                                    <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, overflowWrap: 'break-word', '&:hover': { color: '#2563eb' } }}>{customerFullName(c)}</Typography>
                                     {/* Phones and tablets hide the e-mail, phone and type columns; they move under the name instead. */}
                                     <Box sx={{ display: { xs: 'block', md: 'none' }, minWidth: 0 }}>
                                       <Typography noWrap variant="caption" sx={{ display: 'block', color: '#64748b' }}>{c.email}</Typography>
