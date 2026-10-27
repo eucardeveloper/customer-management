@@ -48,6 +48,7 @@ import { CustomerDialogs } from './views/CustomerDialogs';
 import { OrderDialogs } from './views/OrderDialogs';
 import { UserDialogs } from './views/UserDialogs';
 import { orderMatchesSearch } from '../lib/orderSearch';
+import { customerFullName } from '../lib/customerName';
 
 export default function Home() {
   const [tab, setTab] = useState<'dashboard' | 'customers' | 'orders' | 'ai' | 'analytics' | 'users'>('dashboard');
@@ -306,7 +307,7 @@ export default function Home() {
   };
 
   const filteredCustomers = [...customers].sort((x, y) => (x.id ?? 0) - (y.id ?? 0)).filter(c => { const q = custSearch.toLowerCase(); if (!q) return true; return `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q); });
-  const getCustomerName = (id: number) => { const c = customers.find(c => c.id === id); return c ? `${c.firstName} ${c.lastName}` : `ID: ${id}`; };
+  const getCustomerName = (id: number) => { const c = customers.find(c => c.id === id); return c ? customerFullName(c) : `ID: ${id}`; };
   const filteredOrders = [...orders].sort((x, y) => (y.id ?? 0) - (x.id ?? 0)).filter(o => orderMatchesSearch(o, ordSearch, getCustomerName(o.customerId), statusText(o.status ?? 'PENDING', t)));
   // Keep the page index valid when rows disappear (delete / search), otherwise the table shows an empty page
   const custPageSafe = Math.min(custPage, Math.max(0, Math.ceil(filteredCustomers.length / custRowsPerPage) - 1));
