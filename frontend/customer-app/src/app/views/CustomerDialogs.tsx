@@ -24,6 +24,7 @@ interface CustomerDialogsProps {
   formErrors: Record<string, string>;
   setFormErrors: Dispatch<SetStateAction<Record<string, string>>>;
   handleSave: () => void | Promise<void>;
+  busy?: boolean;
   deleteDialogOpen: boolean;
   setDeleteDialogOpen: Dispatch<SetStateAction<boolean>>;
   handleDelete: () => void | Promise<void>;
@@ -33,7 +34,7 @@ interface CustomerDialogsProps {
   openDelete: (id: number) => void;
 }
 
-export function CustomerDialogs({ t, lang, isAdmin, orders, dialogOpen, setDialogOpen, isEditing, editCustomer, setEditCustomer, customerType, setCustomerType, formErrors, setFormErrors, handleSave, deleteDialogOpen, setDeleteDialogOpen, handleDelete, drawerCustomer, setDrawerCustomer, openEdit, openDelete }: CustomerDialogsProps) {
+export function CustomerDialogs({ t, lang, isAdmin, orders, dialogOpen, setDialogOpen, isEditing, editCustomer, setEditCustomer, customerType, setCustomerType, formErrors, setFormErrors, handleSave, busy, deleteDialogOpen, setDeleteDialogOpen, handleDelete, drawerCustomer, setDrawerCustomer, openEdit, openDelete }: CustomerDialogsProps) {
   return (
     <>
         {/* Customer Add/Edit */}
@@ -63,7 +64,7 @@ export function CustomerDialogs({ t, lang, isAdmin, orders, dialogOpen, setDialo
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
-            <Button variant="contained" onClick={handleSave} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{isEditing ? t('update') : t('addCustomer')}</Button>
+            <Button variant="contained" onClick={handleSave} disabled={busy} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{isEditing ? t('update') : t('addCustomer')}</Button>
           </DialogActions>
         </Dialog>
 

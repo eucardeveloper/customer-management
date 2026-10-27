@@ -6,6 +6,7 @@ import { translateServerMessage } from '@/lib/serverMessages';
 import { usePersistedPref } from '@/lib/usePersistedPref';
 import { downloadXlsx } from '@/lib/exportXlsx';
 import { useLang } from '@/lib/useLang';
+import { runOnce } from '@/lib/runOnce';
 import { getAuthUser, logout } from '@/lib/auth';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useMounted } from '@/lib/useMounted';
@@ -180,8 +181,12 @@ export default function Home() {
     return Object.keys(errors).length === 0;
   };
 
+  const customerFlight = useRef(false);
+  const [customerBusy, setCustomerBusy] = useState(false);
   const handleSave = async () => {
     if (!validateCustomer()) return;
+    setCustomerBusy(true);
+    const ranCustomer = await runOnce(customerFlight, async () => {
     try {
       const payload = { ...editCustomer, lastName: customerType === 'company' ? '' : editCustomer.lastName || '', customerType: customerType === 'company' ? 'COMPANY' : 'INDIVIDUAL' };
       if (isEditing && editCustomer.id) { await api.put(`/api/customers/${editCustomer.id}`, payload); showSnackbar(t('saved'), 'success'); }
@@ -191,6 +196,8 @@ export default function Home() {
       const m = e instanceof Error ? e.message : '';
       showSnackbar(m && !m.startsWith('HTTP') ? translateServerMessage(lang, m) : t('error'), 'error');
     }
+    });
+    if (ranCustomer) setCustomerBusy(false);
   };
 
   const serverMsg = (e: unknown, fallback: string) => {
@@ -208,6 +215,8 @@ export default function Home() {
     catch (e) { showSnackbar(serverMsg(e, t('deleteFailed')), 'error'); }
   };
 
+  const orderFlight = useRef(false);
+  const [orderBusy, setOrderBusy] = useState(false);
   const handleSaveOrder = async () => {
     const customerId = parseInt(editOrder.customerId);
     const price = parseFloat(editOrder.price);
@@ -216,6 +225,8 @@ export default function Home() {
     if (isNaN(customerId) || customerId <= 0) { showSnackbar(t('customerIdRequired'), 'error'); return; }
     if (isNaN(price) || price < 0) { showSnackbar(t('priceRequired'), 'error'); return; }
     if (isNaN(quantity) || quantity <= 0) { showSnackbar(t('quantityRequired'), 'error'); return; }
+    setOrderBusy(true);
+    const ranOrder = await runOnce(orderFlight, async () => {
     try {
       const body: Record<string, unknown> = { customerId, productName: editOrder.productName.trim(), price, quantity, status: editOrder.status || 'PENDING' };
       if (isEditingOrder && editOrderId) {
@@ -225,6 +236,8 @@ export default function Home() {
       else { await api.post('/api/orders', body); showSnackbar(t('saved'), 'success'); }
       setOrderDialogOpen(false); fetchOrders();
     } catch { showSnackbar(t('error'), 'error'); }
+    });
+    if (ranOrder) setOrderBusy(false);
   };
 
   const handleDeleteOrder = async () => {
@@ -646,11 +659,11 @@ export default function Home() {
 
         <CustomerDialogs t={t} lang={lang} isAdmin={isAdmin} orders={orders} dialogOpen={dialogOpen} setDialogOpen={setDialogOpen}
           isEditing={isEditing} editCustomer={editCustomer} setEditCustomer={setEditCustomer} customerType={customerType}
-          setCustomerType={setCustomerType} formErrors={formErrors} setFormErrors={setFormErrors} handleSave={handleSave}
+          setCustomerType={setCustomerType} formErrors={formErrors} setFormErrors={setFormErrors} handleSave={handleSave} busy={customerBusy}
           deleteDialogOpen={deleteDialogOpen} setDeleteDialogOpen={setDeleteDialogOpen} handleDelete={handleDelete}
           drawerCustomer={drawerCustomer} setDrawerCustomer={setDrawerCustomer} openEdit={openEdit} openDelete={openDelete} />
         <OrderDialogs t={t} customers={customers} orderDialogOpen={orderDialogOpen} setOrderDialogOpen={setOrderDialogOpen}
-          isEditingOrder={isEditingOrder} editOrder={editOrder} setEditOrder={setEditOrder} handleSaveOrder={handleSaveOrder}
+          isEditingOrder={isEditingOrder} editOrder={editOrder} setEditOrder={setEditOrder} handleSaveOrder={handleSaveOrder} busy={orderBusy}
           orderDeleteDialogOpen={orderDeleteDialogOpen} setOrderDeleteDialogOpen={setOrderDeleteDialogOpen} handleDeleteOrder={handleDeleteOrder} />
         <UserDialogs t={t} deleteUserDialogOpen={deleteUserDialogOpen} setDeleteUserDialogOpen={setDeleteUserDialogOpen}
           handleDeleteUser={handleDeleteUser} addUserDialogOpen={addUserDialogOpen} setAddUserDialogOpen={setAddUserDialogOpen}
