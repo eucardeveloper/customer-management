@@ -13,6 +13,10 @@ import java.time.LocalDateTime;
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
+    boolean existsByEmailIgnoreCase(String email);
+
+    boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
+
     /**
      * Claims the customer for deletion in one atomic statement. Returns 1 if this caller got the claim,
      * 0 if the customer is gone or another delete holds a claim younger than {@code staleBefore}.

@@ -13,6 +13,7 @@ class CustomerRequestDTOValidationTest {
     private CustomerRequestDTO withType(String type) {
         CustomerRequestDTO dto = new CustomerRequestDTO();
         dto.setFirstName("Ada");
+        dto.setEmail("ada@example.com");   // iletişim bilgisi zorunlu (CustomerContactRequiredTest)
         dto.setCustomerType(type);
         return dto;
     }
