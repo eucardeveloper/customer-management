@@ -14,12 +14,13 @@ interface OrderDialogsProps {
   editOrder: OrderForm;
   setEditOrder: Dispatch<SetStateAction<OrderForm>>;
   handleSaveOrder: () => void | Promise<void>;
+  busy?: boolean;
   orderDeleteDialogOpen: boolean;
   setOrderDeleteDialogOpen: Dispatch<SetStateAction<boolean>>;
   handleDeleteOrder: () => void | Promise<void>;
 }
 
-export function OrderDialogs({ t, customers, orderDialogOpen, setOrderDialogOpen, isEditingOrder, editOrder, setEditOrder, handleSaveOrder, orderDeleteDialogOpen, setOrderDeleteDialogOpen, handleDeleteOrder }: OrderDialogsProps) {
+export function OrderDialogs({ t, customers, orderDialogOpen, setOrderDialogOpen, isEditingOrder, editOrder, setEditOrder, handleSaveOrder, busy, orderDeleteDialogOpen, setOrderDeleteDialogOpen, handleDeleteOrder }: OrderDialogsProps) {
   return (
     <>
         {/* Order Add/Edit */}
@@ -49,7 +50,7 @@ export function OrderDialogs({ t, customers, orderDialogOpen, setOrderDialogOpen
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setOrderDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
-            <Button variant="contained" onClick={handleSaveOrder} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{isEditingOrder ? t('update') : t('addOrder')}</Button>
+            <Button variant="contained" onClick={handleSaveOrder} disabled={busy} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{isEditingOrder ? t('update') : t('addOrder')}</Button>
           </DialogActions>
         </Dialog>
 
