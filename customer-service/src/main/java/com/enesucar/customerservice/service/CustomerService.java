@@ -5,6 +5,7 @@ import com.enesucar.customerservice.dto.CustomerRequestDTO;
 import com.enesucar.customerservice.dto.CustomerResponseDTO;
 import com.enesucar.customerservice.entity.Customer;
 import com.enesucar.customerservice.exception.CustomerHasOrdersException;
+import com.enesucar.customerservice.exception.DuplicateEmailException;
 import com.enesucar.customerservice.exception.DeletionInProgressException;
 import com.enesucar.customerservice.exception.OrderServiceUnavailableException;
 import com.enesucar.customerservice.exception.ResourceNotFoundException;
@@ -45,14 +46,27 @@ public class CustomerService {
     }
 
     public CustomerResponseDTO createCustomer(CustomerRequestDTO request) {
+        String email = normalizedEmail(request);
+        if (email != null && customerRepository.existsByEmailIgnoreCase(email)) {
+            throw new DuplicateEmailException(email);
+        }
         Customer customer = new Customer();
         customer.setFirstName(request.getFirstName());
         customer.setLastName(request.getLastName());
-        customer.setEmail(request.getEmail());
+        customer.setEmail(email);
         customer.setPhone(request.getPhone());
         customer.setCustomerType(request.getCustomerType());
         Customer saved = customerRepository.save(customer);
         return toResponse(saved);
+    }
+
+    /** Trimmed e-mail, or null when blank (a blank address is "no address", not a value to compare). */
+    private static String normalizedEmail(CustomerRequestDTO request) {
+        String email = request.getEmail();
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        return email.trim();
     }
 
     public CustomerResponseDTO getCustomerById(Long id) {
@@ -74,9 +88,13 @@ public class CustomerService {
     public CustomerResponseDTO updateCustomer(Long id, CustomerRequestDTO request) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with ID: " + id));
+        String email = normalizedEmail(request);
+        if (email != null && customerRepository.existsByEmailIgnoreCaseAndIdNot(email, id)) {
+            throw new DuplicateEmailException(email);
+        }
         customer.setFirstName(request.getFirstName());
         customer.setLastName(request.getLastName());
-        customer.setEmail(request.getEmail());
+        customer.setEmail(email);
         customer.setPhone(request.getPhone());
         customer.setCustomerType(request.getCustomerType());
         Customer saved = customerRepository.save(customer);

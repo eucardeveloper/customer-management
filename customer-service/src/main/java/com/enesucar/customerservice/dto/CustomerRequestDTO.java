@@ -1,5 +1,7 @@
 package com.enesucar.customerservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -27,4 +29,14 @@ public class CustomerRequestDTO {
 
     @Pattern(regexp = "^(INDIVIDUAL|COMPANY)$", message = "Customer type must be INDIVIDUAL or COMPANY")
     private String customerType;
+
+    /**
+     * A customer needs at least one way to be reached. The screen already enforces this; the API must too,
+     * otherwise a direct call can create a customer nobody can contact.
+     */
+    @JsonIgnore
+    @AssertTrue(message = "Email or phone is required")
+    public boolean isContactProvided() {
+        return (email != null && !email.isBlank()) || (phone != null && !phone.isBlank());
+    }
 }
