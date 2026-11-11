@@ -38,6 +38,9 @@ class OrderServiceTest {
     private OutboxEventRepository outbox;
 
     @Mock
+    private com.enesucar.orderservice.repository.OrderAuditRepository audits;
+
+    @Mock
     private CustomerClient customerClient;
 
     // the service runs its writes through a TransactionTemplate; a mock manager just lets them run
