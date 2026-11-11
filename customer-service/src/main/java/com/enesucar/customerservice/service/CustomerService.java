@@ -11,6 +11,7 @@ import com.enesucar.customerservice.exception.OrderServiceUnavailableException;
 import com.enesucar.customerservice.exception.ResourceNotFoundException;
 import com.enesucar.customerservice.repository.OrderProjectionRepository;
 import com.enesucar.customerservice.repository.CustomerRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -56,8 +57,23 @@ public class CustomerService {
         customer.setEmail(email);
         customer.setPhone(request.getPhone());
         customer.setCustomerType(request.getCustomerType());
-        Customer saved = customerRepository.save(customer);
+        Customer saved = saveOrConflict(customer, email);
         return toResponse(saved);
+    }
+
+    /**
+     * The exists-check above is only a fast path; two concurrent requests can both pass it. The unique index
+     * (V5) is the real guard, so flush now and turn its violation into the same 409 the check produces.
+     */
+    private Customer saveOrConflict(Customer customer, String email) {
+        try {
+            return customerRepository.saveAndFlush(customer);
+        } catch (DataIntegrityViolationException e) {
+            if (email != null) {
+                throw new DuplicateEmailException(email);
+            }
+            throw e;
+        }
     }
 
     /** Trimmed e-mail, or null when blank (a blank address is "no address", not a value to compare). */
@@ -97,7 +113,7 @@ public class CustomerService {
         customer.setEmail(email);
         customer.setPhone(request.getPhone());
         customer.setCustomerType(request.getCustomerType());
-        Customer saved = customerRepository.save(customer);
+        Customer saved = saveOrConflict(customer, email);
         return toResponse(saved);
     }
 
