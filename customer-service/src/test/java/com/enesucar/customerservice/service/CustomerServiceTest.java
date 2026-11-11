@@ -78,7 +78,7 @@ class CustomerServiceTest {
 
     @Test
     void createCustomer_shouldSaveAndReturnResponse() {
-        when(customerRepository.save(any(Customer.class))).thenReturn(customer);
+        when(customerRepository.saveAndFlush(any(Customer.class))).thenReturn(customer);
         CustomerResponseDTO result = customerService.createCustomer(requestDTO);
         assertThat(result.getFirstName()).isEqualTo("John");
         assertThat(result.getEmail()).isEqualTo("john@test.com");
@@ -104,7 +104,7 @@ class CustomerServiceTest {
     @Test
     void updateCustomer_shouldUpdateAndReturn_whenExists() {
         when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
-        when(customerRepository.save(any(Customer.class))).thenReturn(customer);
+        when(customerRepository.saveAndFlush(any(Customer.class))).thenReturn(customer);
         CustomerResponseDTO result = customerService.updateCustomer(1L, requestDTO);
         assertThat(result.getFirstName()).isEqualTo("John");
         verify(customerRepository).save(any(Customer.class));
@@ -116,7 +116,7 @@ class CustomerServiceTest {
         assertThatThrownBy(() -> customerService.updateCustomer(99L, requestDTO))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Customer not found with ID: 99");
-        verify(customerRepository, never()).save(any());
+        verify(customerRepository, never()).saveAndFlush(any());
     }
 
     @Test

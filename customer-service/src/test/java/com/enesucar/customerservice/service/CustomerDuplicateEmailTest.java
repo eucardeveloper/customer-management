@@ -41,7 +41,7 @@ class CustomerDuplicateEmailTest {
         when(customerRepository.existsByEmailIgnoreCase("ayse@example.com")).thenReturn(true);
         assertThatThrownBy(() -> customerService.createCustomer(request(" ayse@example.com ")))
                 .isInstanceOf(DuplicateEmailException.class);
-        verify(customerRepository, never()).save(any());
+        verify(customerRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -52,6 +52,6 @@ class CustomerDuplicateEmailTest {
         when(customerRepository.existsByEmailIgnoreCaseAndIdNot("ayse@example.com", 5L)).thenReturn(true);
         assertThatThrownBy(() -> customerService.updateCustomer(5L, request("ayse@example.com")))
                 .isInstanceOf(DuplicateEmailException.class);
-        verify(customerRepository, never()).save(any());
+        verify(customerRepository, never()).saveAndFlush(any());
     }
 }
