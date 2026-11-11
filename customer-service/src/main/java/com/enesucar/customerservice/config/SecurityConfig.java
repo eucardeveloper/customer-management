@@ -50,6 +50,8 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         // Reading is open to any signed-in user; changing data is an ADMIN action.
                         // (The UI hides the buttons, this is what actually enforces it.)
+                        // The audit trail is for administrators only; this rule must stay above the general GET rule.
+                        .requestMatchers(HttpMethod.GET, "/api/customers/audit", "/api/customers/audit/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/customers/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/customers/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/customers/**").hasRole("ADMIN")

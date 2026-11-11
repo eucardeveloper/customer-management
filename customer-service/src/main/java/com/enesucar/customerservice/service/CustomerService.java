@@ -4,19 +4,27 @@ import com.enesucar.customerservice.client.OrderClient;
 import com.enesucar.customerservice.dto.CustomerRequestDTO;
 import com.enesucar.customerservice.dto.CustomerResponseDTO;
 import com.enesucar.customerservice.entity.Customer;
+import com.enesucar.customerservice.entity.CustomerAudit;
 import com.enesucar.customerservice.exception.CustomerHasOrdersException;
 import com.enesucar.customerservice.exception.DuplicateEmailException;
 import com.enesucar.customerservice.exception.DeletionInProgressException;
 import com.enesucar.customerservice.exception.OrderServiceUnavailableException;
 import com.enesucar.customerservice.exception.ResourceNotFoundException;
+import com.enesucar.customerservice.repository.CustomerAuditRepository;
 import com.enesucar.customerservice.repository.OrderProjectionRepository;
 import com.enesucar.customerservice.repository.CustomerRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,12 +39,39 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final OrderClient orderClient;
     private final OrderProjectionRepository orderProjection;
+    private final CustomerAuditRepository audits;
+    private final TransactionTemplate tx;
 
     public CustomerService(CustomerRepository customerRepository, OrderClient orderClient,
-                           OrderProjectionRepository orderProjection) {
+                           OrderProjectionRepository orderProjection, CustomerAuditRepository audits,
+                           PlatformTransactionManager transactionManager) {
         this.customerRepository = customerRepository;
         this.orderClient = orderClient;
         this.orderProjection = orderProjection;
+        this.audits = audits;
+        this.tx = new TransactionTemplate(transactionManager);
+    }
+
+    /**
+     * Written in the same transaction as the change it describes, so the row commits with the change or not
+     * at all. Personal data is minimised on purpose: names, e-mail and phone VALUES never go in, only which
+     * fields changed.
+     */
+    private void audit(Long customerId, String action, String details) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String actor = auth != null && auth.isAuthenticated() && auth.getName() != null ? auth.getName() : "system";
+        audits.save(new CustomerAudit(customerId, action, actor, details));
+    }
+
+    private static String describeChanges(Customer before, CustomerRequestDTO now, String newEmail) {
+        List<String> changed = new ArrayList<>();
+        if (!Objects.equals(before.getFirstName(), now.getFirstName())) changed.add("firstName");
+        if (!Objects.equals(before.getLastName(), now.getLastName())) changed.add("lastName");
+        String oldEmail = before.getEmail();
+        if (oldEmail == null ? newEmail != null : !oldEmail.equalsIgnoreCase(newEmail == null ? "" : newEmail)) changed.add("email");
+        if (!Objects.equals(before.getPhone(), now.getPhone())) changed.add("phone");
+        if (!Objects.equals(before.getCustomerType(), now.getCustomerType())) changed.add("customerType");
+        return changed.isEmpty() ? "No field changed" : "Changed: " + String.join(", ", changed);
     }
 
     public List<CustomerResponseDTO> getAllCustomers() {
@@ -57,7 +92,7 @@ public class CustomerService {
         customer.setEmail(email);
         customer.setPhone(request.getPhone());
         customer.setCustomerType(request.getCustomerType());
-        Customer saved = saveOrConflict(customer, email);
+        Customer saved = saveOrConflict(customer, email, "CREATED", "Customer created (type " + request.getCustomerType() + ")");
         return toResponse(saved);
     }
 
@@ -65,9 +100,13 @@ public class CustomerService {
      * The exists-check above is only a fast path; two concurrent requests can both pass it. The unique index
      * (V5) is the real guard, so flush now and turn its violation into the same 409 the check produces.
      */
-    private Customer saveOrConflict(Customer customer, String email) {
+    private Customer saveOrConflict(Customer customer, String email, String auditAction, String auditDetails) {
         try {
-            return customerRepository.saveAndFlush(customer);
+            return tx.execute(status -> {
+                Customer saved = customerRepository.saveAndFlush(customer);
+                audit(saved.getId(), auditAction, auditDetails);
+                return saved;
+            });
         } catch (DataIntegrityViolationException e) {
             if (email != null) {
                 throw new DuplicateEmailException(email);
@@ -108,12 +147,13 @@ public class CustomerService {
         if (email != null && customerRepository.existsByEmailIgnoreCaseAndIdNot(email, id)) {
             throw new DuplicateEmailException(email);
         }
+        String changes = describeChanges(customer, request, email);
         customer.setFirstName(request.getFirstName());
         customer.setLastName(request.getLastName());
         customer.setEmail(email);
         customer.setPhone(request.getPhone());
         customer.setCustomerType(request.getCustomerType());
-        Customer saved = saveOrConflict(customer, email);
+        Customer saved = saveOrConflict(customer, email, "UPDATED", changes);
         return toResponse(saved);
     }
 
@@ -139,7 +179,10 @@ public class CustomerService {
             if (hasOrders(id)) {
                 throw new CustomerHasOrdersException(id);
             }
-            customerRepository.deleteById(id);
+            tx.executeWithoutResult(status -> {
+                customerRepository.deleteById(id);
+                audit(id, "DELETED", "Customer deleted");
+            });
             deleted = true;
         } finally {
             if (!deleted) {
