@@ -1,7 +1,7 @@
 'use client';
 import { PieChart, Pie, Cell, Tooltip as ReTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { percentShares } from '@/lib/percent';
-import { sumRevenue, isPending, trendWindows, monthlySeries } from '@/lib/orderStats';
+import { sumRevenue, revenueOrders, isPending, trendWindows, monthlySeries } from '@/lib/orderStats';
 import { Box, Typography, Paper, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { pctChange } from '@/lib/trend';
 import { type Customer, type Order, ORDER_STATUSES, statusText, isCompany } from '../model';
@@ -53,7 +53,7 @@ export function AnalyticsTab({ t, orders, customers, isAdmin, now, chartData, ch
                   const allAnalyticsCards = [
                     { label: t('totalRevenue'), value: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: revF, sparkColor: '#2563eb', spark: seriesOf(sumRevenue), adminOnly: true },
                     { label: t('totalOrders'), value: orders.length.toString(), f: ordF, sparkColor: '#10b981', spark: seriesOf(os => os.length), adminOnly: false },
-                    { label: t('avgOrderValue'), value: (orders.length > 0 ? totalRevenue / orders.length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: avgF, sparkColor: '#f59e0b', spark: seriesOf(os => os.length ? sumRevenue(os) / os.length : 0), adminOnly: true },
+                    { label: t('avgOrderValue'), value: (revenueOrders(orders).length > 0 ? totalRevenue / revenueOrders(orders).length : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }), f: avgF, sparkColor: '#f59e0b', spark: seriesOf(os => revenueOrders(os).length ? sumRevenue(os) / revenueOrders(os).length : 0), adminOnly: true },
                     { label: t('pendingOrders'), value: orders.filter(isPending).length.toString(), f: pndF, sparkColor: '#ef4444', spark: seriesOf(os => os.filter(isPending).length), adminOnly: false },
                   ];
                   const analyticsCards = allAnalyticsCards.filter(c => isAdmin || !c.adminOnly);
