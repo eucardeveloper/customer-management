@@ -16,8 +16,14 @@ export const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const orderTotal = (o: Pick<StatOrder, 'price' | 'quantity'>): number => o.price * o.quantity;
 
-export const sumRevenue = (orders: Pick<StatOrder, 'price' | 'quantity'>[]): number =>
-  orders.reduce((sum, o) => sum + orderTotal(o), 0);
+/** A cancelled order never happened as far as money goes; every other status (pending, shipped, delivered) counts. */
+export const countsAsRevenue = (o: Pick<StatOrder, 'status'>): boolean => o.status !== 'CANCELLED';
+
+/** The orders that make up revenue figures (cancelled ones left out). */
+export const revenueOrders = <T extends Pick<StatOrder, 'status'>>(orders: T[]): T[] => orders.filter(countsAsRevenue);
+
+export const sumRevenue = (orders: Pick<StatOrder, 'price' | 'quantity' | 'status'>[]): number =>
+  revenueOrders(orders).reduce((sum, o) => sum + orderTotal(o), 0);
 
 /** An order without a status counts as pending (the API defaults it the same way). */
 export const isPending = (o: Pick<StatOrder, 'status'>): boolean => (o.status ?? 'PENDING') === 'PENDING';
@@ -63,7 +69,7 @@ export interface RevenuePoint {
 
 function revenueBy(orders: StatOrder[], keyOf: (d: Date) => string, labelOf: (d: Date) => string): RevenuePoint[] {
   const buckets = new Map<string, RevenuePoint>();
-  for (const o of orders) {
+  for (const o of revenueOrders(orders)) {
     if (!o.date) continue;
     const d = new Date(o.date);
     const key = keyOf(d);
@@ -94,11 +100,11 @@ export const dailyRevenue = (orders: StatOrder[], locale = 'en-US'): RevenuePoin
 
 /** The customers who brought in the most revenue, best first (ties: lower customer id first). */
 export function topCustomersByRevenue(
-  orders: Pick<StatOrder, 'customerId' | 'price' | 'quantity'>[],
+  orders: Pick<StatOrder, 'customerId' | 'price' | 'quantity' | 'status'>[],
   limit: number,
 ): { customerId: number; revenue: number }[] {
   const totals = new Map<number, number>();
-  for (const o of orders) totals.set(o.customerId, (totals.get(o.customerId) ?? 0) + orderTotal(o));
+  for (const o of revenueOrders(orders)) totals.set(o.customerId, (totals.get(o.customerId) ?? 0) + orderTotal(o));
   return [...totals.entries()]
     .map(([customerId, revenue]) => ({ customerId, revenue }))
     .sort((a, b) => b.revenue - a.revenue || a.customerId - b.customerId)

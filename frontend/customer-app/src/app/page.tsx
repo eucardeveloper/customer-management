@@ -12,7 +12,7 @@ import { useAuthUser } from '@/lib/useAuthUser';
 import { useMounted } from '@/lib/useMounted';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-import { sumRevenue, isPending, countByStatus, monthlyRevenue, dailyRevenue } from '@/lib/orderStats';
+import { sumRevenue, revenueOrders, isPending, countByStatus, monthlyRevenue, dailyRevenue } from '@/lib/orderStats';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { Box, AppBar, Toolbar, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Button, IconButton, Chip, Avatar, ThemeProvider, GlobalStyles, CssBaseline, Alert, Snackbar, Tooltip, Card, CardContent, SwipeableDrawer } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
@@ -160,7 +160,8 @@ export default function Home() {
   }, [tab, fetchCustomers, fetchOrders, fetchUsers]);
 
   const totalRevenue = sumRevenue(orders);
-  const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+  const countedOrders = revenueOrders(orders).length;
+  const avgOrderValue = countedOrders > 0 ? totalRevenue / countedOrders : 0;
 
   const validateCustomer = () => {
     const errors: Record<string, string> = {};

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DAY_MS, sumRevenue, isPending, countByStatus, trendWindows, deliveredRateChange,
-  monthlyRevenue, dailyRevenue, topCustomersByRevenue, monthlySeries,
+  monthlyRevenue, dailyRevenue, topCustomersByRevenue, monthlySeries, revenueOrders,
 } from '../src/lib/orderStats.ts';
 
 // Local-time dates, so the tests do not depend on the machine's time zone.
@@ -111,4 +111,21 @@ test('monthlyRevenue labels follow the requested locale and default to English',
   assert.equal(monthlyRevenue(orders)[0].label, "Oct '26");
   assert.match(monthlyRevenue(orders, 'tr-TR')[0].label, /^Eki '26$/);
   assert.match(monthlyRevenue(orders, 'de-DE')[0].label, /^Okt\.? '26$/);
+});
+
+test('cancelled orders are left out of every revenue figure', () => {
+  const orders = [
+    order({ customerId: 1, price: 100, status: 'DELIVERED', date: at(2026, 9, 2) }),
+    order({ customerId: 2, price: 500, status: 'CANCELLED', date: at(2026, 9, 2) }),
+    order({ customerId: 1, price: 50, status: 'PENDING', date: at(2026, 9, 3) }),
+  ];
+  assert.equal(sumRevenue(orders), 150);
+  assert.deepEqual(revenueOrders(orders).length, 2);
+  assert.deepEqual(monthlyRevenue(orders), [{ label: "Sep '26", value: 150 }]);
+  assert.deepEqual(dailyRevenue(orders), [{ label: 'Sep 2', value: 100 }, { label: 'Sep 3', value: 50 }]);
+  assert.deepEqual(topCustomersByRevenue(orders, 5), [{ customerId: 1, revenue: 150 }]);
+});
+
+test('an order without a status still counts as revenue (it is pending)', () => {
+  assert.equal(sumRevenue([{ price: 10, quantity: 2 }]), 20);
 });
