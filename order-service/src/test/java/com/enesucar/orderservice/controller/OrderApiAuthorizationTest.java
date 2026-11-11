@@ -87,4 +87,48 @@ class OrderApiAuthorizationTest {
             assertThat(order.hasNonNull("price")).isFalse();
         }
     }
+
+    @Test
+    void auditTrailIsAdminOnlyAndShowsWhoChangedWhat() throws Exception {
+        mvc.perform(get("/api/orders/audit")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/orders/audit").header("X-Auth-User", "user1").header("X-Auth-Role", "USER"))
+                .andExpect(status().isForbidden());
+
+        String created = mvc.perform(post("/api/orders").header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN")
+                        .contentType(MediaType.APPLICATION_JSON).content(ORDER))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long id = json.readTree(created).get("id").asLong();
+
+        String body = mvc.perform(get("/api/orders/audit").param("orderId", String.valueOf(id))
+                        .header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode page = json.readTree(body);
+        assertThat(page.get("total").asLong()).isEqualTo(1);
+        JsonNode row = page.get("items").get(0);
+        assertThat(row.get("action").asText()).isEqualTo("CREATE");
+        assertThat(row.get("actor").asText()).isEqualTo("admin");
+        assertThat(row.get("orderId").asLong()).isEqualTo(id);
+    }
+
+    @Test
+    void auditPagingIsClampedAndNewestFirst() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            mvc.perform(post("/api/orders").header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN")
+                    .contentType(MediaType.APPLICATION_JSON).content(ORDER)).andExpect(status().isCreated());
+        }
+        String body = mvc.perform(get("/api/orders/audit").param("page", "-5").param("size", "2")
+                        .header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode page = json.readTree(body);
+        assertThat(page.get("page").asInt()).isEqualTo(0);
+        assertThat(page.get("size").asInt()).isEqualTo(2);
+        assertThat(page.get("items")).hasSize(2);
+        assertThat(page.get("items").get(0).get("id").asLong()).isGreaterThan(page.get("items").get(1).get("id").asLong());
+        assertThat(page.get("total").asLong()).isGreaterThanOrEqualTo(3);
+
+        String huge = mvc.perform(get("/api/orders/audit").param("size", "100000")
+                        .header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(json.readTree(huge).get("size").asInt()).isEqualTo(100);
+    }
 }

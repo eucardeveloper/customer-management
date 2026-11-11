@@ -28,6 +28,8 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import BarChartIcon from '@mui/icons-material/BarChart';
 
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import HistoryIcon from '@mui/icons-material/History';
+import { AuditTab } from './views/AuditTab';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
@@ -51,7 +53,7 @@ import { orderMatchesSearch } from '../lib/orderSearch';
 import { customerFullName } from '../lib/customerName';
 
 export default function Home() {
-  const [tab, setTab] = useState<'dashboard' | 'customers' | 'orders' | 'ai' | 'analytics' | 'users'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'customers' | 'orders' | 'ai' | 'analytics' | 'users' | 'audit'>('dashboard');
   const [lang, setLang] = useLang();
   const dateLocale = lang === 'tr' ? 'tr-TR' : lang === 'de' ? 'de-DE' : 'en-US';
   // data loaders read the language through a ref so that switching language does not reload the data
@@ -414,9 +416,10 @@ export default function Home() {
     { key: 'analytics', label: t('analytics'), icon: <TrendingUpIcon />, count: null, color: '#3b82f6' },
     { key: 'ai', label: t('aiAgent'), icon: <SmartToyIcon />, count: null, color: '#a78bfa' },
     ...(isAdmin ? [{ key: 'users', label: t('userManagement'), icon: <ManageAccountsIcon />, count: users.length, color: '#34d399' }] : []),
+    ...(isAdmin ? [{ key: 'audit', label: t('audit'), icon: <HistoryIcon />, count: null, color: '#34d399' }] : []),
   ];
 
-  const pageTitle = tab === 'dashboard' ? t('dashboard') : tab === 'customers' ? t('customers') : tab === 'orders' ? t('orders') : tab === 'analytics' ? t('analytics') : tab === 'users' ? t('userManagement') : t('aiAgent');
+  const pageTitle = tab === 'dashboard' ? t('dashboard') : tab === 'customers' ? t('customers') : tab === 'orders' ? t('orders') : tab === 'analytics' ? t('analytics') : tab === 'users' ? t('userManagement') : tab === 'audit' ? t('audit') : t('aiAgent');
 
   // Stat cards per tab
   const statCards = tab === 'customers'
@@ -571,6 +574,7 @@ export default function Home() {
                   {tab === 'analytics' && t('businessIntelligence')}
                   {tab === 'ai' && t('aiSubtitle')}
                   {tab === 'users' && `${users.length} ${t('registeredAccounts')}`}
+                  {tab === 'audit' && t('auditSubtitle')}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -635,6 +639,9 @@ export default function Home() {
                 setDeleteUserDialogOpen={setDeleteUserDialogOpen} setDeleteUserId={setDeleteUserId} setRoleDialogOpen={setRoleDialogOpen}
                 setSelectedRole={setSelectedRole} setSelectedUserId={setSelectedUserId} />
             )}
+
+            {/* ── AUDIT TAB ── */}
+            {tab === 'audit' && isAdmin && <AuditTab t={t} />}
 
             {/* ── DASHBOARD TAB ── */}
             {tab === 'dashboard' && (
