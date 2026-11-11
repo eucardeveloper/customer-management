@@ -50,6 +50,8 @@ public class SecurityConfig {
                         // Spring forwards sendError (403, 404...) to /error. Without this the forward is judged
                         // as anonymous and every 403 turns into an empty 401 on a real server.
                         .requestMatchers("/error").permitAll()
+                        // The audit trail shows who changed what; it is for ADMIN only (must stay above the general GET rule).
+                        .requestMatchers(HttpMethod.GET, "/api/orders/audit", "/api/orders/audit/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/orders/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/orders/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/orders/**").hasRole("ADMIN")
