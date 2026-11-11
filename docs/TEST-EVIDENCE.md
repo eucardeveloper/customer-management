@@ -4,12 +4,12 @@ What was run, where, and what came out. "Run by the author" means a command run 
 
 | Check | Result | How |
 |---|---|---|
-| auth-service | 101 passed (incl. `LastAdminConcurrencyTest` on PostgreSQL) | `./mvnw test` |
-| order-service | 61 passed | `./mvnw test` |
-| customer-service | 39 passed | `./mvnw test` |
-| api-gateway | 21 passed | `./mvnw test` |
-| Frontend unit tests | customer-app 41 passed (API client, auth helpers, percentages, trend badges, order statistics, translations, server messages); ai-agent-app 5 passed (chat guard); lint, tsc and production build clean | `npm test` in each app |
-| End-to-end (Playwright) | 11 tests in `e2e/tests/`: 9 in `journey.spec.ts`, and in `integrity.spec.ts` the race between deleting a customer and adding an order (20 rounds through the gateway; no order may outlive its customer) and the role matrix (ADMIN, USER and anonymous callers on every endpoint, price masking); 11 passed, 0 skipped in the `E2E` workflow on 2026-10-22; the suite removes the data it creates | `cd e2e && npx playwright test` against `docker compose up` |
+| auth-service | 106 passed (incl. `LastAdminConcurrencyTest` on PostgreSQL) | `./mvnw test`; CI run 40471202871 (27.10.2026) |
+| order-service | 73 passed | `./mvnw test`; CI run 40471202871 |
+| customer-service | 52 passed | `./mvnw test`; CI run 40471202871 |
+| api-gateway | 21 passed | `./mvnw test`; CI run 40471202871 |
+| Frontend unit tests | customer-app 51 passed (API client, auth helpers, percentages, trend badges, order statistics, translations, server messages); ai-agent-app 5 passed (chat guard); lint, tsc and production build clean | `npm test` in each app |
+| End-to-end (Playwright) | 12 tests in `e2e/tests/`: 10 in `journey.spec.ts`, and in `integrity.spec.ts` the race between deleting a customer and adding an order (20 rounds through the gateway; no order may outlive its customer) and the role matrix (ADMIN, USER and anonymous callers on every endpoint, price masking); 12 passed, 0 skipped in the `E2E` workflow on 2026-10-27 (run 40471202881); the suite removes the data it creates | `cd e2e && npx playwright test` against `docker compose up` |
 | Monitoring config | `promtool check config` valid; 3 alert rules, 3 rule unit tests pass; a deliberately broken threshold makes them fail | CI job "monitoring" |
 | Backup and restore | `./restore-test.sh` PASS (all three databases; three changed rows gone; counts users=2, customers=5, orders=8 unchanged); with the restore step removed it reports FAIL | E2E workflow step, or by hand |
 | Live, on docker compose | a forged identity header sent straight to the order service answers 401 (gateway shared secret); login/logout; unauthenticated 401; wrong password 401; 30 failures from one address then 429; password change ends the old session; deleting a customer with orders 409; order for an unknown customer 400; order events reach Kafka via the outbox (`ORDER_CREATED`, `ORDER_UPDATED`, `ORDER_DELETED`, all `published`) | commands in the commit history / `docs/DEPLOY-RAILWAY.md` smoke test |
@@ -17,7 +17,7 @@ What was run, where, and what came out. "Run by the author" means a command run 
 | Manual scenarios | 36 browser/API scenarios listed in [MANUAL-TEST-MATRIX.md](MANUAL-TEST-MATRIX.md); status per row, none marked passed before it is run | by hand against `docker compose up` |
 | Not verified here | the hosted (Railway) deployment and its same-origin mode (a hosted instance existed for a time and has been taken down; this repository ships no evidence for it, only the runbook); consumer idempotency against a live broker (covered by Testcontainers tests only) | see `docs/DEPLOY-RAILWAY.md` |
 
-Counts of the backend and frontend rows are the Surefire and `node --test` totals of a run on 2026-10-22 on the commit that added them (0 failures, 0 skipped; Docker available, so the Testcontainers tests ran). Before that commit the `CI` workflow reported auth 90, order 58, customer 38, gateway 19 on `57bec16`, and the customer-app count was listed as 35 while the suite already had 41. The numbers above are updated when the suites are run again; they are not a promise about later commits.
+Backend counts (auth 106, order 73, customer 52, gateway 21 = 252) and the customer-app count (51) are from the CI run on `main` of 2026-10-27 (run 40471202871, all green). The earlier figures (auth 101, order 61, customer 39, gateway 21; customer-app 41) were the Surefire and `node --test` totals of a run on 2026-10-22 on the commit that added them (0 failures, 0 skipped; Docker available, so the Testcontainers tests ran). Before that commit the `CI` workflow reported auth 90, order 58, customer 38, gateway 19 on `57bec16`, and the customer-app count was listed as 35 while the suite already had 41. The numbers above are updated when the suites are run again; they are not a promise about later commits.
 
 ## Defects found by the 2026-10-22 review
 
