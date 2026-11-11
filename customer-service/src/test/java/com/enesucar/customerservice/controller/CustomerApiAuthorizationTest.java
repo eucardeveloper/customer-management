@@ -52,4 +52,14 @@ class CustomerApiAuthorizationTest {
         mvc.perform(delete("/api/customers/1").header("X-Auth-User", "user1").header("X-Auth-Role", "USER"))
                 .andExpect(status().isForbidden());
     }
+    @Test
+    void auditTrailIsAdminOnly() throws Exception {
+        mvc.perform(get("/api/customers/audit")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/customers/audit").header("X-Auth-User", "user1").header("X-Auth-Role", "USER"))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/customers/audit/anything").header("X-Auth-User", "user1").header("X-Auth-Role", "USER"))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/customers/audit").header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN"))
+                .andExpect(status().isOk());
+    }
 }

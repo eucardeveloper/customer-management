@@ -27,6 +27,8 @@ class CustomerDuplicateEmailTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private OrderClient orderClient;
     @Mock private OrderProjectionRepository orderProjection;
+    @Mock private com.enesucar.customerservice.repository.CustomerAuditRepository customerAudits;
+    @Mock private org.springframework.transaction.PlatformTransactionManager transactionManager;
     @InjectMocks private CustomerService customerService;
 
     private CustomerRequestDTO request(String email) {

@@ -37,6 +37,12 @@ class CustomerServiceTest {
     @Mock
     private com.enesucar.customerservice.repository.OrderProjectionRepository orderProjection;
 
+    @Mock
+    private com.enesucar.customerservice.repository.CustomerAuditRepository customerAudits;
+
+    @Mock
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     @InjectMocks
     private CustomerService customerService;
 
