@@ -22,6 +22,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthAuditService audit;
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
@@ -33,6 +34,7 @@ public class UserService {
      * An administrator adds an account with the chosen role. Unlike public sign-up this issues no session:
      * the admin who calls it stays signed in as themselves.
      */
+    @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         Role role = parseRole(request.getRole());
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -47,12 +49,16 @@ public class UserService {
                 .email(request.getEmail())
                 .role(role)
                 .build());
+        audit.record(AuthAuditService.USER_CREATED, AuthAuditService.currentActor(), user.getUsername(),
+                "role " + user.getRole());
         return new UserResponse(user.getId(), user.getUsername(), user.getEmail(), user.getRole());
     }
 
     @Transactional
     public void deleteUser(Long id) {
         requireAnotherAdmin(id, userRepository.lockAdminIds());
+        userRepository.findById(id).ifPresent(u -> audit.record(AuthAuditService.USER_DELETED,
+                AuthAuditService.currentActor(), u.getUsername(), "role " + u.getRole()));
         userRepository.deleteById(id);
     }
 
@@ -76,19 +82,25 @@ public class UserService {
         if (newRole != Role.ADMIN) {
             requireAnotherAdmin(id, admins);
         }
+        Role oldRole = user.getRole();
         user.setRole(newRole);
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
+        audit.record(AuthAuditService.ROLE_CHANGED, AuthAuditService.currentActor(), user.getUsername(),
+                oldRole + " -> " + newRole);
         return new UserResponse(user.getId(), user.getUsername(), user.getEmail(), user.getRole());
     }
 
     /** Admin sets a new password for a user who forgot theirs. */
+    @Transactional
     public void resetPassword(Long id, String newPassword) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
+        audit.record(AuthAuditService.PASSWORD_RESET, AuthAuditService.currentActor(), user.getUsername(),
+                "sessions ended");
     }
 
     private static Role parseRole(String role) {

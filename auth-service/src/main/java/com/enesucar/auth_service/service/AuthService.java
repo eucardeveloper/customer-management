@@ -32,6 +32,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final RevokedTokenRepository revokedTokens;
+    private final AuthAuditService audit;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -49,6 +50,7 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+        audit.record(AuthAuditService.USER_REGISTERED, user.getUsername(), user.getUsername(), "self sign-up");
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getTokenVersion(), user.getId());
         return new AuthResponse(token, user.getUsername(), user.getRole().name());
@@ -70,6 +72,7 @@ public class AuthService {
             );
         } catch (AuthenticationException ex) {
             loginAttemptLimiter.recordFailureIp(clientIp);
+            audit.record(AuthAuditService.LOGIN_FAILED, request.getUsername(), request.getUsername(), "bad credentials");
             throw ex;
         }
         loginAttemptLimiter.reset(request.getUsername());
@@ -78,6 +81,7 @@ public class AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BadCredentialsException("Invalid username or password"));
 
+        audit.record(AuthAuditService.LOGIN_SUCCESS, user.getUsername(), user.getUsername(), null);
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getTokenVersion(), user.getId());
         return new AuthResponse(token, user.getUsername(), user.getRole().name());
     }
@@ -103,6 +107,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setTokenVersion(user.getTokenVersion() + 1); // signs out every session, including this one
         userRepository.save(user);
+        audit.record(AuthAuditService.PASSWORD_CHANGED, username, username, "sessions ended");
         loginAttemptLimiter.reset(throttleKey);
     }
 
@@ -120,5 +125,7 @@ public class AuthService {
         }
         var expiry = jwtUtil.extractExpiration(token).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
         revokedTokens.save(new RevokedToken(jti, expiry));
+        String who = jwtUtil.extractUsername(token);
+        audit.record(AuthAuditService.LOGOUT, who, who, null);
     }
 }

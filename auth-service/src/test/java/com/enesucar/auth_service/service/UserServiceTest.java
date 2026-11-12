@@ -28,6 +28,9 @@ class UserServiceTest {
     @Mock
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AuthAuditService audit;
+
     @InjectMocks
     private UserService userService;
 
