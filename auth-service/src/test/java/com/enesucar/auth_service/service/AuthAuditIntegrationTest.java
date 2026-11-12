@@ -4,8 +4,10 @@ import com.enesucar.auth_service.entity.AuthAudit;
 import com.enesucar.auth_service.entity.Role;
 import com.enesucar.auth_service.entity.User;
 import com.enesucar.auth_service.repository.AuthAuditRepository;
+import com.enesucar.auth_service.repository.LoginFailureRepository;
 import com.enesucar.auth_service.repository.UserRepository;
 import com.enesucar.auth_service.security.JwtUtil;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,7 @@ class AuthAuditIntegrationTest {
     @Autowired WebApplicationContext context;
     @Autowired UserRepository users;
     @Autowired AuthAuditRepository audits;
+    @Autowired LoginFailureRepository loginFailures;
     @Autowired PasswordEncoder encoder;
     @Autowired JwtUtil jwtUtil;
 
@@ -54,6 +57,12 @@ class AuthAuditIntegrationTest {
         adminPassword = "Pw-" + UUID.randomUUID();
         admin = users.save(User.builder().username(adminName).email(adminName + "@example.com")
                 .password(encoder.encode(adminPassword)).role(Role.ADMIN).build());
+    }
+
+    /** Failed sign-ins are counted in a table other tests count rows in; leave it as we found it. */
+    @AfterEach
+    void leaveNoLoginFailuresBehind() {
+        loginFailures.deleteAll();
     }
 
     private static String shortId() {
