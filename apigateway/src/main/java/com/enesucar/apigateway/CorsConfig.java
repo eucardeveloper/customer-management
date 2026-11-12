@@ -21,7 +21,9 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
+        config.setAllowedHeaders(List.of("Content-Type", "Authorization", "X-Request-Id"));
+        // Without this the browser hides the id from page scripts, so a user could not quote it in a bug report.
+        config.setExposedHeaders(List.of("X-Request-Id"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
