@@ -26,6 +26,24 @@ jobs:
       - name: Run Auth Service Tests
         run: mvn test --no-transfer-progress
         working-directory: auth-service
+      - name: JaCoCo summary (auth-service)
+        if: always()
+        run: |
+          if [ -f target/site/jacoco/jacoco.csv ]; then
+            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv
+          mi = ci = mb = cb = 0
+          for r in csv.DictReader(open("target/site/jacoco/jacoco.csv")):
+              mi += int(r["INSTRUCTION_MISSED"]); ci += int(r["INSTRUCTION_COVERED"])
+              mb += int(r["BRANCH_MISSED"]); cb += int(r["BRANCH_COVERED"])
+          print("### JaCoCo (auth-service)")
+          print(f"- Instructions: {100*ci/(ci+mi):.1f}% ({ci}/{ci+mi})")
+          print(f"- Branches: {100*cb/(cb+mb):.1f}% ({cb}/{cb+mb})")
+          PY
+          else
+            echo "JaCoCo report not found (auth-service)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+        working-directory: auth-service
 
   api-gateway:
     name: API Gateway Tests
@@ -44,6 +62,24 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('apigateway/pom.xml') }}
       - name: Run API Gateway Tests
         run: mvn test --no-transfer-progress
+        working-directory: apigateway
+      - name: JaCoCo summary (api-gateway)
+        if: always()
+        run: |
+          if [ -f target/site/jacoco/jacoco.csv ]; then
+            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv
+          mi = ci = mb = cb = 0
+          for r in csv.DictReader(open("target/site/jacoco/jacoco.csv")):
+              mi += int(r["INSTRUCTION_MISSED"]); ci += int(r["INSTRUCTION_COVERED"])
+              mb += int(r["BRANCH_MISSED"]); cb += int(r["BRANCH_COVERED"])
+          print("### JaCoCo (api-gateway)")
+          print(f"- Instructions: {100*ci/(ci+mi):.1f}% ({ci}/{ci+mi})")
+          print(f"- Branches: {100*cb/(cb+mb):.1f}% ({cb}/{cb+mb})")
+          PY
+          else
+            echo "JaCoCo report not found (api-gateway)" >> "$GITHUB_STEP_SUMMARY"
+          fi
         working-directory: apigateway
 
   customer-service:
@@ -64,6 +100,24 @@ jobs:
       - name: Run Customer Service Tests
         run: mvn test --no-transfer-progress
         working-directory: customer-service
+      - name: JaCoCo summary (customer-service)
+        if: always()
+        run: |
+          if [ -f target/site/jacoco/jacoco.csv ]; then
+            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv
+          mi = ci = mb = cb = 0
+          for r in csv.DictReader(open("target/site/jacoco/jacoco.csv")):
+              mi += int(r["INSTRUCTION_MISSED"]); ci += int(r["INSTRUCTION_COVERED"])
+              mb += int(r["BRANCH_MISSED"]); cb += int(r["BRANCH_COVERED"])
+          print("### JaCoCo (customer-service)")
+          print(f"- Instructions: {100*ci/(ci+mi):.1f}% ({ci}/{ci+mi})")
+          print(f"- Branches: {100*cb/(cb+mb):.1f}% ({cb}/{cb+mb})")
+          PY
+          else
+            echo "JaCoCo report not found (customer-service)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+        working-directory: customer-service
 
   order-service:
     name: Order Service Tests
@@ -82,6 +136,24 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('order-service/pom.xml') }}
       - name: Run Order Service Tests
         run: mvn test --no-transfer-progress
+        working-directory: order-service
+      - name: JaCoCo summary (order-service)
+        if: always()
+        run: |
+          if [ -f target/site/jacoco/jacoco.csv ]; then
+            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv
+          mi = ci = mb = cb = 0
+          for r in csv.DictReader(open("target/site/jacoco/jacoco.csv")):
+              mi += int(r["INSTRUCTION_MISSED"]); ci += int(r["INSTRUCTION_COVERED"])
+              mb += int(r["BRANCH_MISSED"]); cb += int(r["BRANCH_COVERED"])
+          print("### JaCoCo (order-service)")
+          print(f"- Instructions: {100*ci/(ci+mi):.1f}% ({ci}/{ci+mi})")
+          print(f"- Branches: {100*cb/(cb+mb):.1f}% ({cb}/{cb+mb})")
+          PY
+          else
+            echo "JaCoCo report not found (order-service)" >> "$GITHUB_STEP_SUMMARY"
+          fi
         working-directory: order-service
 
   monitoring:
