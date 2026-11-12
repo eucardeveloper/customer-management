@@ -49,6 +49,9 @@ class AuthServiceTest {
     @Mock
     private com.enesucar.auth_service.repository.RevokedTokenRepository revokedTokens;
 
+    @Mock
+    private AuthAuditService audit;
+
     @InjectMocks
     private AuthService authService;
 
