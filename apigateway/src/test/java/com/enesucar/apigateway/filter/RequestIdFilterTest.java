@@ -22,7 +22,7 @@ class RequestIdFilterTest {
         }
         MockServerWebExchange exchange = MockServerWebExchange.from(req);
         AtomicReference<ServerWebExchange> seen = new AtomicReference<>();
-        filter.filter(exchange, ex -> { seen.set(ex); return Mono.empty(); }).block();
+        filter.filter(exchange, ex -> { seen.set(ex); return ex.getResponse().setComplete(); }).block();
         return new String[]{
                 seen.get().getRequest().getHeaders().getFirst(RequestIdFilter.HEADER),
                 exchange.getResponse().getHeaders().getFirst(RequestIdFilter.HEADER)};
@@ -53,6 +53,19 @@ class RequestIdFilterTest {
     void replacesAnIdThatIsTooShortOrTooLong() {
         assertThat(run("short")[0]).hasSize(36);
         assertThat(run("x".repeat(65))[0]).hasSize(36);
+    }
+
+    @Test
+    void theResponseCarriesTheIdOnceEvenWhenAServiceEchoesIt() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/customers")
+                .header(RequestIdFilter.HEADER, "client-req-12345"));
+
+        filter.filter(exchange, ex -> {
+            ex.getResponse().getHeaders().add(RequestIdFilter.HEADER, "client-req-12345"); // what the proxied service sends back
+            return ex.getResponse().setComplete();
+        }).block();
+
+        assertThat(exchange.getResponse().getHeaders().get(RequestIdFilter.HEADER)).containsExactly("client-req-12345");
     }
 
     @Test

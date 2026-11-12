@@ -35,7 +35,11 @@ public class RequestIdFilter implements GlobalFilter, Ordered {
         String id = incoming != null && SAFE.matcher(incoming).matches() ? incoming : UUID.randomUUID().toString();
 
         ServerHttpRequest request = exchange.getRequest().mutate().headers(h -> h.set(HEADER, id)).build();
-        exchange.getResponse().getHeaders().set(HEADER, id);
+        // Set just before the response is sent so it replaces the copy a service echoes (otherwise: "id, id").
+        exchange.getResponse().beforeCommit(() -> {
+            exchange.getResponse().getHeaders().set(HEADER, id);
+            return Mono.empty();
+        });
         return chain.filter(exchange.mutate().request(request).build());
     }
 }
