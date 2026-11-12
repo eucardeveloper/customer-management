@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -18,11 +20,14 @@ import java.util.regex.Pattern;
  * Puts the request id from the gateway (header X-Request-Id) into the logging context, so every log line of
  * this request carries it. A missing or malformed id (the header is the caller's, so it is untrusted: a value
  * with line breaks could forge log entries) is replaced by a fresh one. The context is always cleared, because
- * the server reuses threads.
+ * the server reuses threads. Also writes one access-log line per request (method, path, status, time); the query
+ * string is left out because it can carry personal data, and the Prometheus/health probes are skipped as noise.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestIdFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(RequestIdFilter.class);
 
     public static final String HEADER = "X-Request-Id";
     public static final String MDC_KEY = "requestId";
@@ -35,9 +40,14 @@ public class RequestIdFilter extends OncePerRequestFilter {
         String id = incoming != null && SAFE.matcher(incoming).matches() ? incoming : UUID.randomUUID().toString();
         MDC.put(MDC_KEY, id);
         response.setHeader(HEADER, id);
+        long start = System.nanoTime();
         try {
             chain.doFilter(request, response);
         } finally {
+            if (!request.getRequestURI().startsWith("/actuator")) {
+                log.info("{} {} -> {} ({} ms)", request.getMethod(), request.getRequestURI(), response.getStatus(),
+                        (System.nanoTime() - start) / 1_000_000);
+            }
             MDC.remove(MDC_KEY);
         }
     }
