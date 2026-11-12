@@ -33,6 +33,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
+                // CSRF is handled at the gateway (SameSite=Strict cookie + Origin check; the cookie is never forwarded),
+                // and this service has no cookie session to protect: see docs/adr/0006-csrf-handled-at-the-gateway.md
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
