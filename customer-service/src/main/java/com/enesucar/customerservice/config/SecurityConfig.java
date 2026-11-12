@@ -33,6 +33,8 @@ public class SecurityConfig {
                                            @Value("${gateway.shared-secret:}") String gatewaySecret,
                                            @Value("${gateway.allow-unsigned-headers:false}") boolean allowUnsignedHeaders) throws Exception {
         return http
+                // CSRF is handled at the gateway (SameSite=Strict cookie + Origin check; the cookie is never forwarded),
+                // and this service has no cookie session to protect: see docs/adr/0006-csrf-handled-at-the-gateway.md
                 .csrf(AbstractHttpConfigurer::disable)
                 // Anonymous requests answer 401 (Spring's default would be 403)
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
