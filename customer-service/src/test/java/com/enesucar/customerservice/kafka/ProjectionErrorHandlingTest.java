@@ -37,4 +37,12 @@ class ProjectionErrorHandlingTest {
         assertThat(deadLettered).containsExactly("order-1:db down");
         assertThat(registry.get(ProjectionErrorHandling.DLT_COUNTER).counter().count()).isEqualTo(1.0);
     }
+
+    @Test
+    void aGivenUpEventGoesToTheDocumentedDeadLetterTopic() {
+        var target = ProjectionErrorHandling.deadLetterTopic(new ConsumerRecord<>("order-events", 0, 7L, "order-1", "{}"),
+                new IllegalStateException("db down"));
+
+        assertThat(target.topic()).isEqualTo("order-events.DLT");
+    }
 }
