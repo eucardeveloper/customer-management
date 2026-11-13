@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -100,5 +101,23 @@ class AuthServiceAtomicityTest {
         List<AuthAudit> trail = audits.findByTargetOrderByIdDesc(name, PageRequest.of(0, 20)).getContent();
         assertThat(trail).extracting(AuthAudit::getAction).contains("PASSWORD_CHANGE_FAILED");
         assertThat(trail).allSatisfy(a -> assertThat(String.valueOf(a.getDetails())).doesNotContain("Wrong-"));
+    }
+
+    @Test
+    void aReservedThrottleAttemptStaysCountedWhenTheRequestFailsLater() {
+        String name = "thr" + shortId();
+        savedUser(name, "Right-" + UUID.randomUUID());
+        doThrow(new IllegalStateException("audit store down"))
+                .when(audit).record(eq(AuthAuditService.PASSWORD_CHANGE_FAILED), any(), any(), any());
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("Wrong-" + UUID.randomUUID());
+        request.setNewPassword("New-" + UUID.randomUUID());
+
+        assertThatThrownBy(() -> authService.changePassword(name, request)).isInstanceOf(IllegalStateException.class);
+
+        // The attempt was reserved before the failure; rolling back the request must not erase it, or a
+        // guesser could make every attempt vanish (and parallel attempts could not see each other).
+        assertThat(loginFailures.findByThrottleKeyAndAttemptedAtAfterOrderByAttemptedAtAsc(
+                "pwchange:" + name, LocalDateTime.of(2000, 1, 1, 0, 0))).hasSize(1);
     }
 }
