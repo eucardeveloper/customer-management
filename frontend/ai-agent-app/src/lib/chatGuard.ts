@@ -1,7 +1,7 @@
 /**
  * Input checks and a small rate limit for the chat proxy. The proxy has no user accounts (it fronts an
  * n8n webhook), so the guard keeps it from being a free way to run the workflow: only the two fields
- * the workflow needs are forwarded, their size is bounded, and each client address gets a fixed number
+ * the workflow needs are forwarded, their size is bounded, and each signed-in user gets a fixed number
  * of requests per minute.
  */
 export const MAX_BODY_BYTES = 8 * 1024;
@@ -26,13 +26,6 @@ export function parsePayload(raw: string): ChatPayload | null {
   if (typeof chatInput !== 'string' || chatInput.trim().length === 0 || chatInput.length > MAX_INPUT_CHARS) return null;
   if (typeof sessionId !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(sessionId)) return null;
   return { chatInput, sessionId };
-}
-
-/** The right-most X-Forwarded-For entry is the one our own proxy added; without the header, one shared bucket. */
-export function clientKey(forwardedFor: string | null): string {
-  if (!forwardedFor) return 'unknown';
-  const parts = forwardedFor.split(',').map((p) => p.trim()).filter(Boolean);
-  return parts.length ? parts[parts.length - 1].slice(0, 64) : 'unknown';
 }
 
 export class RateLimiter {
@@ -61,4 +54,17 @@ export class RateLimiter {
     }
     return true;
   }
+}
+
+/**
+ * Id that ties one conversation to the agent's memory (n8n chat memory is keyed by it): 122 random bits
+ * in UUID layout. Built from getRandomValues because crypto.randomUUID needs a secure context, which a
+ * LAN address over plain HTTP is not.
+ */
+export function newSessionId(): string {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+  return `session-${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }

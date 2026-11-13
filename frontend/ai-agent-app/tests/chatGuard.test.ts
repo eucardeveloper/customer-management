@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RateLimiter, clientKey, parsePayload, MAX_INPUT_CHARS } from '../src/lib/chatGuard.ts';
+import { RateLimiter, parsePayload, MAX_INPUT_CHARS } from '../src/lib/chatGuard.ts';
 
 const ok = JSON.stringify({ chatInput: 'Tüm müşterileri listele', sessionId: 'session-1' });
 
@@ -20,11 +20,6 @@ test('bad shapes are refused', () => {
 test('size limits apply to the input and to the whole body', () => {
   assert.equal(parsePayload(JSON.stringify({ chatInput: 'x'.repeat(MAX_INPUT_CHARS + 1), sessionId: 'a' })), null);
   assert.equal(parsePayload(JSON.stringify({ chatInput: 'x', sessionId: 'a', pad: 'y'.repeat(9000) })), null);
-});
-
-test('the client key is the right-most forwarded address', () => {
-  assert.equal(clientKey(null), 'unknown');
-  assert.equal(clientKey('1.1.1.1, 203.0.113.9'), '203.0.113.9');
 });
 
 test('the rate limiter allows the limit, refuses the next, and recovers after the window', () => {
