@@ -38,4 +38,14 @@ not called directly: they only accept requests carrying the gateway's shared sec
   admin account. This protects the UI; it does not protect the n8n webhook itself.
 - n8n's chat trigger does not check the `X-Webhook-Secret` header that the UI sends, so the production
   URL is the only protection for the webhook. Keep it private and keep n8n on loopback.
+- The write tools (POST/PUT) build their JSON body by putting the model's text between quotes
+  (`"firstName": "{{ $fromAI('firstName') }}"`). A value that contains a double quote or a backslash
+  breaks the request (the API answers 400; the agent reports it), and text that came from a record the
+  model read could try to add fields. Not fixed because the workflow cannot be run in CI; the usual
+  remedy is a body built with `JSON.stringify({ ... })`. Verify it in n8n before adopting it.
+- The PUT tools do not send the `version` field that customers and orders now accept, so an update made
+  by the agent is not checked against a concurrent edit (it reads the record, then writes it back).
+- Deleting and updating are guarded only by the agents' instructions ("ask when the record is unclear",
+  no bulk deletes), which a model can misread; there is no confirmation step before a DELETE. Customers
+  with orders are protected by the API (`409`), orders are not.
 - This workflow was adapted from an older export and has not been run end to end in CI.
