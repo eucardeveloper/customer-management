@@ -2,10 +2,11 @@ package com.enesucar.auth_service.security;
 
 import com.enesucar.auth_service.exception.TooManyLoginAttemptsException;
 import com.enesucar.auth_service.repository.LoginFailureRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -19,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Runs against a real (in-memory) database, because the limiter's state lives in the database now. */
 @SpringBootTest
-@Transactional
 class LoginAttemptLimiterTest {
 
     /** A clock the test can move forward. */
@@ -49,10 +49,19 @@ class LoginAttemptLimiterTest {
     @Autowired
     LoginFailureRepository repository;
 
+    @Autowired
+    PlatformTransactionManager transactionManager;
+
     private final MutableClock clock = new MutableClock();
 
+    // reserveAttempt commits in its own transaction, so a rolled-back test transaction no longer cleans up
+    @AfterEach
+    void clearFailures() {
+        repository.deleteAll();
+    }
+
     private LoginAttemptLimiter limiter() {
-        return new LoginAttemptLimiter(3, Duration.ofMinutes(15), clock, repository);
+        return new LoginAttemptLimiter(3, Duration.ofMinutes(15), clock, repository, transactionManager);
     }
 
     @Test
@@ -140,7 +149,7 @@ class LoginAttemptLimiterTest {
 
     @Test
     void oneAddressIsLockedAfterTooManyFailuresEvenAcrossDifferentUsernames() {
-        var limiter = new LoginAttemptLimiter(3, 4, Duration.ofMinutes(15), clock, repository);
+        var limiter = new LoginAttemptLimiter(3, 4, Duration.ofMinutes(15), clock, repository, transactionManager);
         for (int i = 0; i < 4; i++) limiter.recordFailureIp("203.0.113.9");
 
         assertThatThrownBy(() -> limiter.checkAllowedIp("203.0.113.9"))

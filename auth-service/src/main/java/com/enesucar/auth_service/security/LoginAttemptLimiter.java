@@ -7,6 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -14,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Supplier;
 
 /**
  * Slows down password guessing: after {@code maxFailures} failed sign-ins for one username inside the
@@ -35,25 +39,33 @@ public class LoginAttemptLimiter {
     private final Duration window;
     private final Clock clock;
     private final LoginFailureRepository failures;
+    private final TransactionTemplate ownTransaction;
 
     @Autowired
     public LoginAttemptLimiter(@Value("${app.login.max-failures:5}") int maxFailures,
                                @Value("${app.login.max-failures-per-ip:30}") int ipMaxFailures,
                                @Value("${app.login.window-seconds:900}") long windowSeconds,
-                               LoginFailureRepository failures) {
-        this(maxFailures, ipMaxFailures, Duration.ofSeconds(windowSeconds), Clock.systemUTC(), failures);
+                               LoginFailureRepository failures,
+                               PlatformTransactionManager transactionManager) {
+        this(maxFailures, ipMaxFailures, Duration.ofSeconds(windowSeconds), Clock.systemUTC(), failures, transactionManager);
     }
 
-    LoginAttemptLimiter(int maxFailures, Duration window, Clock clock, LoginFailureRepository failures) {
-        this(maxFailures, maxFailures * 6, window, clock, failures);
+    LoginAttemptLimiter(int maxFailures, Duration window, Clock clock, LoginFailureRepository failures,
+                        PlatformTransactionManager transactionManager) {
+        this(maxFailures, maxFailures * 6, window, clock, failures, transactionManager);
     }
 
-    LoginAttemptLimiter(int maxFailures, int ipMaxFailures, Duration window, Clock clock, LoginFailureRepository failures) {
+    LoginAttemptLimiter(int maxFailures, int ipMaxFailures, Duration window, Clock clock, LoginFailureRepository failures,
+                        PlatformTransactionManager transactionManager) {
         this.maxFailures = maxFailures;
         this.ipMaxFailures = ipMaxFailures;
         this.window = window;
         this.clock = clock;
         this.failures = failures;
+        // The reservation must be visible to other requests at once and must survive a rollback of the
+        // caller's transaction (changePassword is transactional), so it always gets a transaction of its own.
+        this.ownTransaction = new TransactionTemplate(transactionManager);
+        this.ownTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /** Throws {@link TooManyLoginAttemptsException} when the username is currently locked out. */
@@ -88,7 +100,7 @@ public class LoginAttemptLimiter {
     }
 
     private void reserve(String throttleKey, int max) {
-        LoginFailure mine = failures.save(new LoginFailure(throttleKey, now()));
+        LoginFailure mine = inOwnTransaction(() -> failures.save(new LoginFailure(throttleKey, now())));
         LocalDateTime now = now();
         List<LoginFailure> others = failures
                 .findByThrottleKeyAndAttemptedAtAfterOrderByAttemptedAtAsc(throttleKey, now.minus(window))
@@ -96,11 +108,18 @@ public class LoginAttemptLimiter {
                 .filter(f -> !f.getId().equals(mine.getId()))
                 .toList();
         if (others.size() >= max) {
-            failures.deleteById(mine.getId());
+            inOwnTransaction(() -> {
+                failures.deleteById(mine.getId());
+                return null;
+            });
             LocalDateTime unlock = others.get(others.size() - max).getAttemptedAt().plus(window);
             long retry = Duration.between(now, unlock).getSeconds();
             throw new TooManyLoginAttemptsException(Math.max(1, retry));
         }
+    }
+
+    private <T> T inOwnTransaction(Supplier<T> work) {
+        return ownTransaction.execute(status -> work.get());
     }
 
     private void check(String throttleKey, int max) {

@@ -4,7 +4,7 @@ What was run, where, and what came out. "Run by the author" means a command run 
 
 | Check | Result | How |
 |---|---|---|
-| auth-service | 132 passed (incl. `LastAdminConcurrencyTest` and `AuthPostgresConstraintsIntegrationTest` on PostgreSQL) | `./mvnw test`; CI run 43418636788 (13.11.2026, PR #111) |
+| auth-service | 133 passed (incl. `LastAdminConcurrencyTest` and `AuthPostgresConstraintsIntegrationTest` on PostgreSQL) | `./mvnw test`; CI run 43431624120 (13.11.2026, PR #112) |
 | order-service | 88 passed | `./mvnw test`; CI run 43418636788 |
 | customer-service | 75 passed | `./mvnw test`; CI run 43418636788 |
 | api-gateway | 33 passed | `./mvnw test`; CI run 43418636788 |
@@ -17,7 +17,7 @@ What was run, where, and what came out. "Run by the author" means a command run 
 | Manual scenarios | 36 browser/API scenarios listed in [MANUAL-TEST-MATRIX.md](MANUAL-TEST-MATRIX.md); status per row, none marked passed before it is run | by hand against `docker compose up` |
 | Not verified here | the hosted (Railway) deployment and its same-origin mode (a hosted instance existed for a time and has been taken down; this repository ships no evidence for it, only the runbook); consumer idempotency against a live broker (covered by Testcontainers tests only) | see `docs/DEPLOY-RAILWAY.md` |
 
-Backend counts (auth 132, order 88, customer 75, gateway 33 = 328) are from the CI run of the pull request branch of 2026-11-13 (run 43418636788, all green, 0 skipped); the customer-app count (56) is from the Frontend workflow run 43418636829 of the same commit. ai-agent-app (5) is from the Frontend workflow run 43175928908 (commit 0638101, green, 0 skipped). The Playwright count is from the run of 2026-10-27 (run 40471202871) and has not been re-read since. The earlier figures (auth 101, order 61, customer 39, gateway 21; customer-app 41) were the Surefire and `node --test` totals of a run on 2026-10-22 on the commit that added them (0 failures, 0 skipped; Docker available, so the Testcontainers tests ran). Before that commit the `CI` workflow reported auth 90, order 58, customer 38, gateway 19 on `57bec16`, and the customer-app count was listed as 35 while the suite already had 41. The numbers above are updated when the suites are run again; they are not a promise about later commits.
+Backend counts (auth 133, order 88, customer 75, gateway 33 = 329) are from the CI run of the pull request branch of 2026-11-13 (auth: run 43431624120 of PR #112; order, customer and gateway: run 43418636788 of PR #111, unchanged since; all green, 0 skipped); the customer-app count (56) is from the Frontend workflow run 43418636829 of the same commit. ai-agent-app (5) is from the Frontend workflow run 43175928908 (commit 0638101, green, 0 skipped). The Playwright count is from the run of 2026-10-27 (run 40471202871) and has not been re-read since. The earlier figures (auth 101, order 61, customer 39, gateway 21; customer-app 41) were the Surefire and `node --test` totals of a run on 2026-10-22 on the commit that added them (0 failures, 0 skipped; Docker available, so the Testcontainers tests ran). Before that commit the `CI` workflow reported auth 90, order 58, customer 38, gateway 19 on `57bec16`, and the customer-app count was listed as 35 while the suite already had 41. The numbers above are updated when the suites are run again; they are not a promise about later commits.
 
 ## Defects found by the 2026-10-22 review
 
