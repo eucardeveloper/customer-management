@@ -29,4 +29,11 @@ class CustomerRequestDTOValidationTest {
     void anUnknownTypeIsRejected() {
         assertThat(validator.validate(withType("VIP"))).hasSize(1);
     }
+
+    @Test
+    void anEmailLongerThanTheColumnIsRejectedAsInvalidInput() {
+        CustomerRequestDTO dto = withType("INDIVIDUAL");
+        dto.setEmail("a".repeat(250) + "@example.com");   // well-formed, but 262 characters; the column holds 255
+        assertThat(validator.validate(dto)).extracting(v -> v.getPropertyPath().toString()).contains("email");
+    }
 }
