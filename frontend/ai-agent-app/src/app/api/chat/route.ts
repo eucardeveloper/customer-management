@@ -7,7 +7,11 @@ let warnedNoSecret = false;
 
 export async function POST(req: NextRequest) {
   return handleChat(req, {
-    env: process.env,
+    env: {
+      N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL,
+      N8N_WEBHOOK_SECRET: process.env.N8N_WEBHOOK_SECRET,
+      GATEWAY_URL: process.env.GATEWAY_URL,
+    },
     fetch,
     limiter,
     warn: (message) => {
