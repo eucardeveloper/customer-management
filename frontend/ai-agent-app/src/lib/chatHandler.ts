@@ -1,7 +1,7 @@
 import { MAX_BODY_BYTES, RateLimiter, clientKey, parsePayload } from './chatGuard.ts';
 
 export interface ChatDeps {
-  env: { N8N_WEBHOOK_URL?: string; N8N_WEBHOOK_SECRET?: string };
+  env: { N8N_WEBHOOK_URL?: string; N8N_WEBHOOK_SECRET?: string; GATEWAY_URL?: string };
   fetch: typeof fetch;
   limiter: RateLimiter;
   warn?: (message: string) => void;
