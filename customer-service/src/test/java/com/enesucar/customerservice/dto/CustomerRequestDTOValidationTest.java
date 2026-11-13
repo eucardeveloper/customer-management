@@ -33,7 +33,8 @@ class CustomerRequestDTOValidationTest {
     @Test
     void anEmailLongerThanTheColumnIsRejectedAsInvalidInput() {
         CustomerRequestDTO dto = withType("INDIVIDUAL");
-        dto.setEmail("a".repeat(250) + "@example.com");   // well-formed, but 262 characters; the column holds 255
+        // Well-formed for @Email (local part <= 64, each label <= 63) yet 308 characters; the column holds 255.
+        dto.setEmail("a".repeat(60) + "@" + ("b".repeat(60) + ".").repeat(4) + "com");
         assertThat(validator.validate(dto)).extracting(v -> v.getPropertyPath().toString()).contains("email");
     }
 }
