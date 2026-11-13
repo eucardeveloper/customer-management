@@ -63,6 +63,9 @@ class DeadLetterBrokerIntegrationTest {
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers(),
                 ConsumerConfig.GROUP_ID_CONFIG, "dlt-reader",
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
+                // the dead-letter topic does not exist yet when this consumer subscribes (the broker creates it on
+                // the first publish); by default a consumer would only notice it after five minutes
+                ConsumerConfig.METADATA_MAX_AGE_CONFIG, 1000,
                 ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class))) {
             dlt.subscribe(List.of("order-events.DLT"));
