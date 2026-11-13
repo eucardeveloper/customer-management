@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { clean } from '@/lib/aiPromptData';
 
 /**
  * Server-side proxy for the CRM assistant.
@@ -95,13 +96,6 @@ async function fetchList<T>(path: string, token: string): Promise<{ status: numb
   if (!res.ok) return { status: res.status, data: [] };
   const json = await res.json().catch(() => []);
   return { status: 200, data: Array.isArray(json) ? (json as T[]) : [] };
-}
-
-function clean(value: unknown, max = 80): string {
-  // Strip control characters and newlines so stored data cannot break out of the data block.
-  return String(value ?? '')
-    .replace(/[\u0000-\u001f\u007f]/g, ' ')
-    .slice(0, max);
 }
 
 export async function POST(req: NextRequest) {
