@@ -199,6 +199,8 @@ services:
       # Production URL of an n8n chat webhook; without it the agent UI answers 503.
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-}
       N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
+      # The chat endpoint asks the gateway whether the CRM session cookie belongs to a signed-in ADMIN.
+      GATEWAY_URL: http://api-gateway:8080
 
   n8n:
     image: n8nio/n8n:2.42.4

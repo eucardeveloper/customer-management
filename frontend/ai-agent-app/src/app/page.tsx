@@ -90,6 +90,7 @@ export default function Home() {
       timestamp: new Date(),
     },
   ]);
+  const [sessionId] = useState(() => newSessionId());
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -117,7 +118,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chatInput: input,
-          sessionId: newSessionId(),
+          sessionId,
         }),
       });
 

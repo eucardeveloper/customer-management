@@ -8,7 +8,7 @@ What was run, where, and what came out. "Run by the author" means a command run 
 | order-service | 88 passed | `./mvnw test`; CI run 43418636788 |
 | customer-service | 75 passed | `./mvnw test`; CI run 43418636788 |
 | api-gateway | 33 passed | `./mvnw test`; CI run 43418636788 |
-| Frontend unit tests | customer-app 56 passed (API client, auth helpers, percentages, trend badges, order statistics, translations, server messages); ai-agent-app 5 passed (chat guard); lint, tsc and production build clean | `npm test` in each app |
+| Frontend unit tests | customer-app 56 passed (API client, auth helpers, percentages, trend badges, order statistics, translations, server messages); ai-agent-app 17 passed (chat guard, chat proxy: ADMIN session, per-user limit, n8n error handling, conversation ids); lint, tsc and production build clean | `npm test` in each app |
 | End-to-end (Playwright) | 12 tests in `e2e/tests/`: 10 in `journey.spec.ts`, and in `integrity.spec.ts` the race between deleting a customer and adding an order (20 rounds through the gateway; no order may outlive its customer) and the role matrix (ADMIN, USER and anonymous callers on every endpoint, price masking); 12 passed, 0 skipped in the `E2E` workflow on 2026-10-27 (run 40471202881); the suite removes the data it creates | `cd e2e && npx playwright test` against `docker compose up` |
 | Monitoring config | `promtool check config` valid; 3 alert rules, 3 rule unit tests pass; a deliberately broken threshold makes them fail | CI job "monitoring" |
 | Backup and restore | `./restore-test.sh` PASS (all three databases; three changed rows gone; counts users=2, customers=5, orders=8 unchanged); with the restore step removed it reports FAIL | E2E workflow step, or by hand |

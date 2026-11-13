@@ -33,6 +33,9 @@ not called directly: they only accept requests carrying the gateway's shared sec
 - The agent runs with the permissions of the account in "Gateway Girişi". With an ADMIN account it can add,
   change and delete customers and orders, and it sees prices. Use a read-only (USER) account and remove the
   POST/PUT/DELETE tool nodes if you want a read-only agent.
+- The agent UI's chat endpoint only serves a signed-in CRM ADMIN (it asks the gateway about the
+  `customer_session` cookie, so sign in at http://localhost:3000 first), because the agent acts with an
+  admin account. This protects the UI; it does not protect the n8n webhook itself.
 - n8n's chat trigger does not check the `X-Webhook-Secret` header that the UI sends, so the production
-  URL is the only protection. Keep it private and keep n8n on loopback.
+  URL is the only protection for the webhook. Keep it private and keep n8n on loopback.
 - This workflow was adapted from an older export and has not been run end to end in CI.
