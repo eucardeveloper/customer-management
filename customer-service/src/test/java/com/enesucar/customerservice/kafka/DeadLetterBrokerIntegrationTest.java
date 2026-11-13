@@ -32,7 +32,12 @@ import static org.mockito.Mockito.when;
  * work together. The database failure is simulated by a repository that throws.
  */
 @Testcontainers
-@SpringBootTest(properties = "app.kafka.listener.auto-startup=true")
+@SpringBootTest(properties = {
+        "app.kafka.listener.auto-startup=true",
+        // the test resources replace the production properties, where this is "earliest": without it the listener
+        // starts at the end of the topic and can miss an event sent right after start-up
+        "spring.kafka.consumer.auto-offset-reset=earliest"
+})
 class DeadLetterBrokerIntegrationTest {
 
     @Container
