@@ -21,6 +21,7 @@ public class CustomerRequestDTO {
     private String lastName;
 
     @Email(message = "Invalid email format")
+    @Size(max = 255, message = "Email must be at most 255 characters")
     private String email;
 
     @Size(max = 20, message = "Phone must be at most 20 characters")
@@ -29,6 +30,13 @@ public class CustomerRequestDTO {
 
     @Pattern(regexp = "^(INDIVIDUAL|COMPANY)$", message = "Customer type must be INDIVIDUAL or COMPANY")
     private String customerType;
+
+    /**
+     * Optional: the version of the record the caller based its edit on (from the last response). When it is
+     * sent and the record has moved on, the update answers 409 instead of silently overwriting. Without it
+     * the update behaves as before.
+     */
+    private Long version;
 
     /**
      * A customer needs at least one way to be reached. The screen already enforces this; the API must too,

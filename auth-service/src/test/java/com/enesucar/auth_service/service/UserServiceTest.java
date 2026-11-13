@@ -176,7 +176,7 @@ class UserServiceTest {
     @Test
     void createUser_shouldRefuseTakenUsernameOrEmail_andUnknownRole() {
         when(userRepository.existsByUsername("taken")).thenReturn(true);
-        when(userRepository.existsByEmail("taken@test.com")).thenReturn(true);
+        when(userRepository.existsByEmailIgnoreCase("taken@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> userService.createUser(createRequest("taken", "x@test.com", "USER")))
                 .isInstanceOf(com.enesucar.auth_service.exception.UserAlreadyExistsException.class)

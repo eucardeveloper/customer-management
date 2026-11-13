@@ -26,8 +26,16 @@ public class Customer {
 	
 	private String customerType;
 
-    /** Set while a delete is checking for orders (see V3 migration); null otherwise. */
-    @Column(name = "deletion_pending_since")
+    /**
+     * Set while a delete is checking for orders (see V3 migration); null otherwise. Only the claim/release
+     * queries in CustomerRepository write it: a normal save never includes this column, so an update that
+     * read the row before a delete claimed it cannot wipe the claim.
+     */
+    @Column(name = "deletion_pending_since", insertable = false, updatable = false)
     private LocalDateTime deletionPendingSince;
+
+    /** Optimistic lock (V7): a save of a copy that someone else has changed since is refused, not merged. */
+    @Version
+    private Long version;
 }
 

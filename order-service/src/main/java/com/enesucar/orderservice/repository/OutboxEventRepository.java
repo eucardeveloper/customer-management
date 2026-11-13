@@ -31,6 +31,11 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     /**
      * Oldest unpublished events, locked for this transaction. SKIP LOCKED lets several instances run the
      * relay at the same time without publishing the same row twice.
+     *
+     * <p>Ordering: with ONE relay instance the events of an order leave in the order they were written. With
+     * several instances running at once, one can hold rows 1-50 while another publishes 51-100 first, so
+     * the order of events across instances is NOT guaranteed (see ADR-0004). The consumers do not depend on
+     * it: both apply each event as an idempotent "set the state" step.
      */
     @Query(value = "SELECT * FROM outbox_event WHERE published_at IS NULL AND parked_at IS NULL ORDER BY id LIMIT :batch FOR UPDATE SKIP LOCKED",
             nativeQuery = true)

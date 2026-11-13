@@ -43,7 +43,8 @@ public class OutboxRelay {
         List<OutboxEvent> batch = outbox.lockNextUnpublished(BATCH_SIZE);
         for (OutboxEvent event : batch) {
             try {
-                // Key by order id: Kafka keeps the events of one order in one partition, in the order sent.
+                // Key by order id: Kafka keeps the events of one order in one partition, in the order SENT.
+                // (With several relay instances the order sent can differ from the order written; see ADR-0004.)
                 var parsed = OrderEvent.parse(event.getPayload());
                 if (parsed.isPresent()) {
                     producer.publish(event.getTopic(), "order-" + parsed.get().orderId(), event.getPayload());

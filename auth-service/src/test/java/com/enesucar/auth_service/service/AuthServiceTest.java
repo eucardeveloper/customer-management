@@ -82,7 +82,7 @@ class AuthServiceTest {
     @Test
     void register_shouldReturnAuthResponse_whenValidRequest() {
         when(userRepository.existsByUsername("testuser")).thenReturn(false);
-        when(userRepository.existsByEmail("test@test.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("test@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(user);
         when(jwtUtil.generateToken(eq("testuser"), eq("USER"), eq(0), any())).thenReturn("jwt-token");
@@ -110,7 +110,7 @@ class AuthServiceTest {
     @Test
     void register_shouldAlwaysCreateUserRole_andNeverAdmin() {
         when(userRepository.existsByUsername("testuser")).thenReturn(false);
-        when(userRepository.existsByEmail("test@test.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("test@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(user);
         when(jwtUtil.generateToken(eq("testuser"), eq("USER"), eq(0), any())).thenReturn("jwt-token");
@@ -142,7 +142,7 @@ class AuthServiceTest {
     @Test
     void register_shouldThrowException_whenEmailAlreadyExists() {
         when(userRepository.existsByUsername("testuser")).thenReturn(false);
-        when(userRepository.existsByEmail("test@test.com")).thenReturn(true);
+        when(userRepository.existsByEmailIgnoreCase("test@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(registerRequest))
                 .isInstanceOf(UserAlreadyExistsException.class)

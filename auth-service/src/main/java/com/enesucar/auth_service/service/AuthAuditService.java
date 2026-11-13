@@ -19,6 +19,9 @@ public class AuthAuditService {
     public static final String LOGIN_SUCCESS = "LOGIN_SUCCESS";
     public static final String LOGIN_FAILED = "LOGIN_FAILED";
     public static final String LOGOUT = "LOGOUT";
+    public static final String PASSWORD_CHANGE_FAILED = "PASSWORD_CHANGE_FAILED";
+    public static final String BOOTSTRAP_ADMIN_PASSWORD = "BOOTSTRAP_ADMIN_PASSWORD";
+    public static final String BOOTSTRAP_DEMO_USER_REMOVED = "BOOTSTRAP_DEMO_USER_REMOVED";
 
     private final AuthAuditRepository audits;
 

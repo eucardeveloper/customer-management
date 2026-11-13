@@ -58,6 +58,11 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
             if (path.startsWith("/api/auth/logout")) {
                 // The auth-service revokes the token; forget the cached "still valid" answer so it stops now.
+                // Whichever way the client presented the token (cookie or Bearer header), that one is forgotten.
+                String authorization = exchange.getRequest().getHeaders().getFirst("Authorization");
+                if (authorization != null && authorization.startsWith("Bearer ") && authorization.length() > 7) {
+                    sessionValidator.forget(authorization.substring(7));
+                }
                 HttpCookie session = exchange.getRequest().getCookies().getFirst(COOKIE_NAME);
                 if (session != null && !session.getValue().isBlank()) {
                     sessionValidator.forget(session.getValue());

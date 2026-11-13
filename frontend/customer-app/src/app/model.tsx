@@ -1,8 +1,8 @@
 import { Chip } from '@mui/material';
 import type { Lang } from './translations';
 
-export interface Customer { id: number; firstName: string; lastName: string; email: string; phone: string; customerType?: string; }
-export interface Order { id: number; customerId: number; productName: string; price: number; quantity: number; date: string; status?: string; }
+export interface Customer { id: number; firstName: string; lastName: string; email: string; phone: string; customerType?: string; version?: number; }
+export interface Order { id: number; customerId: number; productName: string; price: number; quantity: number; date: string; status?: string; version?: number; }
 export interface ChatMessage { role: 'user' | 'assistant'; content: string; }
 export interface UserItem { id: number; username: string; email: string; role: string; }
 
@@ -58,7 +58,7 @@ export const formatDate = (dateStr: string, lang: Lang = 'en') => {
 export type TFn = (key: string) => string;
 export type SessionUser = { username: string; role: string } | null;
 export type TabKey = 'dashboard' | 'customers' | 'orders' | 'ai' | 'analytics' | 'users' | 'audit';
-export type OrderForm = { customerId: string; productName: string; price: string; quantity: string; status: string; date?: string };
+export type OrderForm = { customerId: string; productName: string; price: string; quantity: string; status: string; date?: string; version?: number };
 export type NewUserForm = { username: string; email: string; password: string; role: string };
 export type PwDialogState = { mode: 'self' | 'reset'; userId?: number; username?: string } | null;
 export type PwFormState = { current: string; next: string; confirm: string };

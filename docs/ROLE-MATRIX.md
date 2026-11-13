@@ -24,10 +24,15 @@ Legend: yes = allowed, no = refused with `403` (or the page is not offered), mas
 | See unit price, order total, revenue | yes | masked | `OrderController` (price set to `null` for non-admins) |
 | Create, edit, change status, delete orders | yes | no | `POST/PUT/PATCH/DELETE /api/orders/**` ADMIN |
 | Users page: list, add (with a chosen role), change role, reset password, delete | yes | no | `/api/users/**` ADMIN (`POST /api/users` for adding; it issues no session, so the admin stays signed in) |
+| Delete your own account | no (`409`; ask another administrator) | no | `UserService.deleteUser` (the Users page also disables the button for your own row) |
+| Read the audit feeds (orders, customers, accounts) | yes | no (`403`) | `/api/orders/audit`, `/api/customers/audit` (service `SecurityConfig`), `/api/users/audit` (`@PreAuthorize`) |
+| Edit a record someone else saved first | refused with `409` (reload) | no | optional `version` on customer and order updates |
 | AI assistant | yes (prices and revenue included in the context) | yes (no prices) | Next.js route, caller's JWT |
 
 ## Invariants that hold for every role
 
+- An administrator cannot delete the account they are signed in with (`409`); a non-existent user id answers `404`.
+- The audit tables are append-only for the application: the runtime role cannot update or delete their rows (`AuthPostgresConstraintsIntegrationTest` proves it on PostgreSQL); a change and its audit row commit together.
 - The last `ADMIN` cannot be demoted or deleted (`409`), also when two admins act at the same moment (admin rows locked; `LastAdminConcurrencyTest`).
 - The session cookie is `HttpOnly` and `SameSite=Strict`; requests whose `Origin` does not match are refused.
 - Repeated failed sign-ins are throttled in the database (`LoginAttemptLimiter`).

@@ -23,4 +23,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
+
+    /** E-mail addresses are unique regardless of letter case (V8 enforces it in the database as well). */
+    boolean existsByEmailIgnoreCase(String email);
 }

@@ -14,8 +14,9 @@ public class ChangePasswordRequest {
     @NotBlank(message = "Current password is required")
     private String currentPassword;
 
-    // BCrypt only uses the first 72 bytes, so longer input would silently be truncated.
+    // BCrypt refuses more than 72 BYTES (not characters), so the limit is counted in bytes.
     @NotBlank(message = "New password is required")
-    @Size(min = 8, max = 72, message = "New password must be 8-72 characters")
+    @Size(min = 8, message = "New password must be at least 8 characters")
+    @Utf8MaxBytes(message = "New password must be at most 72 bytes (accented letters count as 2)")
     private String newPassword;
 }

@@ -28,4 +28,8 @@ public class Order {
     private LocalDateTime date;
 	
 	private String status;
+
+    /** Optimistic lock (V13): a save of a copy that someone else has changed since is refused, not merged. */
+    @Version
+    private Long version;
 }
