@@ -39,7 +39,7 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 
 import { DRAWER_WIDTH, SIDEBAR_BG, SIDEBAR_HOVER, SIDEBAR_ACTIVE, LIGHT_VARS, DARK_VARS, theme, darkTheme } from './theme';
-import { type Customer, type Order, type ChatMessage, type UserItem, emptyCustomer, type CustomerType, emptyOrder, ORDER_STATUSES, statusText, isCompany } from './model';
+import { type Customer, type Order, type ChatMessage, type UserItem, type OrderForm, emptyCustomer, type CustomerType, emptyOrder, ORDER_STATUSES, statusText, isCompany } from './model';
 import { AiTab } from './views/AiTab';
 import { AnalyticsTab } from './views/AnalyticsTab';
 import { DashboardTab } from './views/DashboardTab';
@@ -82,7 +82,7 @@ export default function Home() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [orderDeleteDialogOpen, setOrderDeleteDialogOpen] = useState(false);
-  const [editOrder, setEditOrder] = useState<{ customerId: string; productName: string; price: string; quantity: string; status: string; date?: string }>(emptyOrder);
+  const [editOrder, setEditOrder] = useState<OrderForm>(emptyOrder);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editOrderId, setEditOrderId] = useState<number | null>(null);
   const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);

@@ -1,6 +1,7 @@
 package com.enesucar.apigateway.filter;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpCookie;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -42,7 +43,7 @@ class JwtAuthFilterLogoutTest {
     @Test
     void logoutWithTheCookieForgetsTheCachedSession() {
         run(MockServerHttpRequest.post("/api/auth/logout")
-                .header("Cookie", JwtAuthFilter.COOKIE_NAME + "=cookie-token"));
+                .cookie(new HttpCookie(JwtAuthFilter.COOKIE_NAME, "cookie-token")));
         assertThat(forgotten).containsExactly("cookie-token");
     }
 

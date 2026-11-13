@@ -67,7 +67,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("newPassword", "short"))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("New password must be 8-72 characters"));
+                .andExpect(jsonPath("$.message").value("New password must be at least 8 characters"));
         verify(userService, never()).resetPassword(anyLong(), anyString());
     }
 
