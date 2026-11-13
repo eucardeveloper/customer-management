@@ -26,7 +26,12 @@ Customer: Ada Lovelace, ada@example.com, phone 555 0100. Order: product "Keyboar
 | 1.10 | Delete the order, then delete Ada | Both disappear; reload confirms | |
 | 1.11 | Dashboard and Analytics | Revenue figures and charts are visible | |
 | 1.12 | Users, add a user (pick ADMIN), change its role, reset its password | Each works; the new user has the role you picked and you are still signed in as admin (the Users page keeps loading); the last admin cannot be demoted or deleted | |
-| 1.13 | Tables | Text columns left, price and total right, status and quantity badges centred, actions right; headers aligned with cells | |
+| 1.13 | Audit page (admin only): make a change in each of Customers, Orders and Users, then open the three tabs | Each change appears with your name and a time; customer rows list field names only, never values; no password or token appears anywhere | |
+| 1.14 | Users, try to delete your own row | The button is disabled; calling `DELETE /api/users/<your id>` answers `409` | |
+| 1.15 | Open the same customer in two windows, save in the first, then save in the second | The second shows "someone else changed this record", reloads the list and saves nothing | |
+| 1.16 | Change your password using a password of 40 `ş` letters | A clear "too long" message, never an error page | |
+| 1.17 | Find one request in the logs: copy the `X-Request-Id` from the browser's network tab and search the service logs | The same id appears in the gateway and the service that handled the call | |
+| 1.18 | Tables | Text columns left, price and total right, status and quantity badges centred, actions right; headers aligned with cells | |
 
 ## 2) USER (`user1`)
 

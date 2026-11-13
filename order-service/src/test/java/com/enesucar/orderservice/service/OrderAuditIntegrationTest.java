@@ -116,4 +116,32 @@ class OrderAuditIntegrationTest {
 
         assertThat(audits.findByOrderIdOrderByIdAsc(id)).extracting(OrderAudit::getActor).containsExactly("system");
     }
+
+    @Test
+    void anOrderMayBeCorrectedBackToAnEarlierStatusAndTheTrailShowsIt() {
+        // Decision: the CRM allows free status corrections (a mis-click must be fixable); the audit trail is the safeguard.
+        when(customerClient.exists(1L)).thenReturn(true);
+        signInAs("alice");
+        long id = orderService.createOrder(request("DELIVERED", "10.00")).getId();
+
+        orderService.updateOrder(id, request("PENDING", "10.00"));
+
+        List<OrderAudit> trail = audits.findByOrderIdOrderByIdAsc(id);
+        assertThat(trail.get(1).getOldStatus()).isEqualTo("DELIVERED");
+        assertThat(trail.get(1).getNewStatus()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void anOrderUndoneBecauseItsCustomerVanishedIsRecordedUnderTheUserWhoseRequestWasUndone() {
+        // First lookup (before saving) finds the customer, the re-check after the commit does not.
+        when(customerClient.exists(1L)).thenReturn(true, false);
+        signInAs("alice");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> orderService.createOrder(request("PENDING", "10.00")))
+                .isInstanceOf(com.enesucar.orderservice.exception.UnknownCustomerException.class);
+
+        List<OrderAudit> undone = audits.findAll().stream().filter(a -> "UNDO_CREATE".equals(a.getAction())).toList();
+        assertThat(undone).isNotEmpty();
+        assertThat(undone.get(undone.size() - 1).getActor()).isEqualTo("alice");
+    }
 }

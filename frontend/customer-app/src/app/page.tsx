@@ -39,7 +39,7 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 
 import { DRAWER_WIDTH, SIDEBAR_BG, SIDEBAR_HOVER, SIDEBAR_ACTIVE, LIGHT_VARS, DARK_VARS, theme, darkTheme } from './theme';
-import { type Customer, type Order, type ChatMessage, type UserItem, emptyCustomer, type CustomerType, emptyOrder, ORDER_STATUSES, statusText, isCompany } from './model';
+import { type Customer, type Order, type ChatMessage, type UserItem, type OrderForm, emptyCustomer, type CustomerType, emptyOrder, ORDER_STATUSES, statusText, isCompany } from './model';
 import { AiTab } from './views/AiTab';
 import { AnalyticsTab } from './views/AnalyticsTab';
 import { DashboardTab } from './views/DashboardTab';
@@ -82,7 +82,7 @@ export default function Home() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [orderDeleteDialogOpen, setOrderDeleteDialogOpen] = useState(false);
-  const [editOrder, setEditOrder] = useState<{ customerId: string; productName: string; price: string; quantity: string; status: string; date?: string }>(emptyOrder);
+  const [editOrder, setEditOrder] = useState<OrderForm>(emptyOrder);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editOrderId, setEditOrderId] = useState<number | null>(null);
   const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);
@@ -199,6 +199,8 @@ export default function Home() {
     } catch (e) {
       const m = e instanceof Error ? e.message : '';
       showSnackbar(m && !m.startsWith('HTTP') ? translateServerMessage(lang, m) : t('error'), 'error');
+      // Someone else changed (or is deleting) this customer: show the current list so the next edit starts from it.
+      if (/changed by someone else|already being deleted/i.test(m)) { setDialogOpen(false); fetchCustomers(); }
     }
     });
     if (ranCustomer) setCustomerBusy(false);
@@ -235,11 +237,16 @@ export default function Home() {
       const body: Record<string, unknown> = { customerId, productName: editOrder.productName.trim(), price, quantity, status: editOrder.status || 'PENDING' };
       if (isEditingOrder && editOrderId) {
         if (editOrder.date) body.date = editOrder.date;
+        // The version this edit started from: if someone else saved the order meanwhile, the server answers 409.
+        if (editOrder.version !== undefined) body.version = editOrder.version;
         await api.put(`/api/orders/${editOrderId}`, body); showSnackbar(t('saved'), 'success');
       }
       else { await api.post('/api/orders', body); showSnackbar(t('saved'), 'success'); }
       setOrderDialogOpen(false); fetchOrders();
-    } catch { showSnackbar(t('error'), 'error'); }
+    } catch (e) {
+      showSnackbar(serverMsg(e, t('error')), 'error');
+      if (e instanceof Error && /changed by someone else/i.test(e.message)) { setOrderDialogOpen(false); fetchOrders(); }
+    }
     });
     if (ranOrder) setOrderBusy(false);
   };
@@ -254,7 +261,7 @@ export default function Home() {
     if (!pwDialog) return;
     if (pwDialog.mode === 'self' && !pwForm.current) { setPwError(t('allFieldsRequired')); return; }
     if (pwForm.next.length < 8) { setPwError(t('passwordMin8')); return; }
-    if (pwForm.next.length > 72) { setPwError(t('passwordMax72')); return; }
+    if (new TextEncoder().encode(pwForm.next).length > 72) { setPwError(t('passwordMax72')); return; }
     if (pwForm.next !== pwForm.confirm) { setPwError(t('passwordsDontMatch')); return; }
     setPwBusy(true); setPwError('');
     try {
@@ -299,7 +306,7 @@ export default function Home() {
   const openEdit = (c: Customer) => { setEditCustomer(c); setIsEditing(true); setFormErrors({}); const type = c.customerType ?? (c.lastName?.trim() ? 'INDIVIDUAL' : 'COMPANY'); setCustomerType(type === 'COMPANY' ? 'company' : 'individual'); setDialogOpen(true); };
   const openDelete = (id: number) => { setDeleteId(id); setDeleteDialogOpen(true); };
   const openAddOrder = () => { setEditOrder(emptyOrder); setIsEditingOrder(false); setEditOrderId(null); setOrderDialogOpen(true); };
-  const openEditOrder = (o: Order) => { setEditOrder({ customerId: o.customerId.toString(), productName: o.productName, price: o.price.toString(), quantity: o.quantity.toString(), status: o.status ?? 'PENDING', date: o.date }); setIsEditingOrder(true); setEditOrderId(o.id); setOrderDialogOpen(true); };
+  const openEditOrder = (o: Order) => { setEditOrder({ customerId: o.customerId.toString(), productName: o.productName, price: o.price.toString(), quantity: o.quantity.toString(), status: o.status ?? 'PENDING', date: o.date, version: o.version }); setIsEditingOrder(true); setEditOrderId(o.id); setOrderDialogOpen(true); };
   const openDeleteOrder = (id: number) => { setDeleteOrderId(id); setOrderDeleteDialogOpen(true); };
 
   const updateOrderStatus = async (orderId: number, newStatus: string) => {

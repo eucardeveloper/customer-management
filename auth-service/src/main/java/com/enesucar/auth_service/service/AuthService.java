@@ -11,6 +11,7 @@ import com.enesucar.auth_service.repository.RevokedTokenRepository;
 import com.enesucar.auth_service.repository.UserRepository;
 import com.enesucar.auth_service.security.JwtUtil;
 import com.enesucar.auth_service.security.LoginAttemptLimiter;
+import com.enesucar.auth_service.security.PasswordRules;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -18,6 +19,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.enesucar.auth_service.exception.InvalidPasswordException;
 import com.enesucar.auth_service.exception.UserAlreadyExistsException;
 import com.enesucar.auth_service.exception.UserNotFoundException;
@@ -34,11 +36,13 @@ public class AuthService {
     private final RevokedTokenRepository revokedTokens;
     private final AuthAuditService audit;
 
+    /** The account and its audit row are written in one transaction: both exist or neither does. */
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Username already taken: " + request.getUsername());
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already registered: " + request.getEmail());
         }
 
@@ -67,6 +71,10 @@ public class AuthService {
         // past a "check, then record" gap. A successful sign-in clears the counter again.
         loginAttemptLimiter.reserveAttempt(request.getUsername());
         try {
+            if (PasswordRules.exceedsBcryptLimit(request.getPassword())) {
+                // Cannot be anyone's password; BCrypt would throw instead of answering. Same answer as any wrong password.
+                throw new BadCredentialsException("Invalid username or password");
+            }
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
@@ -90,6 +98,9 @@ public class AuthService {
      * Lets a signed-in user choose a new password. The current password must be proven again, so a
      * stolen session alone cannot take the account over. Wrong attempts count against a throttle.
      */
+    // A refused attempt (InvalidPasswordException) must still commit: it carries the throttle count and the
+    // PASSWORD_CHANGE_FAILED audit row. Any other failure rolls the whole change back.
+    @Transactional(noRollbackFor = InvalidPasswordException.class)
     public void changePassword(String username, ChangePasswordRequest request) {
         String throttleKey = "pwchange:" + username;
         loginAttemptLimiter.reserveAttempt(throttleKey);
@@ -97,7 +108,9 @@ public class AuthService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+        if (PasswordRules.exceedsBcryptLimit(request.getCurrentPassword())
+                || !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            audit.record(AuthAuditService.PASSWORD_CHANGE_FAILED, username, username, "current password incorrect");
             throw new InvalidPasswordException("Current password is incorrect");
         }
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
@@ -115,6 +128,7 @@ public class AuthService {
      * Ends a session on the server: the token's id goes on a revocation list until the token would have
      * expired anyway. A missing, malformed or already expired token is ignored (logout never fails).
      */
+    @Transactional
     public void logout(String token) {
         if (token == null || token.isBlank() || !jwtUtil.isTokenValid(token)) {
             return;

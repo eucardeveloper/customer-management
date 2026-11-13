@@ -38,4 +38,11 @@ public class OrderRequestDTO {
     @Pattern(regexp = "^(PENDING|PROCESSING|SHIPPED|DELIVERED|CANCELLED)$",
              message = "Status must be PENDING, PROCESSING, SHIPPED, DELIVERED or CANCELLED")
     private String status;
+
+    /**
+     * Optional: the version of the order the caller based its edit on (from the last response). When it is
+     * sent and the order has moved on, the update answers 409 instead of silently overwriting. Without it
+     * the update behaves as before.
+     */
+    private Long version;
 }

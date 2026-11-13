@@ -11,6 +11,9 @@ This is a portfolio project, not a production system. What it does, and what it 
 - Metrics: the gateway's actuator is on an unpublished management port; on the auth-service only health and Prometheus metrics are open without a session.
 - Public sign-up is off by default; hosted deployments replace the admin password at start-up.
 - Non-root containers, no published ports for databases/Kafka/backends, security headers on the frontends, generic error messages for failed sign-in.
+- Static analysis: CodeQL on every pull request, push to `main` and weekly (Java and TypeScript); alerts are triaged under the Security tab.
+- Audit trails (orders, customers, accounts) are append-only for the application's database roles; sign-ins, password changes (also refused ones) and role changes are recorded without passwords or tokens.
+- Passwords are checked in bytes against BCrypt's 72-byte limit (an over-long password is a 400 or a wrong password, never a 500).
 - Flyway-only schema changes (`ddl-auto=validate`), input validation, `npm audit` and Dependabot in CI.
 
 ## Not covered

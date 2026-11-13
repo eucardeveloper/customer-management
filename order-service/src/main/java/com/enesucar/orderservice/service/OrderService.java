@@ -4,6 +4,7 @@ import com.enesucar.orderservice.dto.OrderRequestDTO;
 import com.enesucar.orderservice.dto.OrderResponseDTO;
 import com.enesucar.orderservice.entity.Order;
 import com.enesucar.orderservice.exception.ResourceNotFoundException;
+import com.enesucar.orderservice.exception.StaleVersionException;
 import com.enesucar.orderservice.exception.UnknownCustomerException;
 import com.enesucar.orderservice.entity.OutboxEvent;
 import com.enesucar.orderservice.kafka.OrderEvent;
@@ -41,8 +42,9 @@ public class OrderService {
     }
     /**
      * Writes the audit row inside the caller's transaction, so an order change and its record exist together.
-     * The actor is the signed-in user the gateway forwarded; work done by the service itself (undoing an
-     * order after its customer vanished) is recorded as "system".
+     * The actor is the signed-in user the gateway forwarded. That includes the undo rows (UNDO_CREATE,
+     * UNDO_REASSIGN): they run on the same request thread, so they are recorded under the user whose request
+     * was undone, and the details say why. "system" appears only when no user is signed in at all.
      */
     private void audit(Long orderId, String action, String oldStatus, String newStatus, String details) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -129,6 +131,9 @@ public class OrderService {
     public OrderResponseDTO updateOrder(Long id, OrderRequestDTO request) {
         Order current = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + id));
+        if (request.getVersion() != null && !request.getVersion().equals(current.getVersion())) {
+            throw new StaleVersionException();
+        }
         Long previousCustomerId = current.getCustomerId();
         boolean customerChanged = !Objects.equals(previousCustomerId, request.getCustomerId());
         if (customerChanged) {
@@ -207,6 +212,7 @@ public class OrderService {
         response.setQuantity(order.getQuantity());
         response.setDate(order.getDate());
 		response.setStatus(order.getStatus());
+        response.setVersion(order.getVersion());
         return response;
     }
 }

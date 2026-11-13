@@ -25,4 +25,6 @@ public class OrderResponseDTO {
     private LocalDateTime date;
 	
 	private String status;
+
+    private Long version;
 }

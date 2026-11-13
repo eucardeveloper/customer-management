@@ -10,6 +10,7 @@ import com.enesucar.customerservice.exception.DuplicateEmailException;
 import com.enesucar.customerservice.exception.DeletionInProgressException;
 import com.enesucar.customerservice.exception.OrderServiceUnavailableException;
 import com.enesucar.customerservice.exception.ResourceNotFoundException;
+import com.enesucar.customerservice.exception.StaleVersionException;
 import com.enesucar.customerservice.repository.CustomerAuditRepository;
 import com.enesucar.customerservice.repository.OrderProjectionRepository;
 import com.enesucar.customerservice.repository.CustomerRepository;
@@ -108,11 +109,29 @@ public class CustomerService {
                 return saved;
             });
         } catch (DataIntegrityViolationException e) {
-            if (email != null) {
+            // Only the e-mail index means "already registered"; any other violation must not be mislabelled.
+            if (email != null && violatesEmailIndex(e)) {
                 throw new DuplicateEmailException(email);
             }
             throw e;
         }
+    }
+
+    static final String EMAIL_UNIQUE_INDEX = "uq_customer_email_lower";
+
+    /** True when the named constraint anywhere in the cause chain is the e-mail unique index (V5). */
+    static boolean violatesEmailIndex(Throwable error) {
+        for (Throwable t = error; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t instanceof org.hibernate.exception.ConstraintViolationException cve
+                    && EMAIL_UNIQUE_INDEX.equalsIgnoreCase(cve.getConstraintName())) {
+                return true;
+            }
+            String message = t.getMessage();
+            if (message != null && message.toLowerCase(java.util.Locale.ROOT).contains(EMAIL_UNIQUE_INDEX)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Trimmed e-mail, or null when blank (a blank address is "no address", not a value to compare). */
@@ -143,6 +162,13 @@ public class CustomerService {
     public CustomerResponseDTO updateCustomer(Long id, CustomerRequestDTO request) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with ID: " + id));
+        // A customer whose delete is being checked right now is not edited: the edit would race the delete.
+        if (isBeingDeleted(customer)) {
+            throw new DeletionInProgressException(id);
+        }
+        if (request.getVersion() != null && !request.getVersion().equals(customer.getVersion())) {
+            throw new StaleVersionException();
+        }
         String email = normalizedEmail(request);
         if (email != null && customerRepository.existsByEmailIgnoreCaseAndIdNot(email, id)) {
             throw new DuplicateEmailException(email);
@@ -216,6 +242,7 @@ public class CustomerService {
         response.setEmail(customer.getEmail());
         response.setPhone(customer.getPhone());
         response.setCustomerType(customer.getCustomerType());
+        response.setVersion(customer.getVersion());
         return response;
     }
 }

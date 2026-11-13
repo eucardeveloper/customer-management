@@ -12,6 +12,7 @@ import lombok.Setter;
 public class ResetPasswordRequest {
 
     @NotBlank(message = "New password is required")
-    @Size(min = 8, max = 72, message = "New password must be 8-72 characters")
+    @Size(min = 8, message = "New password must be at least 8 characters")
+    @Utf8MaxBytes(message = "New password must be at most 72 bytes (accented letters count as 2)")
     private String newPassword;
 }

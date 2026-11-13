@@ -18,4 +18,6 @@ public class CustomerResponseDTO {
     private String phone;
 	
 	private String customerType;
+
+    private Long version;
 }

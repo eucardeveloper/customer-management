@@ -2,6 +2,7 @@ package com.enesucar.auth_service.config;
 
 import com.enesucar.auth_service.entity.User;
 import com.enesucar.auth_service.repository.UserRepository;
+import com.enesucar.auth_service.service.AuthAuditService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,14 +30,16 @@ public class HostedBootstrap implements ApplicationRunner {
 
     private final UserRepository users;
     private final PasswordEncoder encoder;
+    private final AuthAuditService audit;
     private final String adminPassword;
     private final boolean removeDemoUser;
 
-    public HostedBootstrap(UserRepository users, PasswordEncoder encoder,
+    public HostedBootstrap(UserRepository users, PasswordEncoder encoder, AuthAuditService audit,
                            @Value("${auth.bootstrap.admin-password:}") String adminPassword,
                            @Value("${auth.bootstrap.remove-demo-user:false}") boolean removeDemoUser) {
         this.users = users;
         this.encoder = encoder;
+        this.audit = audit;
         this.adminPassword = adminPassword;
         this.removeDemoUser = removeDemoUser;
     }
@@ -52,6 +55,8 @@ public class HostedBootstrap implements ApplicationRunner {
                     admin.setPassword(encoder.encode(adminPassword));
                     admin.setTokenVersion(admin.getTokenVersion() + 1); // old sessions end
                     users.save(admin);
+                    audit.record(AuthAuditService.BOOTSTRAP_ADMIN_PASSWORD, "system", admin.getUsername(),
+                            "replaced at start-up; sessions ended");
                     log.info("Admin password replaced from AUTH_BOOTSTRAP_ADMIN_PASSWORD");
                 }
             });
@@ -59,6 +64,7 @@ public class HostedBootstrap implements ApplicationRunner {
         if (removeDemoUser) {
             users.findByUsername("user1").ifPresent(u -> {
                 users.delete(u);
+                audit.record(AuthAuditService.BOOTSTRAP_DEMO_USER_REMOVED, "system", u.getUsername(), "removed at start-up");
                 log.info("Seeded demo user removed");
             });
         }

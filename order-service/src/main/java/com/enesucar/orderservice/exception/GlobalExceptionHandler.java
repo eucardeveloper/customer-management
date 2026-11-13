@@ -40,6 +40,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
+    /** An edit based on an outdated copy (or one whose order was deleted meanwhile): 409, reload and retry. */
+    @ExceptionHandler({StaleVersionException.class, org.springframework.dao.OptimisticLockingFailureException.class})
+    public ResponseEntity<Map<String, Object>> handleStale(RuntimeException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", 409);
+        body.put("error", "The order was changed by someone else; reload it and try again");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(UnknownCustomerException.class)
     public ResponseEntity<Map<String, Object>> handleUnknownCustomer(UnknownCustomerException ex) {
         Map<String, Object> body = new HashMap<>();

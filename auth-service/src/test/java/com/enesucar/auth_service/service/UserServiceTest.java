@@ -70,6 +70,7 @@ class UserServiceTest {
 
     @Test
     void deleteUser_shouldCallRepositoryDeleteById() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         doNothing().when(userRepository).deleteById(1L);
 
         userService.deleteUser(1L);
@@ -125,10 +126,40 @@ class UserServiceTest {
     @Test
     void deleteUser_shouldAllowDeletingAnAdmin_whenAnotherAdminExists() {
         when(userRepository.lockAdminIds()).thenReturn(List.of(1L, 2L));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         userService.deleteUser(1L);
 
         verify(userRepository).deleteById(1L);
+    }
+
+    @Test
+    void deleteUser_shouldAnswerNotFound_whenTheUserDoesNotExist() {
+        when(userRepository.findById(999_999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.deleteUser(999_999L))
+                .isInstanceOf(com.enesucar.auth_service.exception.UserNotFoundException.class);
+
+        verify(userRepository, never()).deleteById(anyLong());
+    }
+
+    @Test
+    void deleteUser_shouldRefuseDeletingYourOwnAccount_evenWhenAnotherAdminExists() {
+        user.setRole(Role.ADMIN);
+        when(userRepository.lockAdminIds()).thenReturn(List.of(1L, 2L));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        "testuser", null, List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))));
+        try {
+            assertThatThrownBy(() -> userService.deleteUser(1L))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("own account");
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+
+        verify(userRepository, never()).deleteById(anyLong());
     }
 
     @Test
@@ -145,7 +176,7 @@ class UserServiceTest {
     @Test
     void createUser_shouldRefuseTakenUsernameOrEmail_andUnknownRole() {
         when(userRepository.existsByUsername("taken")).thenReturn(true);
-        when(userRepository.existsByEmail("taken@test.com")).thenReturn(true);
+        when(userRepository.existsByEmailIgnoreCase("taken@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> userService.createUser(createRequest("taken", "x@test.com", "USER")))
                 .isInstanceOf(com.enesucar.auth_service.exception.UserAlreadyExistsException.class)

@@ -39,6 +39,13 @@ const ENTRIES: Entry[] = [
   { match: /^Customer .* still has orders/i, en: 'This customer still has orders; delete or reassign them first', tr: 'Bu müşterinin hâlâ siparişleri var; önce siparişleri silin veya başka müşteriye aktarın', de: 'Dieser Kunde hat noch Bestellungen; bitte zuerst löschen oder neu zuordnen' },
   { match: /^Unknown role/i, en: 'Unknown role', tr: 'Bilinmeyen rol', de: 'Unbekannte Rolle' },
   { match: /^role is required$/i, en: 'Role is required', tr: 'Rol gerekli', de: 'Rolle ist erforderlich' },
+  { match: /^The (customer|order) was changed by someone else/i, en: 'Someone else changed this record; the list was reloaded, please try again', tr: 'Bu kayıt başka biri tarafından değiştirildi; liste yenilendi, lütfen tekrar deneyin', de: 'Dieser Datensatz wurde von jemand anderem geändert; die Liste wurde neu geladen, bitte erneut versuchen' },
+  { match: /^Customer \d+ is already being deleted/i, en: 'This customer is being deleted right now; try again shortly', tr: 'Bu müşteri şu anda siliniyor; birazdan tekrar deneyin', de: 'Dieser Kunde wird gerade gelöscht; bitte gleich erneut versuchen' },
+  { match: /^You cannot delete your own account/i, en: 'You cannot delete your own account; ask another administrator', tr: 'Kendi hesabınızı silemezsiniz; başka bir yöneticiden isteyin', de: 'Sie können Ihr eigenes Konto nicht löschen; bitten Sie einen anderen Administrator' },
+  { match: /^Email must be at most 255 characters$/i, en: 'Email must be at most 255 characters', tr: 'E-posta en fazla 255 karakter olabilir', de: 'Die E-Mail darf höchstens 255 Zeichen lang sein' },
+  { match: /^(New p|P)assword must be at most 72 bytes/i, en: 'Password is too long (72 bytes at most; accented letters count as 2)', tr: 'Şifre çok uzun (en fazla 72 bayt; ş, ğ, ı gibi harfler 2 sayılır)', de: 'Das Passwort ist zu lang (höchstens 72 Bytes; Umlaute zählen doppelt)' },
+  { match: /^New password must be at least 8 characters$/i, en: 'New password must be at least 8 characters', tr: 'Yeni şifre en az 8 karakter olmalı', de: 'Das neue Passwort muss mindestens 8 Zeichen lang sein' },
+  { match: /^The request (violates a data constraint|conflicts with existing data)$/i, en: 'The data conflicts with existing records; check the values and try again', tr: 'Veriler mevcut kayıtlarla çakışıyor; değerleri kontrol edip tekrar deneyin', de: 'Die Daten stehen im Konflikt mit vorhandenen Datensätzen; bitte prüfen und erneut versuchen' },
   { match: /^Invalid request$/i, en: 'Invalid request', tr: 'Geçersiz istek', de: 'Ungültige Anfrage' },
 ];
 

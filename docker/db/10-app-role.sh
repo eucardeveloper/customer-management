@@ -33,6 +33,13 @@ SELECT format('GRANT USAGE ON SCHEMA public TO %I', :'app_user') \gexec
 -- Tables and sequences that already exist (running this against an existing database) ...
 SELECT format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I', :'app_user') \gexec
 SELECT format('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO %I', :'app_user') \gexec
+-- The audit trails are append-only for the application: read and insert, never change or delete. (On a
+-- fresh volume the tables do not exist yet when this script runs; the Flyway migrations *_audit_append_only
+-- apply the same restriction when they are created. Running this script by hand re-applies it too.)
+SELECT format('REVOKE UPDATE, DELETE, TRUNCATE ON %I FROM %I', c.relname, :'app_user')
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind = 'r'
+  AND c.relname IN ('auth_audit', 'customer_audit', 'order_audit') \gexec
 -- ... and every table/sequence the owner's Flyway migrations create later.
 SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I',
               :'owner', :'app_user') \gexec

@@ -37,7 +37,35 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDuplicate(DataIntegrityViolationException ex) {
-        return body(HttpStatus.CONFLICT, "Username or email already taken");
+        String text = causeText(ex);
+        if (text.contains("users_username_key")) {
+            return body(HttpStatus.CONFLICT, "Username already taken");
+        }
+        if (text.contains("users_email_key") || text.contains("uq_users_email_lower")) {
+            return body(HttpStatus.CONFLICT, "Email already registered");
+        }
+        // Some other constraint: say only that the data conflicts; the details stay in the log.
+        log.warn("Unclassified data integrity violation", ex);
+        return body(HttpStatus.CONFLICT, "The request conflicts with existing data");
+    }
+
+    /** Names of the violated constraint can sit anywhere in the cause chain (Hibernate wraps the driver's text). */
+    private static String causeText(Throwable error) {
+        StringBuilder sb = new StringBuilder();
+        for (Throwable t = error; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t instanceof org.hibernate.exception.ConstraintViolationException cve && cve.getConstraintName() != null) {
+                sb.append(cve.getConstraintName()).append(' ');
+            }
+            if (t.getMessage() != null) {
+                sb.append(t.getMessage()).append(' ');
+            }
+        }
+        return sb.toString().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    @ExceptionHandler(SelfDeletionException.class)
+    public ResponseEntity<Map<String, Object>> handleSelfDeletion(SelfDeletionException ex) {
+        return body(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(InvalidPasswordException.class)

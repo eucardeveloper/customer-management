@@ -47,6 +47,9 @@ const ACTION_KEYS: Record<string, string> = {
   LOGIN_SUCCESS: 'auditLoginSuccess',
   LOGIN_FAILED: 'auditLoginFailed',
   LOGOUT: 'auditLogout',
+  PASSWORD_CHANGE_FAILED: 'auditPasswordChangeFailed',
+  BOOTSTRAP_ADMIN_PASSWORD: 'auditBootstrapAdminPassword',
+  BOOTSTRAP_DEMO_USER_REMOVED: 'auditBootstrapDemoRemoved',
 };
 
 type Feed = 'orders' | 'customers' | 'accounts';

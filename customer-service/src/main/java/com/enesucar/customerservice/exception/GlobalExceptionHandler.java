@@ -58,6 +58,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    /** An edit based on an outdated copy: either the caller's version did not match, or the save lost a race. */
+    @ExceptionHandler({StaleVersionException.class, org.springframework.dao.OptimisticLockingFailureException.class})
+    public ResponseEntity<Map<String, Object>> handleStale(RuntimeException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", 409);
+        body.put("error", "The customer was changed by someone else; reload it and try again");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    /**
+     * Any other constraint violation: say so without guessing which field (the e-mail case is translated
+     * earlier, in CustomerService, and only for its own constraint). Details stay in the log.
+     */
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class).warn("Data integrity violation", ex);
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", 400);
+        body.put("error", "The request violates a data constraint");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
     @ExceptionHandler(DeletionInProgressException.class)
     public ResponseEntity<Map<String, Object>> handleDeletionInProgress(DeletionInProgressException ex) {
         Map<String, Object> body = new HashMap<>();

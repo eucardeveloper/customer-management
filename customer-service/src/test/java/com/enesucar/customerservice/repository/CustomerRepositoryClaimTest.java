@@ -62,4 +62,19 @@ class CustomerRepositoryClaimTest {
         LocalDateTime now = LocalDateTime.now();
         assertThat(customers.claimForDeletion(999_999L, now, now.minusSeconds(30))).isEqualTo(0);
     }
+
+    @Test
+    void savingAPreviouslyLoadedCustomerNeverOverwritesTheDeletionClaim() {
+        // update flow: the customer is read first, a delete claims it, then the update saves its stale copy
+        Customer loaded = customers.findById(id).orElseThrow();
+        LocalDateTime now = LocalDateTime.now();
+        assertThat(customers.claimForDeletion(id, now, now.minusSeconds(30))).isEqualTo(1);
+
+        loaded.setFirstName("Renamed");
+        customers.saveAndFlush(loaded);
+
+        Customer reread = customers.findById(id).orElseThrow();
+        assertThat(reread.getFirstName()).isEqualTo("Renamed");
+        assertThat(reread.getDeletionPendingSince()).as("the claim must survive an unrelated save").isNotNull();
+    }
 }
