@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/chatGuard.test.ts"
+    "test": "node --test tests/chatGuard.test.ts tests/chatHandler.test.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

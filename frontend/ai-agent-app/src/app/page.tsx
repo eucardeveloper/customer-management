@@ -18,6 +18,7 @@ import {
   createTheme,
   CssBaseline,
 } from '@mui/material';
+import { newSessionId } from '@/lib/chatGuard';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import PersonIcon from '@mui/icons-material/Person';
@@ -116,7 +117,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chatInput: input,
-          sessionId: `session-${Date.now()}`,
+          sessionId: newSessionId(),
         }),
       });
 

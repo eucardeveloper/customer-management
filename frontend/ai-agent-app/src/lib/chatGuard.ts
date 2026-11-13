@@ -62,3 +62,8 @@ export class RateLimiter {
     return true;
   }
 }
+
+/** Id that ties one conversation to the agent's memory (n8n chat memory is keyed by it). */
+export function newSessionId(): string {
+  return `session-${Date.now()}`;
+}
