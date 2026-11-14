@@ -3,6 +3,7 @@ import { useTranslation, translate, type Lang } from './translations';
 
 import { api } from '@/lib/api';
 import { translateServerMessage } from '@/lib/serverMessages';
+import { parsePrice, statusChangeBody } from '@/lib/orderInput';
 import { usePersistedPref } from '@/lib/usePersistedPref';
 import { downloadXlsx } from '@/lib/exportXlsx';
 import { useLang } from '@/lib/useLang';
@@ -225,11 +226,11 @@ export default function Home() {
   const [orderBusy, setOrderBusy] = useState(false);
   const handleSaveOrder = async () => {
     const customerId = parseInt(editOrder.customerId);
-    const price = parseFloat(editOrder.price);
+    const price = parsePrice(editOrder.price);
     const quantity = parseInt(editOrder.quantity);
     if (!editOrder.productName.trim()) { showSnackbar(t('productNameRequired'), 'error'); return; }
     if (isNaN(customerId) || customerId <= 0) { showSnackbar(t('customerIdRequired'), 'error'); return; }
-    if (isNaN(price) || price < 0) { showSnackbar(t('priceRequired'), 'error'); return; }
+    if (price === null) { showSnackbar(t('priceRequired'), 'error'); return; }
     if (isNaN(quantity) || quantity <= 0) { showSnackbar(t('quantityRequired'), 'error'); return; }
     setOrderBusy(true);
     const ranOrder = await runOnce(orderFlight, async () => {
@@ -254,7 +255,7 @@ export default function Home() {
   const handleDeleteOrder = async () => {
     if (!deleteOrderId) return;
     try { await api.delete(`/api/orders/${deleteOrderId}`); showSnackbar(t('deleted'), 'success'); setOrderDeleteDialogOpen(false); fetchOrders(); }
-    catch { showSnackbar(t('deleteFailed'), 'error'); }
+    catch (e) { showSnackbar(serverMsg(e, t('deleteFailed')), 'error'); }
   };
 
   const submitPassword = async () => {
@@ -312,8 +313,12 @@ export default function Home() {
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
-    try { await api.put(`/api/orders/${orderId}`, { customerId: order.customerId, productName: order.productName, price: order.price, quantity: order.quantity, status: newStatus }); showSnackbar(t('saved'), 'success'); fetchOrders(); }
-    catch { showSnackbar(t('statusUpdateFailed'), 'error'); }
+    try { await api.put(`/api/orders/${orderId}`, statusChangeBody(order, newStatus)); showSnackbar(t('saved'), 'success'); fetchOrders(); }
+    catch (e) {
+      showSnackbar(serverMsg(e, t('statusUpdateFailed')), 'error');
+      // Someone else changed the order: show their version again instead of the stale row.
+      if (e instanceof Error && /changed by someone else/i.test(e.message)) fetchOrders();
+    }
   };
 
   const filteredCustomers = [...customers].sort((x, y) => (x.id ?? 0) - (y.id ?? 0)).filter(c => { const q = custSearch.toLowerCase(); if (!q) return true; return `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q); });
