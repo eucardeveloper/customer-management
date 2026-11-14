@@ -29,3 +29,8 @@ test('review-batch messages (stale edit, self deletion, byte limit) are translat
   assert.equal(translateServerMessage('tr', 'Customer 7 is already being deleted; try again shortly'),
     'Bu müşteri şu anda siliniyor; birazdan tekrar deneyin');
 });
+
+test('the fixed username length message is translated', () => {
+  assert.equal(translateServerMessage('tr', 'Username must be 3-50 characters'), 'Kullanıcı adı 3-50 karakter olmalı');
+  assert.equal(translateServerMessage('de', 'Username must be 3-50 characters'), 'Der Benutzername muss 3-50 Zeichen lang sein');
+});

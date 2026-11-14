@@ -12,7 +12,7 @@ import lombok.Setter;
 public class CreateUserRequest {
 
     @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 50)
+    @Size(min = 3, max = 50, message = "Username must be 3-50 characters")
     private String username;
 
     @NotBlank(message = "Password is required")
