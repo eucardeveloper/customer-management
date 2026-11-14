@@ -91,6 +91,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    @ExceptionHandler(InvalidFilterException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidFilter(InvalidFilterException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", 400);
+        body.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
     @ExceptionHandler(OrderServiceUnavailableException.class)
     public ResponseEntity<Map<String, Object>> handleOrderServiceDown(OrderServiceUnavailableException ex) {
         Map<String, Object> body = new HashMap<>();
