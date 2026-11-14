@@ -189,7 +189,7 @@ All routes go through the gateway on `:8080`; protected routes need the session 
 | Area | Endpoints | Access |
 |------|-----------|--------|
 | Auth | `POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/logout` | public |
-| Customers | `GET/POST /api/customers`, `PUT/DELETE /api/customers/{id}` (the update takes an optional `version`; `409` if it is outdated) | read: any user, write: ADMIN |
+| Customers | `GET/POST /api/customers` (`POST` answers `201`), `PUT/DELETE /api/customers/{id}` (the update takes an optional `version`; `409` if it is outdated) | read: any user, write: ADMIN |
 | Orders | `GET/POST /api/orders`, `PUT/DELETE /api/orders/{id}` (same optional `version`) | read: any user, write: ADMIN |
 | Auth (signed in) | `GET /api/auth/session` (is this token still valid; who am I), `POST /api/auth/password` (change own password; needs the current one, throttled; ends all sessions) | any signed-in user |
 | Audit | `GET /api/orders/audit`, `GET /api/customers/audit`, `GET /api/users/audit` | ADMIN |
