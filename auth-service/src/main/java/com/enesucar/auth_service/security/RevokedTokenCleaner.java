@@ -18,6 +18,6 @@ public class RevokedTokenCleaner {
 
     @Scheduled(fixedDelayString = "${auth.revoked-token-cleanup-ms:3600000}", initialDelay = 60_000)
     public void purge() {
-        repository.deleteExpired(LocalDateTime.now());
+        repository.deleteExpired(LocalDateTime.now(java.time.ZoneOffset.UTC));
     }
 }

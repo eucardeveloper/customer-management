@@ -73,16 +73,26 @@ public class LoginAttemptLimiter {
         check(key(username), maxFailures);
     }
 
-    /** Same, for a client address; a blank address is never limited (nothing to count against). */
-    public void checkAllowedIp(String ip) {
-        if (ip != null && !ip.isBlank()) {
-            check(ipKey(ip), ipMaxFailures);
+    /**
+     * Counts one attempt for a client address and refuses it when that exceeds the address limit; same
+     * write-first method as {@link #reserveAttempt}. Returns the reservation (give it back with
+     * {@link #release} after a successful sign-in; a wrong password simply leaves it as a failure), or
+     * {@code null} for a blank address, which is never limited (nothing to count against).
+     */
+    public Long reserveAttemptIp(String ip) {
+        if (ip == null || ip.isBlank()) {
+            return null;
         }
+        return reserve(ipKey(ip), ipMaxFailures);
     }
 
-    public void recordFailureIp(String ip) {
-        if (ip != null && !ip.isBlank()) {
-            failures.save(new LoginFailure(ipKey(ip), now()));
+    /** Gives a reservation back (a successful sign-in is not a failure). A {@code null} reservation is ignored. */
+    public void release(Long reservation) {
+        if (reservation != null) {
+            inOwnTransaction(() -> {
+                failures.deleteById(reservation);
+                return null;
+            });
         }
     }
 
@@ -99,7 +109,7 @@ public class LoginAttemptLimiter {
         reserve(key(username), maxFailures);
     }
 
-    private void reserve(String throttleKey, int max) {
+    private Long reserve(String throttleKey, int max) {
         LoginFailure mine = inOwnTransaction(() -> failures.save(new LoginFailure(throttleKey, now())));
         LocalDateTime now = now();
         List<LoginFailure> others = failures
@@ -116,6 +126,7 @@ public class LoginAttemptLimiter {
             long retry = Duration.between(now, unlock).getSeconds();
             throw new TooManyLoginAttemptsException(Math.max(1, retry));
         }
+        return mine.getId();
     }
 
     private <T> T inOwnTransaction(Supplier<T> work) {
