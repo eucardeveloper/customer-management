@@ -23,6 +23,6 @@ test('a status change carries the version the row was loaded with and keeps the 
 });
 
 test('a row without a version sends none', () => {
-  const body = statusChangeBody({ id: 1, customerId: 1, productName: 'x', price: 1, quantity: 1, date: '' }, 'DELIVERED');
+  const body = statusChangeBody({ customerId: 1, productName: 'x', price: 1, quantity: 1 }, 'DELIVERED');
   assert.equal('version' in body, false);
 });
