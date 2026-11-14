@@ -53,6 +53,8 @@ import { OrderDialogs } from './views/OrderDialogs';
 import { UserDialogs } from './views/UserDialogs';
 import { orderMatchesSearch } from '../lib/orderSearch';
 import { customerFullName } from '../lib/customerName';
+import { nextSort, sortRows, type Accessors, type SortState } from '../lib/listSort';
+import { EMPTY_ORDER_FILTERS, customerKind, filterCustomersByKind, filterOrders, filterUsersByRole, type CustomerKind, type OrderFilters } from '../lib/listFilters';
 
 export default function Home() {
   const [tab, setTab] = useState<'dashboard' | 'customers' | 'orders' | 'ai' | 'analytics' | 'users' | 'audit'>('dashboard');
@@ -71,6 +73,13 @@ export default function Home() {
   const [custSearch, setCustSearch] = useState('');
   const [ordSearch, setOrdSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
+  // Column sorting (null = the screen's default order) and the extra filters of each list.
+  const [custSort, setCustSort] = useState<SortState | null>(null);
+  const [ordSort, setOrdSort] = useState<SortState | null>(null);
+  const [userSort, setUserSort] = useState<SortState | null>(null);
+  const [custKind, setCustKind] = useState<'' | CustomerKind>('');
+  const [ordFilters, setOrdFilters] = useState<OrderFilters>(EMPTY_ORDER_FILTERS);
+  const [userRole, setUserRole] = useState('');
   const [custPage, setCustPage] = useState(0);
   const [custRowsPerPage, setCustRowsPerPage] = useState(10);
   const [ordPage, setOrdPage] = useState(0);
@@ -322,13 +331,23 @@ export default function Home() {
     }
   };
 
-  const filteredCustomers = [...customers].sort((x, y) => (x.id ?? 0) - (y.id ?? 0)).filter(c => { const q = custSearch.toLowerCase(); if (!q) return true; return `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q); });
+  const customerColumns: Accessors<Customer> = { id: c => c.id, type: c => customerKind(c), customer: c => customerFullName(c), email: c => c.email, phone: c => c.phone };
+  const filteredCustomers = sortRows(
+    filterCustomersByKind([...customers].sort((x, y) => (x.id ?? 0) - (y.id ?? 0)), custKind).filter(c => { const q = custSearch.toLowerCase(); if (!q) return true; return `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q); }),
+    custSort, customerColumns);
   const getCustomerName = (id: number) => { const c = customers.find(c => c.id === id); return c ? customerFullName(c) : `ID: ${id}`; };
-  const filteredOrders = [...orders].sort((x, y) => (y.id ?? 0) - (x.id ?? 0)).filter(o => orderMatchesSearch(o, ordSearch, getCustomerName(o.customerId), statusText(o.status ?? 'PENDING', t)));
+  const orderColumns: Accessors<Order> = {
+    id: o => o.id, status: o => statusText(o.status ?? 'PENDING', t), product: o => o.productName, customer: o => getCustomerName(o.customerId),
+    price: o => o.price, qty: o => o.quantity, total: o => (o.price ?? 0) * (o.quantity ?? 0), date: o => o.date,
+  };
+  const filteredOrders = sortRows(
+    filterOrders([...orders].sort((x, y) => (y.id ?? 0) - (x.id ?? 0)), ordFilters).filter(o => orderMatchesSearch(o, ordSearch, getCustomerName(o.customerId), statusText(o.status ?? 'PENDING', t))),
+    ordSort, orderColumns);
   // Keep the page index valid when rows disappear (delete / search), otherwise the table shows an empty page
   const custPageSafe = Math.min(custPage, Math.max(0, Math.ceil(filteredCustomers.length / custRowsPerPage) - 1));
   const ordPageSafe = Math.min(ordPage, Math.max(0, Math.ceil(filteredOrders.length / ordRowsPerPage) - 1));
-  const filteredUsers = users.filter(u => { const q = userSearch.toLowerCase(); if (!q) return true; return u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q); });
+  const userColumns: Accessors<UserItem> = { id: u => u.id, username: u => u.username, email: u => u.email, role: u => u.role };
+  const filteredUsers = sortRows(filterUsersByRole(users, userRole).filter(u => { const q = userSearch.toLowerCase(); if (!q) return true; return u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q); }), userSort, userColumns);
 
   const exportExcel = async (type: 'customers' | 'orders') => {
     const stamp = new Date().toISOString().slice(0, 10);
@@ -633,6 +652,7 @@ export default function Home() {
             {tab === 'customers' && (
               <CustomersTab t={t} isAdmin={isAdmin} loading={loading} custSearch={custSearch} setCustSearch={setCustSearch}
                 setCustPage={setCustPage} custPageSafe={custPageSafe} custRowsPerPage={custRowsPerPage} setCustRowsPerPage={setCustRowsPerPage}
+                custSort={custSort} onCustSort={(k) => { setCustSort(nextSort(custSort, k)); setCustPage(0); }} custKind={custKind} setCustKind={(v) => { setCustKind(v); setCustPage(0); }}
                 filteredCustomers={filteredCustomers} fetchCustomers={fetchCustomers} exportExcel={exportExcel}
                 openAdd={openAdd} openEdit={openEdit} openDelete={openDelete} setDrawerCustomer={setDrawerCustomer} />
             )}
@@ -641,6 +661,7 @@ export default function Home() {
             {tab === 'orders' && (
               <OrdersTab t={t} lang={lang} isAdmin={isAdmin} loading={loading} ordSearch={ordSearch} setOrdSearch={setOrdSearch}
                 setOrdPage={setOrdPage} ordPageSafe={ordPageSafe} ordRowsPerPage={ordRowsPerPage} setOrdRowsPerPage={setOrdRowsPerPage}
+                ordSort={ordSort} onOrdSort={(k) => { setOrdSort(nextSort(ordSort, k)); setOrdPage(0); }} ordFilters={ordFilters} setOrdFilters={(f) => { setOrdFilters(f); setOrdPage(0); }}
                 filteredOrders={filteredOrders} fetchOrders={fetchOrders} exportExcel={exportExcel} getCustomerName={getCustomerName}
                 openAddOrder={openAddOrder} openEditOrder={openEditOrder} openDeleteOrder={openDeleteOrder} updateOrderStatus={updateOrderStatus} />
             )}
@@ -648,6 +669,7 @@ export default function Home() {
             {/* ── USERS TAB ── */}
             {tab === 'users' && isAdmin && (
               <UsersTab t={t} currentUser={currentUser} userSearch={userSearch} setUserSearch={setUserSearch} filteredUsers={filteredUsers}
+                userSort={userSort} onUserSort={(k) => setUserSort(nextSort(userSort, k))} userRole={userRole} setUserRole={setUserRole}
                 fetchUsers={fetchUsers} openPwDialog={openPwDialog} setAddUserDialogOpen={setAddUserDialogOpen}
                 setDeleteUserDialogOpen={setDeleteUserDialogOpen} setDeleteUserId={setDeleteUserId} setRoleDialogOpen={setRoleDialogOpen}
                 setSelectedRole={setSelectedRole} setSelectedUserId={setSelectedUserId} />

@@ -31,7 +31,7 @@ public class CustomerController {
 
     @PostMapping
     public ResponseEntity<CustomerResponseDTO> createCustomer(@RequestBody @Valid CustomerRequestDTO request) {
-        return ResponseEntity.ok(customerService.createCustomer(request));
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(customerService.createCustomer(request));
     }
 
     @PutMapping("/{id}")

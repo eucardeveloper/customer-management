@@ -1,4 +1,7 @@
 'use client';
+import { SortCell, FilterSelect, FilterDate, ClearFilters } from './ListControls';
+import { hasOrderFilters, isOrderRangeInvalid, type OrderFilters } from '../../lib/listFilters';
+import type { SortState } from '../../lib/listSort';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Button, IconButton, TextField, Chip, Avatar, CircularProgress, InputAdornment, Tooltip, Select, MenuItem, FormControl } from '@mui/material';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import AddIcon from '@mui/icons-material/Add';
@@ -7,7 +10,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DownloadIcon from '@mui/icons-material/Download';
-import { ORDER_STATUSES, statusChip, formatDate } from '../model';
+import { ORDER_STATUSES, statusChip, statusText, formatDate } from '../model';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { TFn, Order } from '../model';
@@ -25,6 +28,10 @@ interface OrdersTabProps {
   ordRowsPerPage: number;
   setOrdRowsPerPage: Dispatch<SetStateAction<number>>;
   filteredOrders: Order[];
+  ordSort: SortState | null;
+  onOrdSort: (key: string) => void;
+  ordFilters: OrderFilters;
+  setOrdFilters: (f: OrderFilters) => void;
   fetchOrders: () => void | Promise<void>;
   exportExcel: (type: 'customers' | 'orders') => void | Promise<void>;
   getCustomerName: (id: number) => string;
@@ -34,7 +41,7 @@ interface OrdersTabProps {
   updateOrderStatus: (orderId: number, newStatus: string) => void | Promise<void>;
 }
 
-export function OrdersTab({ t, lang, isAdmin, loading, ordSearch, setOrdSearch, setOrdPage, ordPageSafe, ordRowsPerPage, setOrdRowsPerPage, filteredOrders, fetchOrders, exportExcel, getCustomerName, openAddOrder, openEditOrder, openDeleteOrder, updateOrderStatus }: OrdersTabProps) {
+export function OrdersTab({ t, lang, isAdmin, loading, ordSearch, setOrdSearch, setOrdPage, ordPageSafe, ordRowsPerPage, setOrdRowsPerPage, filteredOrders, ordSort, onOrdSort, ordFilters, setOrdFilters, fetchOrders, exportExcel, getCustomerName, openAddOrder, openEditOrder, openDeleteOrder, updateOrderStatus }: OrdersTabProps) {
   return (
               <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid var(--border)', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0, bgcolor: 'var(--surface)' }}>
@@ -52,6 +59,15 @@ export function OrdersTab({ t, lang, isAdmin, loading, ordSearch, setOrdSearch, 
                     </Button>
                   )}
                 </Box>
+                {/* Status and date filters: they combine with the search box above and with each other. */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'flex-start', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0 }}>
+                  <FilterSelect t={t} label={t('status')} value={ordFilters.status} onChange={(v) => setOrdFilters({ ...ordFilters, status: v })}
+                    options={ORDER_STATUSES.map((st) => ({ value: st, label: statusText(st, t) }))} />
+                  <FilterDate label={t('filterFrom')} value={ordFilters.from} onChange={(v) => setOrdFilters({ ...ordFilters, from: v })} error={isOrderRangeInvalid(ordFilters)} />
+                  <FilterDate label={t('filterTo')} value={ordFilters.to} onChange={(v) => setOrdFilters({ ...ordFilters, to: v })} error={isOrderRangeInvalid(ordFilters)}
+                    helperText={isOrderRangeInvalid(ordFilters) ? t('filterRangeInvalid') : undefined} />
+                  {hasOrderFilters(ordFilters) && <ClearFilters t={t} onClick={() => setOrdFilters({ status: '', from: '', to: '' })} />}
+                </Box>
                 {loading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={32} /></Box>
                 ) : (
@@ -60,14 +76,14 @@ export function OrdersTab({ t, lang, isAdmin, loading, ordSearch, setOrdSearch, 
                       <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: { xs: 0, md: isAdmin ? 1100 : 800 } }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                            <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.75, md: 2 } }}>{t('status')}</TableCell>
-                            <TableCell sx={{ width: { xs: '100%', md: '30%' } }}>{t('product')}</TableCell>
-                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '26%' }}>{t('customer')}</TableCell>
-                            {isAdmin && <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('unitPrice')}</TableCell>}
-                            <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('qty')}</TableCell>
-                            {isAdmin && <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('totalCol')}</TableCell>}
-                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('date')}</TableCell>
+                            <SortCell label={t('id')} sortKey="id" sort={ordSort} onSort={onOrdSort} sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }} />
+                            <SortCell label={t('status')} sortKey="status" sort={ordSort} onSort={onOrdSort} align="center" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.75, md: 2 } }} />
+                            <SortCell label={t('product')} sortKey="product" sort={ordSort} onSort={onOrdSort} sx={{ width: { xs: '100%', md: '30%' } }} />
+                            <SortCell label={t('customer')} sortKey="customer" sort={ordSort} onSort={onOrdSort} sx={{ display: { xs: 'none', md: 'table-cell' }, width: '26%' }} />
+                            {isAdmin && <SortCell label={t('unitPrice')} sortKey="price" sort={ordSort} onSort={onOrdSort} align="right" sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }} />}
+                            <SortCell label={t('qty')} sortKey="qty" sort={ordSort} onSort={onOrdSort} align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }} />
+                            {isAdmin && <SortCell label={t('totalCol')} sortKey="total" sort={ordSort} onSort={onOrdSort} align="right" sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }} />}
+                            <SortCell label={t('date')} sortKey="date" sort={ordSort} onSort={onOrdSort} sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }} />
                             {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>
