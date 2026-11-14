@@ -32,7 +32,7 @@ By hand:
 
 Status: first successful restore test on 2026-10-21 (`.\restore-test.ps1`: all three databases backed up, a marker written into a customer, backup restored, marker gone, customer count unchanged). `./restore-test.sh` passed on 2026-10-22 against a local stack (users=2, customers=5, orders=8 before and after); from then on the E2E workflow runs it.
 
-Latest successful restore test on a local stack: **2026-10-26** (`.\restore-test.ps1`, backup `20261026_144104`: `auth_db`, `customer_db` and `order_db` restored with exit code 0, marker gone, customer count 5 = 5). The n8n database and its encryption key are backed up by `backup.bat` but are not part of the automated restore test; after a restore, open n8n and check that the workflows and credentials are there.
+Latest successful restore test on a local stack: **2026-11-14** (`.\restore-test.ps1`, backup `20261114_163133`: `auth_db`, `customer_db` and `order_db` restored with exit code 0, marker gone, customer count 5 = 5). The PowerShell script writes its marker into one `customer` row only; `./restore-test.sh` changes one row in each of the three databases. Previous run: 2026-10-26 (backup `20261026_144104`, same result). The n8n database and its encryption key are backed up by `backup.bat` but are not part of the automated restore test; after a restore, open n8n and check that the workflows and credentials are there.
 
 ## After reformatting the computer (or on a new computer)
 
