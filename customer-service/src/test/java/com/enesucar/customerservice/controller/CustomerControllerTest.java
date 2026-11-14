@@ -88,12 +88,12 @@ class CustomerControllerTest {
     }
 
     @Test
-    void createCustomer_shouldReturn200_whenValid() throws Exception {
+    void createCustomer_shouldReturn201_whenValid() throws Exception {
         when(customerService.createCustomer(any(CustomerRequestDTO.class))).thenReturn(responseDTO);
         mockMvc.perform(post("/api/customers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDTO)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.firstName").value("John"));
     }
 

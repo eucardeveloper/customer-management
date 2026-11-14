@@ -272,3 +272,57 @@ test('demoting or deleting an account ends its sessions, and a new account with 
   expect(await status(userToken, '/api/customers')()).toBe(401);
   expect(await status(adminToken, '/api/users')()).not.toBe(200);
 });
+
+test('admin can sort the orders list by clicking a column and filter it by status', async ({ page }) => {
+  await signIn(page, ADMIN.user, ADMIN.pass);
+  await page.getByRole('button', { name: 'Orders' }).click();
+  const idHeader = page.getByRole('columnheader', { name: 'ID', exact: true });
+  await expect(idHeader).toBeVisible();
+  const ids = async () => (await page.locator('tbody tr td:nth-child(1)').allInnerTexts())
+    .map((t) => Number(t.replace('#', '').trim())).filter((n) => !Number.isNaN(n));
+
+  const before = await ids();
+  await idHeader.getByRole('button').click();
+  await expect(idHeader).toHaveAttribute('aria-sort', 'ascending');
+  expect(await ids()).toEqual([...before].sort((a, b) => a - b));
+  await idHeader.getByRole('button').click();
+  await expect(idHeader).toHaveAttribute('aria-sort', 'descending');
+  expect(await ids()).toEqual([...before].sort((a, b) => b - a));
+  await idHeader.getByRole('button').click(); // third click: back to the default order
+  await expect(idHeader).not.toHaveAttribute('aria-sort', /ascending|descending/);
+
+  await page.getByRole('combobox', { name: 'Status' }).click();
+  await page.getByRole('option', { name: 'Cancelled' }).click();
+  await expect(page.getByRole('button', { name: 'Clear filters' })).toBeVisible();
+  const statuses = (await page.locator('tbody tr td:nth-child(2)').allInnerTexts()).filter((t) => !t.includes('No orders found'));
+  for (const s of statuses) expect(s).toContain('Cancelled');
+
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await expect(page.getByRole('button', { name: 'Clear filters' })).toHaveCount(0);
+  expect((await ids()).length).toBe(before.length);
+});
+
+test('admin can filter the audit log and gets a message for a wrong date range', async ({ page }) => {
+  await signIn(page, ADMIN.user, ADMIN.pass);
+  await page.getByRole('button', { name: 'Audit Log' }).click();
+  await page.getByLabel('Who').fill('no-such-actor-xyz');
+  await expect(page.getByText('No entries match these filters')).toBeVisible();
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await expect(page.getByText('No entries match these filters')).toHaveCount(0);
+
+  await page.getByLabel('From', { exact: true }).fill('2026-02-02');
+  await page.getByLabel('To', { exact: true }).fill('2026-02-01');
+  await expect(page.getByText('The end date is before the start date')).toBeVisible();
+});
+
+test('admin can filter the users list by role', async ({ page }) => {
+  await signIn(page, ADMIN.user, ADMIN.pass);
+  await page.getByRole('button', { name: 'User Management' }).click();
+  await page.getByRole('combobox', { name: 'Role' }).click();
+  await page.getByRole('option', { name: 'ADMIN' }).click();
+  await expect(page.getByRole('button', { name: 'Clear filters' })).toBeVisible();
+  await expect(page.locator('tbody tr', { hasText: ADMIN.user }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await expect(page.getByRole('button', { name: 'Clear filters' })).toHaveCount(0);
+});
+

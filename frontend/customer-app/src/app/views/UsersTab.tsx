@@ -1,4 +1,6 @@
 'use client';
+import { SortCell, FilterSelect, ClearFilters } from './ListControls';
+import type { SortState } from '../../lib/listSort';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, IconButton, TextField, Chip, Avatar, InputAdornment, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -17,6 +19,10 @@ interface UsersTabProps {
   userSearch: string;
   setUserSearch: Dispatch<SetStateAction<string>>;
   filteredUsers: UserItem[];
+  userSort: SortState | null;
+  onUserSort: (key: string) => void;
+  userRole: string;
+  setUserRole: (r: string) => void;
   fetchUsers: () => void | Promise<void>;
   openPwDialog: (d: { mode: 'self' | 'reset'; userId?: number; username?: string }) => void;
   setAddUserDialogOpen: Dispatch<SetStateAction<boolean>>;
@@ -27,7 +33,7 @@ interface UsersTabProps {
   setSelectedUserId: Dispatch<SetStateAction<number | null>>;
 }
 
-export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUsers, fetchUsers, openPwDialog, setAddUserDialogOpen, setDeleteUserDialogOpen, setDeleteUserId, setRoleDialogOpen, setSelectedRole, setSelectedUserId }: UsersTabProps) {
+export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUsers, userSort, onUserSort, userRole, setUserRole, fetchUsers, openPwDialog, setAddUserDialogOpen, setDeleteUserDialogOpen, setDeleteUserId, setRoleDialogOpen, setSelectedRole, setSelectedUserId }: UsersTabProps) {
   return (
               <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid var(--border)', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0, bgcolor: 'var(--surface)' }}>
@@ -38,14 +44,18 @@ export function UsersTab({ t, currentUser, userSearch, setUserSearch, filteredUs
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddUserDialogOpen(true)} aria-label={t('addUser')} disableElevation size="small" sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: { xs: 36, sm: 64 }, px: { xs: 1, sm: 1.5 }, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } }, textTransform: 'none', fontWeight: 600, borderRadius: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}><Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{ t('addUser') }</Box></Button>
                   <Tooltip title={t('refresh')}><IconButton size="small" onClick={fetchUsers} sx={{ color: '#64748b' }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
                 </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'flex-start', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0 }}>
+                  <FilterSelect t={t} label={t('role')} value={userRole} onChange={setUserRole} options={[{ value: 'ADMIN', label: 'ADMIN' }, { value: 'USER', label: 'USER' }]} />
+                  {userRole !== '' && <ClearFilters t={t} onClick={() => setUserRole('')} />}
+                </Box>
                 <TableContainer sx={{ flex: '0 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 360px)', minHeight: 0 }}>
                   <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: { xs: 0, md: 760 } }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                        <TableCell sx={{ width: { xs: '100%', md: '34%' } }}>{t('username')}</TableCell>
-                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '44%' }}>{t('email')}</TableCell>
-                        <TableCell align="center" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }}>{t('role')}</TableCell>
+                        <SortCell label={t('id')} sortKey="id" sort={userSort} onSort={onUserSort} sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }} />
+                        <SortCell label={t('username')} sortKey="username" sort={userSort} onSort={onUserSort} sx={{ width: { xs: '100%', md: '34%' } }} />
+                        <SortCell label={t('email')} sortKey="email" sort={userSort} onSort={onUserSort} sx={{ display: { xs: 'none', md: 'table-cell' }, width: '44%' }} />
+                        <SortCell label={t('role')} sortKey="role" sort={userSort} onSort={onUserSort} align="center" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }} />
                         <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap', px: { xs: 0.5, md: 2 } }}>{t('actions')}</TableCell>
                       </TableRow>
                     </TableHead>

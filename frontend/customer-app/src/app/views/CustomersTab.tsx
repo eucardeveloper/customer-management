@@ -1,4 +1,7 @@
 'use client';
+import { SortCell, FilterSelect, ClearFilters } from './ListControls';
+import type { SortState } from '../../lib/listSort';
+import type { CustomerKind } from '../../lib/listFilters';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Button, IconButton, TextField, Avatar, CircularProgress, InputAdornment, Tooltip } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import AddIcon from '@mui/icons-material/Add';
@@ -24,6 +27,10 @@ interface CustomersTabProps {
   custRowsPerPage: number;
   setCustRowsPerPage: Dispatch<SetStateAction<number>>;
   filteredCustomers: Customer[];
+  custSort: SortState | null;
+  onCustSort: (key: string) => void;
+  custKind: '' | CustomerKind;
+  setCustKind: (k: '' | CustomerKind) => void;
   fetchCustomers: () => void | Promise<void>;
   exportExcel: (type: 'customers' | 'orders') => void | Promise<void>;
   openAdd: () => void;
@@ -32,7 +39,7 @@ interface CustomersTabProps {
   setDrawerCustomer: Dispatch<SetStateAction<Customer | null>>;
 }
 
-export function CustomersTab({ t, isAdmin, loading, custSearch, setCustSearch, setCustPage, custPageSafe, custRowsPerPage, setCustRowsPerPage, filteredCustomers, fetchCustomers, exportExcel, openAdd, openEdit, openDelete, setDrawerCustomer }: CustomersTabProps) {
+export function CustomersTab({ t, isAdmin, loading, custSearch, setCustSearch, setCustPage, custPageSafe, custRowsPerPage, setCustRowsPerPage, filteredCustomers, custSort, onCustSort, custKind, setCustKind, fetchCustomers, exportExcel, openAdd, openEdit, openDelete, setDrawerCustomer }: CustomersTabProps) {
   return (
               <Paper elevation={0} sx={{ flex: '0 1 auto', minHeight: 0, minWidth: 0, border: '1px solid var(--border)', borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0, bgcolor: 'var(--surface)' }}>
@@ -50,6 +57,11 @@ export function CustomersTab({ t, isAdmin, loading, custSearch, setCustSearch, s
                     </Button>
                   )}
                 </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'flex-start', px: 2, py: 1.5, borderBottom: '1px solid var(--surface-2)', flexShrink: 0 }}>
+                  <FilterSelect t={t} label={t('type')} value={custKind} onChange={(v) => setCustKind(v as '' | CustomerKind)}
+                    options={[{ value: 'INDIVIDUAL', label: t('individual') }, { value: 'COMPANY', label: t('company') }]} />
+                  {custKind !== '' && <ClearFilters t={t} onClick={() => setCustKind('')} />}
+                </Box>
                 {loading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={32} /></Box>
                 ) : (
@@ -58,11 +70,11 @@ export function CustomersTab({ t, isAdmin, loading, custSearch, setCustSearch, s
                       <Table stickyHeader size="small" sx={{ tableLayout: 'auto', minWidth: { xs: 0, md: 900 } }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('id')}</TableCell>
-                            <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }}>{t('type')}</TableCell>
-                            <TableCell sx={{ width: { xs: '100%', md: '30%' } }}>{t('customer')}</TableCell>
-                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '34%' }}>{t('email')}</TableCell>
-                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, width: '18%', whiteSpace: 'nowrap' }}>{t('phone')}</TableCell>
+                            <SortCell label={t('id')} sortKey="id" sort={custSort} onSort={onCustSort} sx={{ display: { xs: 'none', md: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }} />
+                            <SortCell label={t('type')} sortKey="type" sort={custSort} onSort={onCustSort} align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: '1%', whiteSpace: 'nowrap' }} />
+                            <SortCell label={t('customer')} sortKey="customer" sort={custSort} onSort={onCustSort} sx={{ width: { xs: '100%', md: '30%' } }} />
+                            <SortCell label={t('email')} sortKey="email" sort={custSort} onSort={onCustSort} sx={{ display: { xs: 'none', md: 'table-cell' }, width: '34%' }} />
+                            <SortCell label={t('phone')} sortKey="phone" sort={custSort} onSort={onCustSort} sx={{ display: { xs: 'none', md: 'table-cell' }, width: '18%', whiteSpace: 'nowrap' }} />
                             {isAdmin && <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>}
                           </TableRow>
                         </TableHead>

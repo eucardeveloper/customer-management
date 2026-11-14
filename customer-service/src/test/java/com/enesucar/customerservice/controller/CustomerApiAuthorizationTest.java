@@ -71,7 +71,7 @@ class CustomerApiAuthorizationTest {
         String body = "{\"firstName\":\"Fil\",\"lastName\":\"Ter\",\"email\":\"" + email + "\"}";
         String created = mvc.perform(post("/api/customers").header("X-Auth-User", "filter-alice").header("X-Auth-Role", ADMIN_ROLE)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         String id = created.replaceAll("(?s).*\"id\"\\s*:\\s*(\\d+).*", "$1");
         mvc.perform(put("/api/customers/" + id).header("X-Auth-User", "filter-bob").header("X-Auth-Role", ADMIN_ROLE)
                 .contentType(MediaType.APPLICATION_JSON).content(body.replace("Fil", "Fil2"))).andExpect(status().isOk());
