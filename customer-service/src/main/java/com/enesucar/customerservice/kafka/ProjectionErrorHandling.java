@@ -10,6 +10,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ConsumerRecordRecoverer;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.springframework.util.backoff.FixedBackOff;
 
 /**
@@ -30,8 +32,17 @@ public class ProjectionErrorHandling {
 
     @Bean
     public DefaultErrorHandler kafkaErrorHandler(KafkaTemplate<String, String> template, MeterRegistry registry) {
-        return new DefaultErrorHandler(countingRecoverer(new DeadLetterPublishingRecoverer(template), registry),
+        return new DefaultErrorHandler(countingRecoverer(new DeadLetterPublishingRecoverer(template, ProjectionErrorHandling::deadLetterTopic), registry),
                 new FixedBackOff(3000L, 3));
+    }
+
+    /**
+     * The dead-letter topic is named explicitly: Spring Kafka 4 would otherwise use "order-events-dlt", which is not
+     * the "order-events.DLT" the docs, the alert and the order-service's dead-letter listener refer to. The partition
+     * is left to the producer so the dead-letter topic does not need as many partitions as the source.
+     */
+    static TopicPartition deadLetterTopic(ConsumerRecord<?, ?> record, Exception exception) {
+        return new TopicPartition(record.topic() + ".DLT", -1);
     }
 
     /** Wraps the real dead-letter publisher so every event that reaches it is logged and counted. */

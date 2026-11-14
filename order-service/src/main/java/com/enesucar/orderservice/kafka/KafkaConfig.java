@@ -1,6 +1,8 @@
 package com.enesucar.orderservice.kafka;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -41,12 +43,20 @@ public class KafkaConfig {
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
+    /**
+     * Named explicitly: Spring Kafka 4 would otherwise publish to "order-events-dlt", while the dead-letter listener
+     * in OrderConsumer, the docs and the customer-service all use "order-events.DLT".
+     */
+    static TopicPartition deadLetterTopic(ConsumerRecord<?, ?> record, Exception exception) {
+        return new TopicPartition(record.topic() + ".DLT", -1);
+    }
+
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
             ConsumerFactory<String, String> consumerFactory,
             KafkaTemplate<String, String> kafkaTemplate) {
 
-        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate, KafkaConfig::deadLetterTopic);
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, new FixedBackOff(3000L, 3));
 
         ConcurrentKafkaListenerContainerFactory<String, String> factory =

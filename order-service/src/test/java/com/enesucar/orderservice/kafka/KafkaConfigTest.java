@@ -1,5 +1,6 @@
 package com.enesucar.orderservice.kafka;
 
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -15,5 +16,13 @@ class KafkaConfigTest {
 
         assertThat(config.consumerFactory().getConfigurationProperties())
                 .containsEntry("auto.offset.reset", "earliest");
+    }
+
+    @Test
+    void aFailedEventIsDeadLetteredToTheTopicTheListenerAndDocsNameAndNotSpringsDefault() {
+        var target = KafkaConfig.deadLetterTopic(new ConsumerRecord<>("order-events", 0, 3L, "k", "v"),
+                new IllegalStateException("boom"));
+
+        assertThat(target.topic()).isEqualTo("order-events.DLT");
     }
 }
