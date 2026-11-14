@@ -27,6 +27,7 @@ Customer: Ada Lovelace, ada@example.com, phone 555 0100. Order: product "Keyboar
 | 1.11 | Dashboard and Analytics | Revenue figures and charts are visible | |
 | 1.12 | Users, add a user (pick ADMIN), change its role, reset its password | Each works; the new user has the role you picked and you are still signed in as admin (the Users page keeps loading); the last admin cannot be demoted or deleted | |
 | 1.13 | Audit page (admin only): make a change in each of Customers, Orders and Users, then open the three tabs | Each change appears with your name and a time; customer rows list field names only, never values; no password or token appears anywhere | |
+| 1.13b | Audit page filters (admin only): in each of the three tabs, filter by who, by action, by number (order, customer or account) and by a date range; set an end date before the start date; then clear the filters | Only matching rows remain and the total changes; a wrong date range shows a message instead of a list; nothing matches shows "No entries match these filters"; clearing brings everything back | |
 | 1.14 | Users, try to delete your own row | The button is disabled; calling `DELETE /api/users/<your id>` answers `409` | |
 | 1.15 | Open the same customer in two windows, save in the first, then save in the second | The second shows "someone else changed this record", reloads the list and saves nothing | |
 | 1.16 | Change your password using a password of 40 `ş` letters | A clear "too long" message, never an error page | |
