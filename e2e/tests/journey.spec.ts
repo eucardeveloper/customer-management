@@ -310,8 +310,8 @@ test('admin can filter the audit log and gets a message for a wrong date range',
   await page.getByRole('button', { name: 'Clear filters' }).click();
   await expect(page.getByText('No entries match these filters')).toHaveCount(0);
 
-  await page.getByLabel('From').fill('2026-02-02');
-  await page.getByLabel('To').fill('2026-02-01');
+  await page.getByLabel('From', { exact: true }).fill('2026-02-02');
+  await page.getByLabel('To', { exact: true }).fill('2026-02-01');
   await expect(page.getByText('The end date is before the start date')).toBeVisible();
 });
 
@@ -321,7 +321,7 @@ test('admin can filter the users list by role', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Role' }).click();
   await page.getByRole('option', { name: 'ADMIN' }).click();
   await expect(page.getByRole('button', { name: 'Clear filters' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: ADMIN.user, exact: true }).first()).toBeVisible();
+  await expect(page.locator('tbody tr', { hasText: ADMIN.user }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Clear filters' }).click();
   await expect(page.getByRole('button', { name: 'Clear filters' })).toHaveCount(0);
 });
