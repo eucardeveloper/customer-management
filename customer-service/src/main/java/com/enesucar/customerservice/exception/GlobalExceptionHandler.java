@@ -40,6 +40,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
+    @ExceptionHandler(ReplayInProgressException.class)
+    public ResponseEntity<Map<String, Object>> handleReplayInProgress(ReplayInProgressException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", 409);
+        body.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(ReplayUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleReplayUnavailable(ReplayUnavailableException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", 503);
+        body.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
+    }
+
     @ExceptionHandler(CustomerHasOrdersException.class)
     public ResponseEntity<Map<String, Object>> handleHasOrders(CustomerHasOrdersException ex) {
         Map<String, Object> body = new HashMap<>();

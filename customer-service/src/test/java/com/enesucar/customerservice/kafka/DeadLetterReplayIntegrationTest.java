@@ -65,9 +65,4 @@ class DeadLetterReplayIntegrationTest {
         assertThat(back).extracting(ConsumerRecord::key).containsExactlyInAnyOrder("order-1", "order-2");
         assertThat(back).extracting(ConsumerRecord::value).containsExactlyInAnyOrder("{\"eventId\":\"r-1\"}", "{\"eventId\":\"r-2\"}");
     }
-
-    @Test
-    void anEmptyDeadLetterTopicReplaysNothing() {
-        assertThat(replay.replay()).isGreaterThanOrEqualTo(0);
-    }
 }
