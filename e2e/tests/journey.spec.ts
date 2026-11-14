@@ -44,6 +44,26 @@ test('wrong password gives one generic error and no session', async ({ page }) =
   expect(cookies.find((c) => c.name === 'customer_session')).toBeUndefined();
 });
 
+test('wrong password shows the translated message and no session notice', async ({ page }) => {
+  await signIn(page, ADMIN.user, 'definitely-wrong');
+  await expect(page.locator('.MuiAlert-message')).toContainText('Invalid username or password');
+  await expect(page.getByText('Your session has ended')).toHaveCount(0);
+});
+
+test('an expired session sends the user to the login page with the "session ended" notice', async ({ page, context }) => {
+  await signIn(page, ADMIN.user, ADMIN.pass);
+  await expect(page.getByRole('button', { name: 'Customers' })).toBeVisible();
+  // the server stops accepting the session (what happens after 30 minutes): drop the cookie, then use the app
+  await context.clearCookies();
+  await page.getByRole('button', { name: 'Customers' }).click();
+  // opening the list may already ask the server; if not, the refresh button does. Either request is answered 401.
+  await page.waitForURL(/\/login\?expired=1/, { timeout: 5000 }).catch(async () => {
+    await page.getByRole('button', { name: 'Refresh' }).click();
+  });
+  await expect(page).toHaveURL(/\/login\?expired=1/);
+  await expect(page.locator('.MuiAlert-message')).toContainText('Your session has ended. Please sign in again.');
+});
+
 test('admin sees the customers table with aligned columns', async ({ page }) => {
   await signIn(page, ADMIN.user, ADMIN.pass);
   await expect(page.getByRole('button', { name: 'Customers' })).toBeVisible();
