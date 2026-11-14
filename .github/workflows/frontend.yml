@@ -2,11 +2,13 @@ name: Frontend
 
 on:
   push:
-    branches: ["**"]
-    paths: ["frontend/**", ".github/workflows/frontend.yml"]
+    branches: [main]
   pull_request:
     branches: [main]
-    paths: ["frontend/**", ".github/workflows/frontend.yml"]
+  workflow_dispatch:
+
+# No path filter on purpose: a required check that is skipped by a filter never reports and blocks the merge.
+# The two jobs below can therefore be listed as required status checks in the branch ruleset.
 
 jobs:
   frontend:
