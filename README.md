@@ -119,7 +119,7 @@ These credentials are demo data. Change them before exposing the stack anywhere.
 
 ### Audit trail
 
-Three append-only feeds record who changed what, and only ADMIN can read them (*Audit* page; `GET /api/orders/audit`, `GET /api/customers/audit`, `GET /api/users/audit`, paged, 100 rows at most per page):
+Three append-only feeds record who changed what, and only ADMIN can read them (*Audit* page; `GET /api/orders/audit`, `GET /api/customers/audit`, `GET /api/users/audit`, paged, 100 rows at most per page). Each feed can be filtered on the server, all filters optional and combined with AND: the subject (`orderId`, `customerId` or `target`), `action` (exact), `actor` (case-insensitive "contains"), and `from`/`to` (inclusive whole days; `to` before `from` is a 400). The page has a filter bar for the same fields:
 
 | Feed | Recorded | Deliberately not recorded |
 |---|---|---|

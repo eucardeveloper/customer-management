@@ -134,7 +134,7 @@ public class GlobalExceptionHandler {
 
     /** Malformed JSON, wrong types, missing parameters: the client's mistake, so 400, not 500. */
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
-            MissingServletRequestParameterException.class})
+            MissingServletRequestParameterException.class, InvalidFilterException.class})
     public ResponseEntity<Map<String, Object>> handleBadRequest(Exception ex) {
         return body(HttpStatus.BAD_REQUEST, "Malformed or invalid request");
     }

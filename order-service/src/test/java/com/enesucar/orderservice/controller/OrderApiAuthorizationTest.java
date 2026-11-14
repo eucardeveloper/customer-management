@@ -131,4 +131,52 @@ class OrderApiAuthorizationTest {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(json.readTree(huge).get("size").asInt()).isEqualTo(100);
     }
+
+    private long createAs(String user) throws Exception {
+        String created = mvc.perform(post("/api/orders").header("X-Auth-User", user).header("X-Auth-Role", "ADMIN")
+                        .contentType(MediaType.APPLICATION_JSON).content(ORDER))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return json.readTree(created).get("id").asLong();
+    }
+
+    private JsonNode auditPage(String... params) throws Exception {
+        var req = get("/api/orders/audit").header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN");
+        for (int i = 0; i < params.length; i += 2) req = req.param(params[i], params[i + 1]);
+        return json.readTree(mvc.perform(req).andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    }
+
+    @Test
+    void auditCanBeFilteredByActorActionAndDate() throws Exception {
+        long id = createAs("filter-alice");
+        mvc.perform(put("/api/orders/" + id).header("X-Auth-User", "filter-bob").header("X-Auth-Role", "ADMIN")
+                .contentType(MediaType.APPLICATION_JSON).content(ORDER.replace("Laptop", "Laptop 2"))).andExpect(status().isOk());
+
+        // actor: case-insensitive "contains", and only that actor's rows come back
+        JsonNode byActor = auditPage("actor", "FILTER-AL");
+        assertThat(byActor.get("total").asLong()).isGreaterThanOrEqualTo(1);
+        byActor.get("items").forEach(r -> assertThat(r.get("actor").asText()).isEqualTo("filter-alice"));
+
+        // action: exact match
+        JsonNode updates = auditPage("action", "UPDATE", "actor", "filter-bob");
+        assertThat(updates.get("total").asLong()).isEqualTo(1);
+        assertThat(updates.get("items").get(0).get("action").asText()).isEqualTo("UPDATE");
+        assertThat(auditPage("action", "CREATE", "actor", "filter-bob").get("total").asLong()).isZero();
+
+        // filters combine with orderId
+        assertThat(auditPage("orderId", String.valueOf(id), "action", "CREATE").get("total").asLong()).isEqualTo(1);
+
+        // dates are inclusive whole days
+        String today = java.time.LocalDate.now().toString();
+        assertThat(auditPage("from", today, "to", today, "actor", "filter-alice").get("total").asLong()).isGreaterThanOrEqualTo(1);
+        assertThat(auditPage("from", "2000-01-01", "to", "2000-01-02").get("total").asLong()).isZero();
+    }
+
+    @Test
+    void auditFilterRejectsBadDatesWith400() throws Exception {
+        mvc.perform(get("/api/orders/audit").param("from", "not-a-date").header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/orders/audit").param("from", "2026-02-02").param("to", "2026-02-01")
+                        .header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN"))
+                .andExpect(status().isBadRequest());
+    }
 }
