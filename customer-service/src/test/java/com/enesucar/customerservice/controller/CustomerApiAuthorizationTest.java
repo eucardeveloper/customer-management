@@ -82,11 +82,11 @@ class CustomerApiAuthorizationTest {
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[?(@.actor != 'filter-alice')]").isEmpty());
         // action: exact; filters combine
-        mvc.perform(audit("action", "UPDATE", "actor", "filter-bob"))
+        mvc.perform(audit("action", "UPDATED", "actor", "filter-bob"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(1));
-        mvc.perform(audit("action", "CREATE", "actor", "filter-bob"))
+        mvc.perform(audit("action", "CREATED", "actor", "filter-bob"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(0));
-        mvc.perform(audit("customerId", id, "action", "CREATE"))
+        mvc.perform(audit("customerId", id, "action", "CREATED"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(1));
         // dates are inclusive whole days
         String today = java.time.LocalDate.now().toString();
