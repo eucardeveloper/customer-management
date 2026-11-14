@@ -161,4 +161,43 @@ class AuthAuditIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size").value(100));
     }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder audit(String... params) {
+        var req = get("/api/users/audit").header("Authorization", bearer(admin));
+        for (int i = 0; i < params.length; i += 2) req = req.param(params[i], params[i + 1]);
+        return req;
+    }
+
+    @Test
+    void auditCanBeFilteredByActorActionAndDate() throws Exception {
+        String newUser = "usr" + shortId();
+        mvc.perform(post("/api/users").header("Authorization", bearer(admin)).contentType(MediaType.APPLICATION_JSON)
+                        .content(json("username", newUser, "email", newUser + "@example.com", "password", "Np-" + UUID.randomUUID(), "role", "USER")))
+                .andExpect(status().isCreated());
+        User created = users.findByUsername(newUser).orElseThrow();
+        mvc.perform(patch("/api/users/" + created.getId() + "/role").header("Authorization", bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content(json("role", "ADMIN")))
+                .andExpect(status().isOk());
+
+        // actor: case-insensitive "contains"; only that actor's rows come back
+        mvc.perform(audit("actor", adminName.toUpperCase()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.items[?(@.actor != '" + adminName + "')]").isEmpty());
+        // action: exact; filters combine with the existing target filter
+        mvc.perform(audit("action", "ROLE_CHANGED", "actor", adminName)).andExpect(jsonPath("$.total").value(1));
+        mvc.perform(audit("action", "USER_DELETED", "actor", adminName)).andExpect(jsonPath("$.total").value(0));
+        mvc.perform(audit("target", newUser, "action", "USER_CREATED")).andExpect(jsonPath("$.total").value(1));
+        // dates are inclusive whole days
+        String today = java.time.LocalDate.now().toString();
+        mvc.perform(audit("from", today, "to", today, "actor", adminName))
+                .andExpect(jsonPath("$.total").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)));
+        mvc.perform(audit("from", "2000-01-01", "to", "2000-01-02")).andExpect(jsonPath("$.total").value(0));
+    }
+
+    @Test
+    void auditFilterRejectsBadDatesWith400() throws Exception {
+        mvc.perform(audit("from", "not-a-date")).andExpect(status().isBadRequest());
+        mvc.perform(audit("from", "2026-02-02", "to", "2026-02-01")).andExpect(status().isBadRequest());
+    }
 }

@@ -62,4 +62,49 @@ class CustomerApiAuthorizationTest {
         mvc.perform(get("/api/customers/audit").header("X-Auth-User", "admin").header("X-Auth-Role", "ADMIN"))
                 .andExpect(status().isOk());
     }
+
+    private static final String ADMIN_ROLE = "ADMIN";
+
+    @Test
+    void auditCanBeFilteredByActorActionAndDate() throws Exception {
+        String email = "filter-" + java.util.UUID.randomUUID() + "@example.com";
+        String body = "{\"firstName\":\"Fil\",\"lastName\":\"Ter\",\"email\":\"" + email + "\"}";
+        String created = mvc.perform(post("/api/customers").header("X-Auth-User", "filter-alice").header("X-Auth-Role", ADMIN_ROLE)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String id = created.replaceAll("(?s).*\"id\"\\s*:\\s*(\\d+).*", "$1");
+        mvc.perform(put("/api/customers/" + id).header("X-Auth-User", "filter-bob").header("X-Auth-Role", ADMIN_ROLE)
+                .contentType(MediaType.APPLICATION_JSON).content(body.replace("Fil", "Fil2"))).andExpect(status().isOk());
+
+        // actor: case-insensitive "contains"; only that actor's rows come back
+        mvc.perform(audit("actor", "FILTER-AL"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[?(@.actor != 'filter-alice')]").isEmpty());
+        // action: exact; filters combine
+        mvc.perform(audit("action", "UPDATE", "actor", "filter-bob"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(1));
+        mvc.perform(audit("action", "CREATE", "actor", "filter-bob"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(0));
+        mvc.perform(audit("customerId", id, "action", "CREATE"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(1));
+        // dates are inclusive whole days
+        String today = java.time.LocalDate.now().toString();
+        mvc.perform(audit("from", today, "to", today, "actor", "filter-alice"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)));
+        mvc.perform(audit("from", "2000-01-01", "to", "2000-01-02"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(0));
+    }
+
+    @Test
+    void auditFilterRejectsBadDatesWith400() throws Exception {
+        mvc.perform(audit("from", "not-a-date")).andExpect(status().isBadRequest());
+        mvc.perform(audit("from", "2026-02-02", "to", "2026-02-01")).andExpect(status().isBadRequest());
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder audit(String... params) {
+        var req = get("/api/customers/audit").header("X-Auth-User", "admin").header("X-Auth-Role", ADMIN_ROLE);
+        for (int i = 0; i < params.length; i += 2) req = req.param(params[i], params[i + 1]);
+        return req;
+    }
 }
