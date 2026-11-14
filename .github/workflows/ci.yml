@@ -30,7 +30,7 @@ jobs:
         if: always()
         run: |
           if [ -f target/site/jacoco/jacoco.csv ]; then
-            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+            python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
           import csv
           mi = ci = mb = cb = 0
           for r in csv.DictReader(open("target/site/jacoco/jacoco.csv")):
@@ -67,7 +67,7 @@ jobs:
         if: always()
         run: |
           if [ -f target/site/jacoco/jacoco.csv ]; then
-            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+            python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
           import csv
           mi = ci = mb = cb = 0
           for r in csv.DictReader(open("target/site/jacoco/jacoco.csv")):
@@ -104,7 +104,7 @@ jobs:
         if: always()
         run: |
           if [ -f target/site/jacoco/jacoco.csv ]; then
-            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+            python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
           import csv
           mi = ci = mb = cb = 0
           for r in csv.DictReader(open("target/site/jacoco/jacoco.csv")):
@@ -141,7 +141,7 @@ jobs:
         if: always()
         run: |
           if [ -f target/site/jacoco/jacoco.csv ]; then
-            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+            python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
           import csv
           mi = ci = mb = cb = 0
           for r in csv.DictReader(open("target/site/jacoco/jacoco.csv")):
