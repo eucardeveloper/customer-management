@@ -3,10 +3,12 @@ import { Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, 
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { TFn, NewUserForm, PwDialogState, PwFormState } from '../model';
+import { fillTemplate } from '@/lib/fillTemplate';
 
 interface UserDialogsProps {
   t: TFn;
   deleteUserDialogOpen: boolean;
+  deleteUserName: string;
   setDeleteUserDialogOpen: Dispatch<SetStateAction<boolean>>;
   handleDeleteUser: () => void | Promise<void>;
   addUserDialogOpen: boolean;
@@ -28,7 +30,7 @@ interface UserDialogsProps {
   handleUpdateRole: () => void | Promise<void>;
 }
 
-export function UserDialogs({ t, deleteUserDialogOpen, setDeleteUserDialogOpen, handleDeleteUser, addUserDialogOpen, setAddUserDialogOpen, newUser, setNewUser, handleAddUser, pwDialog, setPwDialog, pwForm, setPwForm, pwError, pwBusy, submitPassword, roleDialogOpen, setRoleDialogOpen, selectedRole, setSelectedRole, handleUpdateRole }: UserDialogsProps) {
+export function UserDialogs({ t, deleteUserDialogOpen, deleteUserName, setDeleteUserDialogOpen, handleDeleteUser, addUserDialogOpen, setAddUserDialogOpen, newUser, setNewUser, handleAddUser, pwDialog, setPwDialog, pwForm, setPwForm, pwError, pwBusy, submitPassword, roleDialogOpen, setRoleDialogOpen, selectedRole, setSelectedRole, handleUpdateRole }: UserDialogsProps) {
   return (
     <>
         {/* User Delete */}
@@ -71,7 +73,7 @@ export function UserDialogs({ t, deleteUserDialogOpen, setDeleteUserDialogOpen, 
 
         <Dialog open={deleteUserDialogOpen} onClose={() => setDeleteUserDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
           <DialogTitle sx={{ fontWeight: 700 }}>{t('deleteUserTitle')}</DialogTitle>
-          <DialogContent><Typography variant="body2" color="text.secondary">{t('areYouSure')}</Typography></DialogContent>
+          <DialogContent><Typography variant="body2" color="text.secondary">{deleteUserName ? fillTemplate(t('deleteUserConfirm'), { name: deleteUserName }) : t('areYouSure')}</Typography></DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={() => setDeleteUserDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b' }}>{ t('cancel') }</Button>
             <Button variant="contained" color="error" onClick={handleDeleteUser} disableElevation sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>{ t('delete') }</Button>

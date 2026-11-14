@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { sumRevenue, revenueOrders, isPending, countByStatus, monthlyRevenue, dailyRevenue } from '@/lib/orderStats';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { blurActiveElement } from '@/lib/focus';
 import { Box, AppBar, Toolbar, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Button, IconButton, Chip, Avatar, ThemeProvider, GlobalStyles, CssBaseline, Alert, Snackbar, Tooltip, Card, CardContent, SwipeableDrawer } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -121,7 +122,7 @@ export default function Home() {
   const gridC = colorMode === 'dark' ? '#263449' : '#f1f5f9';
   const tick2C = colorMode === 'dark' ? '#cbd5e1' : '#475569';
   const toggleSidebar = () => {
-    if (isMobile) { setMobileOpen(true); return; }
+    if (isMobile) { blurActiveElement(); setMobileOpen(true); return; }
     setSidebarPref(sidebarOpen ? '0' : '1');
   };
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
@@ -576,7 +577,7 @@ export default function Home() {
               </Tooltip>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="h6" noWrap sx={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--text)' }}>{pageTitle}</Typography>
-                <Typography noWrap sx={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.2, mt: 0.3 }}>
+                <Typography sx={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.2, mt: 0.3, whiteSpace: { xs: 'normal', md: 'nowrap' }, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {tab === 'dashboard' && (isAdmin
                     ? `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')} · ${totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} ${t('totalRevenue').toLowerCase()}`
                     : `${customers.length} ${t('customers')} · ${orders.length} ${t('orders')}`
@@ -619,7 +620,7 @@ export default function Home() {
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 2 }, py: '16px !important', px: { xs: '14px !important', sm: '18px !important' } }}>
                       <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: s.bg, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'center', color: s.color, flexShrink: 0 }}>{s.icon}</Box>
                       <Box sx={{ minWidth: 0 }}>
-                        <Typography noWrap sx={{ fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', mb: 0.2 }}>{s.label}</Typography>
+                        <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', mb: 0.2, lineHeight: 1.3, whiteSpace: { xs: 'normal', sm: 'nowrap' }, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</Typography>
                         <Typography noWrap sx={{ fontWeight: 800, fontSize: '1.25rem', lineHeight: 1.2, color: 'var(--text)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{s.value}</Typography>
                       </Box>
                     </CardContent>
@@ -686,7 +687,7 @@ export default function Home() {
         <OrderDialogs t={t} customers={customers} orderDialogOpen={orderDialogOpen} setOrderDialogOpen={setOrderDialogOpen}
           isEditingOrder={isEditingOrder} editOrder={editOrder} setEditOrder={setEditOrder} handleSaveOrder={handleSaveOrder} busy={orderBusy}
           orderDeleteDialogOpen={orderDeleteDialogOpen} setOrderDeleteDialogOpen={setOrderDeleteDialogOpen} handleDeleteOrder={handleDeleteOrder} />
-        <UserDialogs t={t} deleteUserDialogOpen={deleteUserDialogOpen} setDeleteUserDialogOpen={setDeleteUserDialogOpen}
+        <UserDialogs t={t} deleteUserName={users.find(u => u.id === deleteUserId)?.username ?? ''} deleteUserDialogOpen={deleteUserDialogOpen} setDeleteUserDialogOpen={setDeleteUserDialogOpen}
           handleDeleteUser={handleDeleteUser} addUserDialogOpen={addUserDialogOpen} setAddUserDialogOpen={setAddUserDialogOpen}
           newUser={newUser} setNewUser={setNewUser} handleAddUser={handleAddUser} pwDialog={pwDialog} setPwDialog={setPwDialog}
           pwForm={pwForm} setPwForm={setPwForm} pwError={pwError} pwBusy={pwBusy} submitPassword={submitPassword}
