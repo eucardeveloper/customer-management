@@ -81,3 +81,39 @@ Also checked after the rebuild: an admin setting a password shorter than 8 chara
 | F1 | Stop `auth-service`, then open any page | Gateway answers `503` (fail closed), UI shows an error, no stale data | Passed (gateway) | 2026-10-17 by Claude: `GET /api/customers` returned `503` with an empty body while auth-service was stopped; UI error display not checked |
 | F2 | Stop `order-service`, delete a customer | Refused with `503`, customer is kept | Passed | 2026-10-17 by Claude: delete refused with `503` and the message "Could not verify the customer's orders right now"; customer still readable afterwards |
 | F3 | Stop Kafka, create an order, start Kafka | Order saved; event published after Kafka returns (outbox) | Passed | 2026-10-17 by Claude: order created with Kafka stopped (`201`, outbox row `published=false`); after Kafka restarted the row became `published=true` |
+
+## Run of 2026-11-14 (browser test matrix of the guide, by Claude in the owner's Chrome)
+
+Build: main `4a5fd55`. The numbering follows the guide's matrix (C.3–C.8) so the two can be read side by side. "API" means a request from the signed-in browser tab.
+
+| ID | Role | Steps | Expected | Status | Evidence |
+|---|---|---|---|---|---|
+| W1.1 | anonymous | Open `/` and `/customers` without a session | Redirect to login | Passed | `/` went to `/login?from=%2F`; `/customers` without a cookie answered with a redirect |
+| W1.2 | anonymous | Wrong password | No session, clear error | Passed (API) | `401`, `Invalid username or password`; the on-screen text was not looked at again |
+| W2.1 | ADMIN | Sign in; menu | Panel, Customers, Orders, Analytics, AI Assistant, User Management, Audit Log | Passed | Menu as listed |
+| W2.2 to W2.4 | ADMIN | Create, validate, edit a customer; reload | Row appears; field errors; edit persists | Passed | Customer #50 created, empty name and bad e-mail refused, phone edit kept after reload |
+| W2.5 | ADMIN | Order: Keyboard, 2, `49,90` | Row appears, total 99.80 | Passed | API: `price 49.9`; screen: `$99.80` |
+| W2.6 | ADMIN | Change the order status; reload | Status kept | Passed | `SHIPPED`, `version 1` after reload |
+| W2.7 | ADMIN | Delete the customer while the order exists | Refused (409), customer kept | Passed | Message "Bu müşterinin hâlâ siparişi var. Önce siparişleri silin veya başka müşteriye taşıyın (1)" |
+| W2.8 | ADMIN | Delete the order, then the customer | Both gone | Passed | Order `404`, customer absent from the list; data back to 5 customers and 8 orders |
+| W2.9 | ADMIN | Dashboard and Analytics | Revenue figures and charts | Passed | Total `$6,479.90`, charts drawn |
+| W2.10 | ADMIN | Add a user with role ADMIN | User created; admin stays signed in | Passed | Session still `admin`; list reloaded |
+| W2.11 | ADMIN | Change the role; reset the password | Both work | Passed | Role `USER` kept; old password `401`, new password `200` (request without cookies) |
+| W2.12 | ADMIN | Demote or delete the only administrator | Refused (409) | Passed | UI message "Son yönetici silinemez veya rolü düşürülemez" (API: `The last administrator cannot be demoted or deleted`); own Delete button disabled; `DELETE /api/users/1` answered `409`, administrator and session intact |
+| W2.13 | ADMIN | Look at the tables | Text columns left, other columns centred, headers aligned | Passed, with a note | Price, total, quantity, status and date are centred (not right-aligned); the guide was corrected |
+| W3.1 to W3.3 | USER | Menu, lists, prices | No Users or Audit; no write buttons; no prices or revenue | Passed | `/api/users` 403, `/api/orders/audit` 403, `POST /api/orders` 403, `price: null`; Orders table has no price, total or Actions column; no `$` on the page |
+| W3.4 | USER | Open `/users` | Not shown | Passed, with a note | 404: the route does not exist for anyone; the protection is the missing tab and the 403 |
+| W3.5 | USER | Ask the assistant for revenue | No figures | Passed | "Finansal rakamları veya fiyatları göremiyorum." (the assistant answered in Turkish) |
+| W4.1 | any | Close the browser, reopen within 30 minutes | Session continues | Passed | Reopened 8 minutes after sign-in: Panel, no login. The exact 30-minute expiry was not timed |
+| W4.2 | any | Use an expired session | Clear login page | Passed | Redirected to `/login?expired=1` |
+| W4.3 | ADMIN | Change the password in one window | The other window's session ends | Passed | Private window showed "Your session has ended. Please sign in again." within about a second; password restored afterwards |
+| W4.4 | any | Sign out, then open a protected page | Login page, no data | Passed | `/` went to `/login?from=%2F`, API `401`. The Back-button path was not repeated on a page of the app |
+| W5.1 | any | Wide screens | No horizontal scroll, Actions reachable | Passed, with a note | Orders table fits at about 1150 px and 1582 px with Actions visible; exactly 1440 px was not measured |
+| W5.2 | any | Language and dark mode | Readable, translated | Passed | EN and dark checked on Orders |
+| W5.3 | any | Phone width | Menu becomes a drawer | Passed | DevTools iPhone mode: burger button, no fixed sidebar, Orders and AI Assistant fit, Actions visible |
+| W5.4 | any | Search with no match | Icon and short message | Passed | Icon and "Sipariş bulunamadı" (Turkish UI) |
+| W6.1 | ADMIN | Grafana overview | Targets up, outbox 0 | Passed | Four targets UP, "Order events waiting in the outbox" 0, oldest waiting 0 s |
+| W6.2 | any | Prometheus targets | UP | Passed | Four targets `up`; `outbox_events_pending` and `outbox_events_parked` 0 |
+| W9 | any | `.\restore-test.ps1` | PASS | Passed | Backup `20261114_163133`, three `pg_restore` exit codes 0, marker gone, customers 5 = 5 |
+
+Small findings of this run, fixed in PR #124: the delete-user dialog did not name the user, the menu drawer left the button focused (an `aria-hidden` console warning), three texts were cut off on a phone (page subtitle, a card label, the search placeholder), and the Grafana "Share of 5xx answers" axis ran to 10000% with no data.
