@@ -6,7 +6,6 @@ import com.enesucar.auth_service.dto.LoginRequest;
 import com.enesucar.auth_service.dto.RegisterRequest;
 import com.enesucar.auth_service.entity.Role;
 import com.enesucar.auth_service.entity.User;
-import com.enesucar.auth_service.entity.RevokedToken;
 import com.enesucar.auth_service.repository.RevokedTokenRepository;
 import com.enesucar.auth_service.repository.UserRepository;
 import com.enesucar.auth_service.security.JwtUtil;
@@ -66,10 +65,16 @@ public class AuthService {
 
     /** {@code clientIp} may be null (no address known); then only the per-username limit applies. */
     public AuthResponse login(LoginRequest request, String clientIp) {
-        loginAttemptLimiter.checkAllowedIp(clientIp);
-        // Counts this attempt before the password is checked, in one step: parallel guesses cannot all slip
-        // past a "check, then record" gap. A successful sign-in clears the counter again.
-        loginAttemptLimiter.reserveAttempt(request.getUsername());
+        // Both limits count this attempt before the password is checked, in one step: parallel guesses cannot
+        // all slip past a "check, then record" gap. A successful sign-in clears the username counter and gives
+        // the address its reservation back (only failures count against an address).
+        Long ipReservation = loginAttemptLimiter.reserveAttemptIp(clientIp);
+        try {
+            loginAttemptLimiter.reserveAttempt(request.getUsername());
+        } catch (RuntimeException ex) {
+            loginAttemptLimiter.release(ipReservation); // refused by the username lock: not a guess from this address
+            throw ex;
+        }
         try {
             if (PasswordRules.exceedsBcryptLimit(request.getPassword())) {
                 // Cannot be anyone's password; BCrypt would throw instead of answering. Same answer as any wrong password.
@@ -79,11 +84,11 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
         } catch (AuthenticationException ex) {
-            loginAttemptLimiter.recordFailureIp(clientIp);
             audit.record(AuthAuditService.LOGIN_FAILED, request.getUsername(), request.getUsername(), "bad credentials");
             throw ex;
         }
         loginAttemptLimiter.reset(request.getUsername());
+        loginAttemptLimiter.release(ipReservation);
 
         // Authentication just succeeded, so a missing row means the account was deleted in between: same answer as a bad login.
         User user = userRepository.findByUsername(request.getUsername())
@@ -137,8 +142,10 @@ public class AuthService {
         if (jti == null) {
             return; // issued before token ids existed; it expires on its own
         }
-        var expiry = jwtUtil.extractExpiration(token).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
-        revokedTokens.save(new RevokedToken(jti, expiry));
+        var expiry = jwtUtil.extractExpiration(token).toInstant().atZone(java.time.ZoneOffset.UTC).toLocalDateTime();
+        if (revokedTokens.insertIfAbsent(jti, expiry) == 0) {
+            return; // the same session was ended a moment ago (parallel logout): nothing more to do, and no second audit row
+        }
         String who = jwtUtil.extractUsername(token);
         audit.record(AuthAuditService.LOGOUT, who, who, null);
     }

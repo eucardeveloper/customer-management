@@ -217,13 +217,26 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(loginRequest, "203.0.113.9"))
                 .isInstanceOf(BadCredentialsException.class);
 
-        verify(loginAttemptLimiter).recordFailureIp("203.0.113.9");
+        verify(loginAttemptLimiter).reserveAttemptIp("203.0.113.9");
         verify(loginAttemptLimiter).reserveAttempt("testuser");
+        verify(loginAttemptLimiter, never()).release(any()); // a wrong password stays counted against the address
+    }
+
+    @Test
+    void login_shouldGiveTheAddressReservationBack_whenTheUsernameIsLockedOut() {
+        when(loginAttemptLimiter.reserveAttemptIp("203.0.113.9")).thenReturn(77L);
+        doThrow(new TooManyLoginAttemptsException(60)).when(loginAttemptLimiter).reserveAttempt("testuser");
+
+        assertThatThrownBy(() -> authService.login(loginRequest, "203.0.113.9"))
+                .isInstanceOf(TooManyLoginAttemptsException.class);
+
+        verify(loginAttemptLimiter).release(77L);
+        verifyNoInteractions(authenticationManager);
     }
 
     @Test
     void login_shouldNotTouchAuthentication_whenTheClientAddressIsLockedOut() {
-        doThrow(new TooManyLoginAttemptsException(300)).when(loginAttemptLimiter).checkAllowedIp("203.0.113.9");
+        doThrow(new TooManyLoginAttemptsException(300)).when(loginAttemptLimiter).reserveAttemptIp("203.0.113.9");
 
         assertThatThrownBy(() -> authService.login(loginRequest, "203.0.113.9"))
                 .isInstanceOf(TooManyLoginAttemptsException.class);
@@ -296,12 +309,25 @@ class AuthServiceTest {
         when(jwtUtil.extractTokenId("tok")).thenReturn("jti-1");
         when(jwtUtil.extractExpiration("tok")).thenReturn(new java.util.Date(System.currentTimeMillis() + 3_600_000));
 
+        when(revokedTokens.insertIfAbsent(any(), any())).thenReturn(1);
+
         authService.logout("tok");
 
-        var captor = ArgumentCaptor.forClass(com.enesucar.auth_service.entity.RevokedToken.class);
-        verify(revokedTokens).save(captor.capture());
-        assertThat(captor.getValue().getJti()).isEqualTo("jti-1");
-        assertThat(captor.getValue().getExpiresAt()).isAfter(java.time.LocalDateTime.now());
+        var expiry = ArgumentCaptor.forClass(java.time.LocalDateTime.class);
+        verify(revokedTokens).insertIfAbsent(eq("jti-1"), expiry.capture());
+        assertThat(expiry.getValue()).isAfter(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC));
+    }
+
+    @Test
+    void logout_shouldDoNothingMore_whenTheSessionWasAlreadyEndedAMomentAgo() {
+        when(jwtUtil.isTokenValid("tok")).thenReturn(true);
+        when(jwtUtil.extractTokenId("tok")).thenReturn("jti-1");
+        when(jwtUtil.extractExpiration("tok")).thenReturn(new java.util.Date(System.currentTimeMillis() + 3_600_000));
+        when(revokedTokens.insertIfAbsent(any(), any())).thenReturn(0);
+
+        authService.logout("tok");
+
+        verifyNoInteractions(audit);
     }
 
     @Test

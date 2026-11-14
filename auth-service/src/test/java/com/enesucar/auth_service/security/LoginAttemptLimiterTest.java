@@ -150,19 +150,29 @@ class LoginAttemptLimiterTest {
     @Test
     void oneAddressIsLockedAfterTooManyFailuresEvenAcrossDifferentUsernames() {
         var limiter = new LoginAttemptLimiter(3, 4, Duration.ofMinutes(15), clock, repository, transactionManager);
-        for (int i = 0; i < 4; i++) limiter.recordFailureIp("203.0.113.9");
+        for (int i = 0; i < 4; i++) limiter.reserveAttemptIp("203.0.113.9");
 
-        assertThatThrownBy(() -> limiter.checkAllowedIp("203.0.113.9"))
+        assertThatThrownBy(() -> limiter.reserveAttemptIp("203.0.113.9"))
                 .isInstanceOf(TooManyLoginAttemptsException.class);
-        assertThatCode(() -> limiter.checkAllowedIp("203.0.113.10")).doesNotThrowAnyException();
+        assertThatCode(() -> limiter.reserveAttemptIp("203.0.113.10")).doesNotThrowAnyException();
         assertThatCode(() -> limiter.checkAllowed("ali")).doesNotThrowAnyException(); // usernames are separate
     }
 
     @Test
     void aMissingAddressIsNeverLimited() {
         var limiter = limiter();
-        limiter.recordFailureIp(null);
-        assertThatCode(() -> limiter.checkAllowedIp(null)).doesNotThrowAnyException();
-        assertThatCode(() -> limiter.checkAllowedIp("")).doesNotThrowAnyException();
+        assertThat(limiter.reserveAttemptIp(null)).isNull();
+        assertThat(limiter.reserveAttemptIp("")).isNull();
+        assertThatCode(() -> limiter.release(null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void aReleasedAddressReservationNoLongerCounts() {
+        var limiter = new LoginAttemptLimiter(3, 2, Duration.ofMinutes(15), clock, repository, transactionManager);
+        Long first = limiter.reserveAttemptIp("203.0.113.9");
+        limiter.reserveAttemptIp("203.0.113.9");
+        limiter.release(first); // a successful sign-in is not a failure
+
+        assertThatCode(() -> limiter.reserveAttemptIp("203.0.113.9")).doesNotThrowAnyException();
     }
 }
