@@ -46,7 +46,7 @@ test('wrong password gives one generic error and no session', async ({ page }) =
 
 test('wrong password shows the translated message and no session notice', async ({ page }) => {
   await signIn(page, ADMIN.user, 'definitely-wrong');
-  await expect(page.getByRole('alert')).toContainText('Invalid username or password');
+  await expect(page.locator('.MuiAlert-message')).toContainText('Invalid username or password');
   await expect(page.getByText('Your session has ended')).toHaveCount(0);
 });
 
@@ -56,9 +56,12 @@ test('an expired session sends the user to the login page with the "session ende
   // the server stops accepting the session (what happens after 30 minutes): drop the cookie, then use the app
   await context.clearCookies();
   await page.getByRole('button', { name: 'Customers' }).click();
-  await page.getByRole('button', { name: 'Refresh' }).click(); // the next request is answered 401
+  // opening the list may already ask the server; if not, the refresh button does. Either request is answered 401.
+  await page.waitForURL(/\/login\?expired=1/, { timeout: 5000 }).catch(async () => {
+    await page.getByRole('button', { name: 'Refresh' }).click();
+  });
   await expect(page).toHaveURL(/\/login\?expired=1/);
-  await expect(page.getByRole('alert')).toContainText('Your session has ended. Please sign in again.');
+  await expect(page.locator('.MuiAlert-message')).toContainText('Your session has ended. Please sign in again.');
 });
 
 test('admin sees the customers table with aligned columns', async ({ page }) => {
