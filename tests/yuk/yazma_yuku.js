@@ -115,7 +115,7 @@ export function setup() {
   const veri = { admin: giris(ADMIN, PAROLA), user: giris(USER, PAROLA_USER), buyukMusteri: null };
   if (PROFIL === "buyuk") {
     const m = http.post(`${URL}/api/customers`, musteriGovde(`buyuk-${Date.now()}`), bas(veri.admin));
-    if (m.status !== 200) throw new Error(`büyük veri müşterisi oluşmadı: ${m.status}`);
+    if (m.status !== 200 && m.status !== 201) throw new Error(`büyük veri müşterisi oluşmadı: ${m.status}`);
     const id = m.json("id");
     veri.buyukMusteri = id;
     for (let i = 0; i < BUYUK_N; i += 50) {
@@ -133,7 +133,7 @@ export function adminAkis(veri) {
   const h = bas(veri.admin);
   const etiket = `A${__VU}-${__ITER}-${Date.now()}`;
   const musteri = http.post(`${URL}/api/customers`, musteriGovde(etiket), h);
-  if (musteri.status !== 200) {
+  if (musteri.status !== 200 && musteri.status !== 201) {
     akis_hata.add(1);
     return;
   }
@@ -206,7 +206,7 @@ export function yaris(veri) {
   const h = bas(veri.admin);
   const etiket = `Y${__VU}-${__ITER}-${Date.now()}`;
   const musteri = http.post(`${URL}/api/customers`, musteriGovde(etiket), h);
-  if (musteri.status !== 200) return;
+  if (musteri.status !== 200 && musteri.status !== 201) return;
   const mid = musteri.json("id");
   // Yarışı kaybeden sipariş isteği, tasarım gereği 400 ("müşteri yok") alır ve geri alınır (sunucu günlüğünde
   // "Order N undone"); bu bir hata değil beklenen sonuçtur, yalnızca 5xx / ağ hatası "başarısız" sayılır.
